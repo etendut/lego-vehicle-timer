@@ -17,7 +17,7 @@ print('Version 1.1.0')
 # 'skid_steer' - Expects a DC motor on Port and Port B
 # 'servo_steer'  - Expects a DC motor on Port A and a servo type motor on Port B
 #
-VEHICLE_TYPE = 'skid_steer'  # must be one of 'skid_steer', 'servo_steer' or 'train'
+VEHICLE_TYPE = 'train'  # must be one of 'skid_steer', 'servo_steer' or 'train'
 
 # countdown time settings
 COUNTDOWN_LIMIT_MINUTES = const(
@@ -162,16 +162,26 @@ class RunServoSteerMotors:
 
         self.drive_speed = drive_speed
         self.turn_angle = turn_angle
-
-        if reverse_drive_motor:
-            self.drive_motor = DCMotor(Port.A, positive_direction=Direction.COUNTERCLOCKWISE)
-        else:
-            self.drive_motor = DCMotor(Port.A, positive_direction=Direction.CLOCKWISE)
-
-        if reverse_turn_motor:
-            self.turn_motor = Motor(Port.B, positive_direction=Direction.COUNTERCLOCKWISE)
-        else:
-            self.turn_motor = Motor(Port.B, positive_direction=Direction.CLOCKWISE)
+        try:
+            if reverse_drive_motor:
+                self.drive_motor = DCMotor(Port.A, positive_direction=Direction.COUNTERCLOCKWISE)
+            else:
+                self.drive_motor = DCMotor(Port.A, positive_direction=Direction.CLOCKWISE)
+            print('Found motor on ' + str(Port.A))
+        except OSError as ex:
+            if ex.errno == ENODEV:
+                print('Motor needs to be connected to ' + str(Port.A))
+            raise
+        try:
+            if reverse_turn_motor:
+                self.turn_motor = Motor(Port.B, positive_direction=Direction.COUNTERCLOCKWISE)
+            else:
+                self.turn_motor = Motor(Port.B, positive_direction=Direction.CLOCKWISE)
+            print('Found motor on ' + str(Port.A))
+        except OSError as ex:
+            if ex.errno == ENODEV:
+                print('Motor needs to be connected to ' + str(Port.B))
+            raise
 
         self.left_end = self.turn_motor.run_until_stalled(-200, duty_limit=30)
         self.right_end = self.turn_motor.run_until_stalled(200, duty_limit=30)
@@ -231,16 +241,23 @@ class RunTrainMotor:
         self.speed_step = speed_step
         self.current_motor_speed = 0
 
-        if reverse_motor:
-            self.train_motor_1 = DCMotor(Port.A, Direction.COUNTERCLOCKWISE)
-        else:
-            self.train_motor_1 = DCMotor(Port.A, Direction.CLOCKWISE)
+        try:
+            if reverse_motor:
+                self.train_motor_1 = DCMotor(Port.A, Direction.COUNTERCLOCKWISE)
+            else:
+                self.train_motor_1 = DCMotor(Port.A, Direction.CLOCKWISE)
+            print('Found motor on ' + str(Port.A))
+        except OSError as ex:
+            if ex.errno == ENODEV:
+                print('Motor needs to be connected to ' + str(Port.A))
+            raise
 
         try:
             if reverse_motor_2:
                 self.train_motor_2 = DCMotor(Port.B, Direction.COUNTERCLOCKWISE)
             else:
                 self.train_motor_2 = DCMotor(Port.B, Direction.CLOCKWISE)
+            print('Found motor on ' + str(Port.B))
         except Exception as e2:
             print(e2)
             self.train_motor_2 = None
@@ -268,8 +285,8 @@ class RunTrainMotor:
             if 0 > self.current_motor_speed > -self.min_speed:
                 self.current_motor_speed = 0
 
-            if self.current_motor_speed > max_speed:
-                self.current_motor_speed = max_speed
+            if self.current_motor_speed > self.max_speed:
+                self.current_motor_speed = self.max_speed
 
         elif Button.LEFT_MINUS in remote_buttons or Button.RIGHT_MINUS in remote_buttons:
 
@@ -282,12 +299,12 @@ class RunTrainMotor:
             if self.min_speed > self.current_motor_speed > 0:
                 self.current_motor_speed = 0
 
-            if self.current_motor_speed < -max_speed:  # max reverse
-                self.current_motor_speed = -max_speed
+            if self.current_motor_speed < -self.max_speed:  # max reverse
+                self.current_motor_speed = -self.max_speed
 
         self.train_motor_1.dc(self.current_motor_speed)
         if self.train_motor_2:
-            self.self.train_motor_2.dc(self.current_motor_speed)
+            self.train_motor_2.dc(self.current_motor_speed)
 
     def handle_flip(self):
         """
