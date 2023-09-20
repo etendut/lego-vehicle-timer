@@ -127,7 +127,7 @@ class RunSkidSteerMotors:
 
         # stop motors as this is bang-bang mode where a button
         #  needs to be held down for racer to run
-        self.stop()
+        self.stop_motors()
 
         #  handle button press
         if Button.LEFT_PLUS in remote_buttons:
@@ -308,9 +308,9 @@ class RunTrainMotor:
 ##################################################################################
 
 def wait_for_no_pressed_buttons():
-    buttons_pressed = remote.buttons.pressed
+    buttons_pressed = remote.buttons.pressed()
     while buttons_pressed:
-        buttons_pressed = remote.buttons.pressed
+        buttons_pressed = remote.buttons.pressed()
         wait(100)
 
 
@@ -326,18 +326,19 @@ def convert_millis_hours_minutes_seconds(millis):
 
     return hours, minutes, seconds
 
+READY = const(0)
+ACTIVE = const(10)
+FINAL_MINUTE = const(20)
+FINAL_20_SECS = const(30)
+ENDED = const(40)
+
+ORANGE_HSV = Color(h=5, s=100, v=100)
 
 class CountdownTimer:
     """
     This allows the model to run for a set time
     """
-    READY = const(0)
-    ACTIVE = const(10)
-    FINAL_MINUTE = const(20)
-    FINAL_20_SECS = const(30)
-    ENDED = const(40)
 
-    ORANGE_HSV = Color(h=5, s=100, v=100)
 
     def __init__(self):
         # assign external objects to properties of the class
@@ -371,16 +372,17 @@ class CountdownTimer:
             self.show_status()
             return False
         # in last 25s slow flash a warning
-        if remaining_time < (1000 * const(20)):
+        if remaining_time < (1000 * 20):
             self.countdown_status = FINAL_20_SECS
             self.show_status()
-            return True
 
             # in last minute slow flash a warning
-        if remaining_time < (1000 * const(60)):
+        if remaining_time < (1000 * 60):
             self.countdown_status = FINAL_MINUTE
             self.show_status()
-            return True
+
+        return True
+
 
     def __start_countdown__(self):
         """
