@@ -1,7 +1,6 @@
-# Train and Tracked Racer Program
+# Train, Servo Steer, and Skid Steer timed vehicle Program
 
-A python program to enable a time limited running of a lego vehicle.
-Copyright Etendut
+A python program to enable a time limited running of a Train, Servo Steer, or Skid Steer Lego vehicle.
 
 ## Requires
 
