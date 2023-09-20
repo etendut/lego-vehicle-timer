@@ -164,9 +164,9 @@ class RunServoSteerMotors:
         self.turn_angle = turn_angle
         try:
             if reverse_drive_motor:
-                self.drive_motor = DCMotor(Port.A, positive_direction=Direction.COUNTERCLOCKWISE)
-            else:
                 self.drive_motor = DCMotor(Port.A, positive_direction=Direction.CLOCKWISE)
+            else:
+                self.drive_motor = DCMotor(Port.A, positive_direction=Direction.COUNTERCLOCKWISE)
             print('Found drive motor on ' + str(Port.A))
         except OSError as ex:
             if ex.errno == ENODEV:
@@ -182,14 +182,17 @@ class RunServoSteerMotors:
             if ex.errno == ENODEV:
                 print('Steering motor needs to be connected to ' + str(Port.B))
             raise
-        print('--setting steering limits')
-        self.left_end = self.steering_motor.run_until_stalled(-200, duty_limit=60)
-        print('left limit: ' + str(self.left_end))
-        self.right_end = self.steering_motor.run_until_stalled(200, duty_limit=60)
-        print('right limit: ' + str(self.right_end))
-        self.steering_motor.run_target(200, 0)
 
+        self.calibrate_steering()
         self.stop_motors()
+
+    def calibrate_steering(self):
+        print('--setting steering limits')
+        left_end = self.steering_motor.run_until_stalled(-200, duty_limit=60)
+        right_end = self.steering_motor.run_until_stalled(200, duty_limit=60)
+        self.steering_motor.reset_angle((right_end - left_end) / 2)
+        print('--centering')
+        self.steering_motor.run_target(200, 0)
 
     def handle_flip(self):
         """
@@ -207,25 +210,26 @@ class RunServoSteerMotors:
 
         # stop motors as this is bang-bang mode where a button
         #  needs to be held down for racer to run
-        self.stop_motors()
 
         #  handle button press
         if Button.LEFT_PLUS in remote_buttons:
-            self.steering_motor.dc(self.drive_speed)
-
-        if Button.LEFT_MINUS in remote_buttons:
-            self.steering_motor.dc(-self.drive_speed)
+            self.drive_motor.dc(self.drive_speed)
+        elif Button.LEFT_MINUS in remote_buttons:
+            self.drive_motor.dc(-self.drive_speed)
+        else:
+            self.drive_motor.dc(0)
 
         if Button.RIGHT_PLUS in remote_buttons:
-            self.steering_motor.run_target(200, self.turn_angle)
+            self.steering_motor.run_target(200, self.turn_angle, wait=False)
         elif Button.RIGHT_MINUS in remote_buttons:
-            self.steering_motor.run_target(200, -self.turn_angle)
+            self.steering_motor.run_target(200, -self.turn_angle, wait=False)
         else:
-            self.steering_motor.run_target(200, 0)
+            self.steering_motor.run_target(200, 0, wait=False)
 
     # stop all motors
     def stop_motors(self):
-        self.steering_motor.dc(0)
+        self.drive_motor.dc(0)
+        self.steering_motor.run_target(200, 0)
 
 
 ##################################################################################
