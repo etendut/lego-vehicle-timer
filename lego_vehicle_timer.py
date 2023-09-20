@@ -5,8 +5,9 @@
 from pybricks.parameters import Color, Side, Button, Port, Direction
 from pybricks.pupdevices import DCMotor, Remote
 from pybricks.tools import wait, StopWatch
+from uerrno import ENODEV
 
-print('Version 1.0.0')
+print('Version 1.1.0')
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -24,7 +25,6 @@ COUNTDOWN_LIMIT_MINUTES = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
-
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP = const(10)  # the amount each button press changes the train speed
 TRAIN_MOTOR_MIN_SPEED = const(30)  # lowest speed the train will go set between 30 and 100
@@ -40,9 +40,9 @@ SKID_STEER_REVERSE_RIGHT_MOTOR = False  # set to True if remote + button cause m
 
 # servo steer settings
 SERVO_STEER_SPEED = const(80)  # set between 50 and 100
-SERVO_STEER_TURN_ANGLE = const(45) # angle to turn wheels
+SERVO_STEER_TURN_ANGLE = const(45)  # angle to turn wheels
 SERVO_STEER_REVERSE_DRIVE_MOTOR = False  # set to True if remote + button cause motor to run backwards
-SERVO_STEER_REVERSE_TURN_MOTOR = False # set to True if remote + button cause motor to turn wrong way
+SERVO_STEER_REVERSE_TURN_MOTOR = False  # set to True if remote + button cause motor to turn wrong way
 
 
 ##################################################################################
@@ -61,11 +61,11 @@ class RunSkidSteerMotors:
     def __init__(self, drive_speed, swap_motor_sides, reverse_left_motor, reverse_right_motor):
 
         if swap_motor_sides:
-            self.left_motor_port = Port.A
-            self.right_motor_port = Port.B
-        else:
             self.left_motor_port = Port.B
             self.right_motor_port = Port.A
+        else:
+            self.left_motor_port = Port.A
+            self.right_motor_port = Port.B
 
         if reverse_left_motor:
             self.left_motor_direction = Direction.COUNTERCLOCKWISE
@@ -79,9 +79,18 @@ class RunSkidSteerMotors:
 
         self.drive_speed = drive_speed
         self.last_side = None
-
-        self.right_motor = DCMotor(right_motor_port, positive_direction=right_motor_direction)
-        self.left_motor = DCMotor(left_motor_port, positive_direction=left_motor_direction)
+        try:
+            self.left_motor = DCMotor(self.left_motor_port, positive_direction=self.left_motor_direction)
+        except OSError as ex:
+            if ex.errno == ENODEV:
+                print('Motor needs to be connected to ' + str(self.left_motor_port))
+            raise
+        try:
+            self.right_motor = DCMotor(self.right_motor_port, positive_direction=self.right_motor_direction)
+        except OSError as ex:
+            if ex.errno == ENODEV:
+                print('Motor needs to be connected to ' + str(self.right_motor_port))
+            raise
 
         self.stop_motors()
 
@@ -509,7 +518,7 @@ def setup_hub():
 
         hub = CityHub()
         print('Lego City Hub found')
-        return false
+        return False
     except ImportError:
         try:
             from pybricks.hubs import TechnicHub
@@ -536,7 +545,7 @@ def setup_remote():
     # try to connect to remote multiple times
     remote_retry_count = 0
 
-    while true:
+    while True:
         try:
             print("--looking for remote")
             # Connect to the remote.
@@ -552,14 +561,15 @@ def setup_remote():
 
 
 if __name__ == "__main__":
+    print('SETUP')
     print('--setup hub')
     hub_supports_flip = setup_hub()
     print('--setup remote')
     setup_remote()
     print("--setup countdown")
     countdown_timer = CountdownTimer()
-    countdown_timer.reset()
     print("--setup motors")
+    print(VEHICLE_TYPE)
     if VEHICLE_TYPE == 'skid_steer':
         drive_motors = RunSkidSteerMotors(SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES, SKID_STEER_REVERSE_LEFT_MOTOR,
                                           SKID_STEER_REVERSE_RIGHT_MOTOR)
@@ -576,7 +586,8 @@ if __name__ == "__main__":
 
     # give everything a chance to warm up
     wait(500)
-
+    print('SETUP complete')
+    countdown_timer.reset()
     while True:
         countdown_timer.check_remote_buttons()
         if countdown_timer.has_time_remaining():
