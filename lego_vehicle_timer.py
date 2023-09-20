@@ -3,7 +3,7 @@
 # licence MIT
 
 from pybricks.parameters import Color, Side, Button, Port, Direction
-from pybricks.pupdevices import DCMotor, Remote
+from pybricks.pupdevices import DCMotor, Motor, Remote
 from pybricks.tools import wait, StopWatch
 from uerrno import ENODEV
 
@@ -17,7 +17,7 @@ print('Version 1.1.0')
 # 'skid_steer' - Expects a DC motor on Port and Port B
 # 'servo_steer'  - Expects a DC motor on Port A and a servo type motor on Port B
 #
-VEHICLE_TYPE = 'train'  # must be one of 'skid_steer', 'servo_steer' or 'train'
+VEHICLE_TYPE = 'servo_steer'  # must be one of 'skid_steer', 'servo_steer' or 'train'
 
 # countdown time settings
 COUNTDOWN_LIMIT_MINUTES = const(
@@ -158,7 +158,7 @@ class RunServoSteerMotors:
         Expects a DC motor on Port A and a self centering Servo motor on Port B
     """
 
-    def __init__(self, drive_speed, turn_angle, reverse_drive_motor, reverse_turn_motor):
+    def __init__(self, drive_speed, turn_angle, reverse_drive_motor, reverse_steering_motor):
 
         self.drive_speed = drive_speed
         self.turn_angle = turn_angle
@@ -167,24 +167,27 @@ class RunServoSteerMotors:
                 self.drive_motor = DCMotor(Port.A, positive_direction=Direction.COUNTERCLOCKWISE)
             else:
                 self.drive_motor = DCMotor(Port.A, positive_direction=Direction.CLOCKWISE)
-            print('Found motor on ' + str(Port.A))
+            print('Found drive motor on ' + str(Port.A))
         except OSError as ex:
             if ex.errno == ENODEV:
-                print('Motor needs to be connected to ' + str(Port.A))
+                print('Drive motor needs to be connected to ' + str(Port.A))
             raise
         try:
-            if reverse_turn_motor:
-                self.turn_motor = Motor(Port.B, positive_direction=Direction.COUNTERCLOCKWISE)
+            if reverse_steering_motor:
+                self.steering_motor = Motor(Port.B, positive_direction=Direction.COUNTERCLOCKWISE)
             else:
-                self.turn_motor = Motor(Port.B, positive_direction=Direction.CLOCKWISE)
-            print('Found motor on ' + str(Port.A))
+                self.steering_motor = Motor(Port.B, positive_direction=Direction.CLOCKWISE)
+            print('Found steering motor on ' + str(Port.A))
         except OSError as ex:
             if ex.errno == ENODEV:
-                print('Motor needs to be connected to ' + str(Port.B))
+                print('Steering motor needs to be connected to ' + str(Port.B))
             raise
-
-        self.left_end = self.turn_motor.run_until_stalled(-200, duty_limit=30)
-        self.right_end = self.turn_motor.run_until_stalled(200, duty_limit=30)
+        print('--setting steering limits')
+        self.left_end = self.steering_motor.run_until_stalled(-200, duty_limit=60)
+        print('left limit: ' + str(self.left_end))
+        self.right_end = self.steering_motor.run_until_stalled(200, duty_limit=60)
+        print('right limit: ' + str(self.right_end))
+        self.steering_motor.run_target(200, 0)
 
         self.stop_motors()
 
@@ -204,25 +207,25 @@ class RunServoSteerMotors:
 
         # stop motors as this is bang-bang mode where a button
         #  needs to be held down for racer to run
-        self.stop()
+        self.stop_motors()
 
         #  handle button press
         if Button.LEFT_PLUS in remote_buttons:
-            self.turn_motor.dc(self.drive_speed)
+            self.steering_motor.dc(self.drive_speed)
 
         if Button.LEFT_MINUS in remote_buttons:
-            self.turn_motor.dc(-self.drive_speed)
+            self.steering_motor.dc(-self.drive_speed)
 
         if Button.RIGHT_PLUS in remote_buttons:
-            self.turn_motor.run_target(200, self.turn_angle)
+            self.steering_motor.run_target(200, self.turn_angle)
         elif Button.RIGHT_MINUS in remote_buttons:
-            self.turn_motor.run_target(200, -self.turn_angle)
+            self.steering_motor.run_target(200, -self.turn_angle)
         else:
-            self.turn_motor.run_target(200, 0)
+            self.steering_motor.run_target(200, 0)
 
     # stop all motors
     def stop_motors(self):
-        self.turn_motor.dc(0)
+        self.steering_motor.dc(0)
 
 
 ##################################################################################
@@ -246,10 +249,10 @@ class RunTrainMotor:
                 self.train_motor_1 = DCMotor(Port.A, Direction.COUNTERCLOCKWISE)
             else:
                 self.train_motor_1 = DCMotor(Port.A, Direction.CLOCKWISE)
-            print('Found motor on ' + str(Port.A))
+            print('Found train motor on ' + str(Port.A))
         except OSError as ex:
             if ex.errno == ENODEV:
-                print('Motor needs to be connected to ' + str(Port.A))
+                print('Train motor needs to be connected to ' + str(Port.A))
             raise
 
         try:
@@ -257,7 +260,7 @@ class RunTrainMotor:
                 self.train_motor_2 = DCMotor(Port.B, Direction.COUNTERCLOCKWISE)
             else:
                 self.train_motor_2 = DCMotor(Port.B, Direction.CLOCKWISE)
-            print('Found motor on ' + str(Port.B))
+            print('Found train motor on ' + str(Port.B))
         except Exception as e2:
             print(e2)
             self.train_motor_2 = None
