@@ -68,14 +68,14 @@ class RunSkidSteerMotors:
             self.right_motor_port = Port.B
 
         if reverse_left_motor:
-            self.left_motor_direction = Direction.COUNTERCLOCKWISE
-        else:
             self.left_motor_direction = Direction.CLOCKWISE
+        else:
+            self.left_motor_direction = Direction.COUNTERCLOCKWISE
 
         if reverse_right_motor:
-            self.right_motor_direction = Direction.CLOCKWISE
-        else:
             self.right_motor_direction = Direction.COUNTERCLOCKWISE
+        else:
+            self.right_motor_direction = Direction.CLOCKWISE
 
         self.drive_speed = drive_speed
         self.last_side = None
@@ -326,6 +326,7 @@ def convert_millis_hours_minutes_seconds(millis):
 
     return hours, minutes, seconds
 
+
 READY = const(0)
 ACTIVE = const(10)
 FINAL_MINUTE = const(20)
@@ -334,11 +335,11 @@ ENDED = const(40)
 
 ORANGE_HSV = Color(h=5, s=100, v=100)
 
+
 class CountdownTimer:
     """
     This allows the model to run for a set time
     """
-
 
     def __init__(self):
         # assign external objects to properties of the class
@@ -383,7 +384,6 @@ class CountdownTimer:
 
         return True
 
-
     def __start_countdown__(self):
         """
             start the countdown sequence by resetting timers and status
@@ -409,7 +409,7 @@ class CountdownTimer:
             wait_for_no_pressed_buttons()
 
         # if reset sequence pressed reset the countdown timer
-        if self.countdown_status == ENDED and all(i in pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
+        if all(i in pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
                 i in pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
             self.reset()
             wait_for_no_pressed_buttons()
