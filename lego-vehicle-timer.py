@@ -1,4 +1,5 @@
 # Timed train and vehicle program for interactive displays
+# Copyright Etendut
 # licence MIT
 
 from pybricks.parameters import Color, Side, Button, Port, Direction
@@ -18,7 +19,7 @@ COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right cente
 # motor setup
 # 'train' - Expects a train motor on Port A, and an optional train motor on Port B
 # 'skid_steer' - Expects a DC motor on Port and Port B
-# 'servo_steer'  - Expects a DC motor on Port A and a self centering Servo motor on Port B
+# 'servo_steer'  - Expects a DC motor on Port A and a servo type motor on Port B
 #
 VEHICLE_TYPE = 'skid_steer'  # must be one of 'skid_steer', 'servo_steer' or 'train'
 
