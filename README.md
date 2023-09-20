@@ -19,7 +19,7 @@ A program to enable a time limited running of a lego vehicle.
 ## How do I get set up?
 
 - Use [PyBricks](https://code.pybricks.com/) to configure your hub
-- load [lego-vehicle-timer](lego-vehicle-timer.py) into PyBricks
+- load [lego_vehicle_timer](lego_vehicle_timer.py) into PyBricks
 - configure the settings as per below Configuration
 - flash to hub using PyBricks
 
