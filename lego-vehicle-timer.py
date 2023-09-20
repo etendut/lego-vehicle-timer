@@ -11,17 +11,19 @@ print('Version 1.0.0')
 #  Settings
 ##################################################################################
 
-# countdown time settings
-COUNTDOWN_LIMIT_MINUTES = const(
-    3)  # run for (x) minutes, min 1 minute, max up to you. the default of 3 minutes is play tested :).
-# c = center button, + = + button, - = - button
-COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
-# motor setup
+# vehicle type
 # 'train' - Expects a train motor on Port A, and an optional train motor on Port B
 # 'skid_steer' - Expects a DC motor on Port and Port B
 # 'servo_steer'  - Expects a DC motor on Port A and a servo type motor on Port B
 #
 VEHICLE_TYPE = 'skid_steer'  # must be one of 'skid_steer', 'servo_steer' or 'train'
+
+# countdown time settings
+COUNTDOWN_LIMIT_MINUTES = const(
+    3)  # run for (x) minutes, min 1 minute, max up to you. the default of 3 minutes is play tested :).
+# c = center button, + = + button, - = - button
+COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
+
 
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP = const(10)  # the amount each button press changes the train speed
@@ -38,9 +40,9 @@ SKID_STEER_REVERSE_RIGHT_MOTOR = False  # set to True if remote + button cause m
 
 # servo steer settings
 SERVO_STEER_SPEED = const(80)  # set between 50 and 100
-SERVO_STEER_TURN_ANGLE = const(45)
-SERVO_STEER_REVERSE_DRIVE_MOTOR = False
-SERVO_STEER_REVERSE_TURN_MOTOR = False
+SERVO_STEER_TURN_ANGLE = const(45) # angle to turn wheels
+SERVO_STEER_REVERSE_DRIVE_MOTOR = False  # set to True if remote + button cause motor to run backwards
+SERVO_STEER_REVERSE_TURN_MOTOR = False # set to True if remote + button cause motor to turn wrong way
 
 
 ##################################################################################
