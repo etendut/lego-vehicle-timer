@@ -7,7 +7,7 @@ from pybricks.pupdevices import DCMotor, Motor, Remote
 from pybricks.tools import wait, StopWatch
 from uerrno import ENODEV
 
-print('Version 1.1.0')
+print('Version 1.1.1')
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -247,27 +247,35 @@ class RunTrainMotor:
         self.max_speed = max_speed
         self.speed_step = speed_step
         self.current_motor_speed = 0
-
+        motor_found = False
         try:
             if reverse_motor:
                 self.train_motor_1 = DCMotor(Port.A, Direction.COUNTERCLOCKWISE)
             else:
                 self.train_motor_1 = DCMotor(Port.A, Direction.CLOCKWISE)
             print('Found train motor on ' + str(Port.A))
+            motor_found = True
         except OSError as ex:
-            if ex.errno == ENODEV:
-                print('Train motor needs to be connected to ' + str(Port.A))
-            raise
+            pass
+            self.train_motor_1 = None
+            # ignore not found first motor
 
-        try:
-            if reverse_motor_2:
-                self.train_motor_2 = DCMotor(Port.B, Direction.COUNTERCLOCKWISE)
-            else:
-                self.train_motor_2 = DCMotor(Port.B, Direction.CLOCKWISE)
-            print('Found train motor on ' + str(Port.B))
-        except Exception as e2:
-            print(e2)
-            self.train_motor_2 = None
+        if not motor_found:
+            try:
+                if reverse_motor_2:
+                    self.train_motor_2 = DCMotor(Port.B, Direction.COUNTERCLOCKWISE)
+                else:
+                    self.train_motor_2 = DCMotor(Port.B, Direction.CLOCKWISE)
+                print('Found train motor on ' + str(Port.B))
+                motor_found = True
+            except Exception as e2:
+                pass
+                # ignore not found
+                self.train_motor_2 = None
+
+        if not motor_found:
+            raise Exception ('Train motor needs to be connected to ' + str(Port.A) 
+            + ' or ' + str(Port.B))
 
     def handle_remote_press(self):
         """
