@@ -1,13 +1,16 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
 # licence MIT
+from typing import Union
 
+from micropython import const
+from pybricks.hubs import CityHub, TechnicHub
 from pybricks.parameters import Color, Side, Button, Port, Direction
 from pybricks.pupdevices import DCMotor, Motor, Remote
 from pybricks.tools import wait, StopWatch
 from uerrno import ENODEV
 
-print('Version 1.1.1')
+print('Version 1.3.0')
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -17,36 +20,65 @@ print('Version 1.1.1')
 # 'skid_steer' - Expects a DC motor on Port and Port B
 # 'servo_steer'  - Expects a DC motor on Port A and a servo type motor on Port B
 #
-VEHICLE_TYPE = 'servo_steer'  # must be one of 'skid_steer', 'servo_steer' or 'train'
+VEHICLE_TYPE = 'train'  # must be one of 'skid_steer', 'servo_steer' or 'train'
 
 # countdown time settings
-COUNTDOWN_LIMIT_MINUTES = const(
+COUNTDOWN_LIMIT_MINUTES: int = const(
     3)  # run for (x) minutes, min 1 minute, max up to you. the default of 3 minutes is play tested :).
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
 # Train mode settings
-TRAIN_MOTOR_SPEED_STEP = const(10)  # the amount each button press changes the train speed
-TRAIN_MOTOR_MIN_SPEED = const(30)  # lowest speed the train will go set between 30 and 100
-TRAIN_MOTOR_MAX_SPEED = const(80)  # set between 80 and 100
-TRAIN_REVERSE_MOTOR_1 = False  # set to True if remote + button cause motor to run backwards
-TRAIN_REVERSE_MOTOR_2 = True  # only used if a second train motor is on Port B
+TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed
+TRAIN_MOTOR_MIN_SPEED: int = const(30)  # lowest speed the train will go set between 30 and 100
+TRAIN_MOTOR_MAX_SPEED: int = const(80)  # set between 80 and 100
+TRAIN_REVERSE_MOTOR_1: bool = False  # set to True if remote + button cause motor to run backwards
+TRAIN_REVERSE_MOTOR_2: bool = True  # only used if a second train motor is on Port B
 
 # skid steer dual motor settings
-SKID_STEER_SPEED = const(80)  # set between 50 and 100
-SKID_STEER_SWAP_MOTOR_SIDES = False  # set to True if Left/Right remote buttons are backwards
-SKID_STEER_REVERSE_LEFT_MOTOR = False  # set to True if remote + button cause motor to run backwards
-SKID_STEER_REVERSE_RIGHT_MOTOR = False  # set to True if remote + button cause motor to run backwards
+SKID_STEER_SPEED: int = const(80)  # set between 50 and 100
+SKID_STEER_SWAP_MOTOR_SIDES: bool = False  # set to True if Left/Right remote buttons are backwards
+SKID_STEER_REVERSE_LEFT_MOTOR: bool = False  # set to True if remote + button cause motor to run backwards
+SKID_STEER_REVERSE_RIGHT_MOTOR: bool = False  # set to True if remote + button cause motor to run backwards
 
 # servo steer settings
-SERVO_STEER_SPEED = const(80)  # set between 50 and 100
-SERVO_STEER_TURN_ANGLE = const(45)  # angle to turn wheels
-SERVO_STEER_REVERSE_DRIVE_MOTOR = False  # set to True if remote + button cause motor to run backwards
-SERVO_STEER_REVERSE_TURN_MOTOR = False  # set to True if remote + button cause motor to turn wrong way
+SERVO_STEER_SPEED: int = const(80)  # set between 50 and 100
+SERVO_STEER_TURN_ANGLE: int = const(45)  # angle to turn wheels
+SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = False  # set to True if remote + button cause motor to run backwards
+SERVO_STEER_REVERSE_TURN_MOTOR: bool = False  # set to True if remote + button cause motor to turn wrong way
 
 
 ##################################################################################
 # ---------Main program below, editing should not be needed -------------
+
+
+class ErrorFlashCodes:
+    def __init__(self):
+        self.flash_count = 1
+        self.loop_delay = 200.0
+
+    def set_error_no_remote(self):
+        self.flash_count = 2
+        self.loop_delay = 200.0
+
+    def set_error_no_motor_on_a(self):
+        self.flash_count = 3
+        self.loop_delay = 1500.0
+
+    def set_error_no_motor_on_b(self):
+        self.flash_count = 4
+        self.loop_delay = 1500.0
+
+    def flash_error_code(self):
+        """
+            this flashes the remote led
+        """
+        for f in range(self.flash_count):
+            hub.light.on(Color.RED)
+            wait(500)
+            hub.light.on(Color.NONE)
+            wait(200)
+        wait(self.loop_delay)
 
 
 ##################################################################################
@@ -58,8 +90,10 @@ class RunSkidSteerMotors:
         Handles driving a skid steer model and reverses control when it flips over
     """
 
-    def __init__(self, drive_speed, swap_motor_sides, reverse_left_motor, reverse_right_motor):
+    def __init__(self, error_flash_code_helper: ErrorFlashCodes, drive_speed: int, swap_motor_sides: bool,
+                 reverse_left_motor: bool, reverse_right_motor: bool):
 
+        self.error_flash_code = error_flash_code_helper
         if swap_motor_sides:
             self.left_motor_port = Port.B
             self.right_motor_port = Port.A
@@ -84,12 +118,14 @@ class RunSkidSteerMotors:
         except OSError as ex:
             if ex.errno == ENODEV:
                 print('Motor needs to be connected to ' + str(self.left_motor_port))
+                self.error_flash_code.set_error_no_motor_on_a()
             raise
         try:
             self.right_motor = DCMotor(self.right_motor_port, positive_direction=self.right_motor_direction)
         except OSError as ex:
             if ex.errno == ENODEV:
                 print('Motor needs to be connected to ' + str(self.right_motor_port))
+                self.error_flash_code.set_error_no_motor_on_b()
             raise
 
         self.stop_motors()
@@ -158,8 +194,9 @@ class RunServoSteerMotors:
         Expects a DC motor on Port A and a self centering Servo motor on Port B
     """
 
-    def __init__(self, drive_speed, turn_angle, reverse_drive_motor, reverse_steering_motor):
-
+    def __init__(self, error_flash_code_helper: ErrorFlashCodes, drive_speed: int, turn_angle: int,
+                 reverse_drive_motor: bool, reverse_steering_motor: bool):
+        self.error_flash_code = error_flash_code_helper
         self.drive_speed = drive_speed
         self.turn_angle = turn_angle
         try:
@@ -171,6 +208,7 @@ class RunServoSteerMotors:
         except OSError as ex:
             if ex.errno == ENODEV:
                 print('Drive motor needs to be connected to ' + str(Port.A))
+                self.error_flash_code.set_error_no_motor_on_a()
             raise
         try:
             if reverse_steering_motor:
@@ -181,6 +219,7 @@ class RunServoSteerMotors:
         except OSError as ex:
             if ex.errno == ENODEV:
                 print('Steering motor needs to be connected to ' + str(Port.B))
+                self.error_flash_code.set_error_no_motor_on_b()
             raise
 
         self.calibrate_steering()
@@ -241,13 +280,15 @@ class RunTrainMotor:
         Expects a train motor on Port A, and an optional train motor on Port B
     """
 
-    def __init__(self, min_speed, max_speed, speed_step, reverse_motor, reverse_motor_2):
-
+    def __init__(self, error_flash_code_helper: ErrorFlashCodes, min_speed: int, max_speed: int, speed_step: int,
+                 reverse_motor: bool, reverse_motor_2: bool):
+        self.error_flash_code = error_flash_code_helper
         self.min_speed = min_speed
         self.max_speed = max_speed
         self.speed_step = speed_step
         self.current_motor_speed = 0
         motor_found = False
+        # noinspection PyBroadException
         try:
             if reverse_motor:
                 self.train_motor_1 = DCMotor(Port.A, Direction.COUNTERCLOCKWISE)
@@ -255,12 +296,12 @@ class RunTrainMotor:
                 self.train_motor_1 = DCMotor(Port.A, Direction.CLOCKWISE)
             print('Found train motor on ' + str(Port.A))
             motor_found = True
-        except OSError as ex:
+        except:
             pass
-            self.train_motor_1 = None
-            # ignore not found first motor
+            self.train_motor_1 = None  # ignore not found first motor
 
         if not motor_found:
+            # noinspection PyBroadException
             try:
                 if reverse_motor_2:
                     self.train_motor_2 = DCMotor(Port.B, Direction.COUNTERCLOCKWISE)
@@ -268,14 +309,14 @@ class RunTrainMotor:
                     self.train_motor_2 = DCMotor(Port.B, Direction.CLOCKWISE)
                 print('Found train motor on ' + str(Port.B))
                 motor_found = True
-            except Exception as e2:
+            except:
                 pass
                 # ignore not found
                 self.train_motor_2 = None
 
         if not motor_found:
-            raise Exception ('Train motor needs to be connected to ' + str(Port.A) 
-            + ' or ' + str(Port.B))
+            self.error_flash_code.set_error_no_motor_on_a()
+            raise Exception('Train motor needs to be connected to ' + str(Port.A) + ' or ' + str(Port.B))
 
     def handle_remote_press(self):
         """
@@ -346,7 +387,7 @@ def wait_for_no_pressed_buttons():
         wait(100)
 
 
-def convert_millis_hours_minutes_seconds(millis):
+def convert_millis_hours_minutes_seconds(millis: int):
     """
         utility for making milliseconds hours/minutes/seconds
     :param millis:
@@ -359,11 +400,11 @@ def convert_millis_hours_minutes_seconds(millis):
     return hours, minutes, seconds
 
 
-READY = const(0)
-ACTIVE = const(10)
-FINAL_MINUTE = const(20)
-FINAL_20_SECS = const(30)
-ENDED = const(40)
+READY: int = const(0)
+ACTIVE: int = const(10)
+FINAL_MINUTE: int = const(20)
+FINAL_20_SECS: int = const(30)
+ENDED: int = const(40)
 
 ORANGE_HSV = Color(h=5, s=100, v=100)
 
@@ -540,7 +581,7 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 # Main program
 ##################################################################################
 
-hub = None
+hub: Union[CityHub, TechnicHub, None] = None
 
 
 def setup_hub():
@@ -548,15 +589,11 @@ def setup_hub():
 
     try:
         # this import will fail if the city hub is not connected.
-        from pybricks.hubs import CityHub
-
         hub = CityHub()
         print('Lego City Hub found')
         return False
     except ImportError:
         try:
-            from pybricks.hubs import TechnicHub
-
             hub = TechnicHub()
             print('Lego Technic Hub found')
             return True
@@ -566,71 +603,83 @@ def setup_hub():
             raise Exception('This program only support Lego City hub and Lego Technic hub')
 
 
-remote = None
+remote: Union[Remote, None] = None
 LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
 
 
-def setup_remote():
+def setup_remote(error_flash_code_helper, retry=5):
     global remote
 
     # Flashing led while waiting connection
     hub.light.blink(Color.WHITE, LED_FLASHING_SEQUENCE)
 
     # try to connect to remote multiple times
-    remote_retry_count = 0
+    remote_retry_count = 1
 
     while True:
+        # noinspection PyBroadException
         try:
-            print("--looking for remote")
+            print("--looking for remote try " + str(remote_retry_count))
             # Connect to the remote.
             remote = Remote()
             print("--remote connected.")
             break
-        except Exception as e:
-            if remote_retry_count > 20:
-                raise
-            print(e)
+        except:
+            if remote_retry_count >= retry:
+                error_flash_code_helper.set_error_no_remote()
+                raise  # ignore first 20 errors
         remote_retry_count += 1
         wait(50)
 
 
-if __name__ == "__main__":
+def main():
+    error_flash_code = ErrorFlashCodes()
     print('SETUP')
-    print('--setup hub')
-    hub_supports_flip = setup_hub()
-    print('--setup remote')
-    setup_remote()
-    print("--setup countdown")
-    countdown_timer = CountdownTimer()
-    print("--setup motors")
-    print(VEHICLE_TYPE)
-    if VEHICLE_TYPE == 'skid_steer':
-        drive_motors = RunSkidSteerMotors(SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES, SKID_STEER_REVERSE_LEFT_MOTOR,
-                                          SKID_STEER_REVERSE_RIGHT_MOTOR)
+    try:
+        print('--setup hub')
+        hub_supports_flip = setup_hub()
+        print("--setup countdown")
+        countdown_timer = CountdownTimer()
+        print("--setup motors")
+        print(VEHICLE_TYPE)
+        if VEHICLE_TYPE == 'skid_steer':
+            drive_motors = RunSkidSteerMotors(error_flash_code, SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES,
+                                              SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)
 
-    elif VEHICLE_TYPE == 'servo_steer':
-        drive_motors = RunServoSteerMotors(SERVO_STEER_SPEED, SERVO_STEER_TURN_ANGLE, SERVO_STEER_REVERSE_DRIVE_MOTOR,
-                                           SERVO_STEER_REVERSE_TURN_MOTOR)
+        elif VEHICLE_TYPE == 'servo_steer':
+            drive_motors = RunServoSteerMotors(error_flash_code, SERVO_STEER_SPEED, SERVO_STEER_TURN_ANGLE,
+                                               SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)
 
-    elif VEHICLE_TYPE == 'train':
-        drive_motors = RunTrainMotor(TRAIN_MOTOR_MIN_SPEED, TRAIN_MOTOR_MAX_SPEED, TRAIN_MOTOR_SPEED_STEP,
-                                     TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)
-    else:
-        raise Exception('VEHICLE_TYPE must be one of [skid_steer,servo_steer,train]')
-
-    # give everything a chance to warm up
-    wait(500)
-    print('SETUP complete')
-    countdown_timer.reset()
-    while True:
-        countdown_timer.check_remote_buttons()
-        if countdown_timer.has_time_remaining():
-            if hub_supports_flip:
-                drive_motors.handle_flip()
-            drive_motors.handle_remote_press()
+        elif VEHICLE_TYPE == 'train':
+            drive_motors = RunTrainMotor(error_flash_code, TRAIN_MOTOR_MIN_SPEED, TRAIN_MOTOR_MAX_SPEED,
+                                         TRAIN_MOTOR_SPEED_STEP, TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)
         else:
-            drive_motors.stop_motors()
+            raise Exception('VEHICLE_TYPE must be one of [skid_steer,servo_steer,train]')
 
-        countdown_timer.show_status()
-        # add a small delay to keep the loop stable and allow for events to occur
-        wait(100)
+        print('--setup remote')
+        setup_remote(error_flash_code)
+
+        # give everything a chance to warm up
+        wait(500)
+        print('SETUP complete')
+        countdown_timer.reset()
+        while True:
+            countdown_timer.check_remote_buttons()
+            if countdown_timer.has_time_remaining():
+                if hub_supports_flip:
+                    drive_motors.handle_flip()
+                drive_motors.handle_remote_press()
+            else:
+                drive_motors.stop_motors()
+
+            countdown_timer.show_status()
+            # add a small delay to keep the loop stable and allow for events to occur
+            wait(100)
+    except Exception as e:
+        print(e)
+        while True:
+            error_flash_code.flash_error_code()
+
+
+if __name__ == "__main__":
+    main()
