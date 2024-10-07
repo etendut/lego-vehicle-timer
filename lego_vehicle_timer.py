@@ -80,7 +80,7 @@ class ErrorFlashCodes:
             hub.light.on(Color.NONE)
             wait(350)
         if self.flash_count > 1:
-            wait(1500)
+            wait(2000)
 
 
 
