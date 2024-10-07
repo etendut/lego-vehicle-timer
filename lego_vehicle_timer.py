@@ -508,7 +508,7 @@ class CountdownTimer:
     def show_status(self):
         global hub
         if self.countdown_status == READY:
-            self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.RED, 500)
+            self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.BLUE, 500)
         elif self.countdown_status == ACTIVE:
             hub.light.on(Color.GREEN)
             remote.light.on(Color.GREEN)
@@ -517,8 +517,8 @@ class CountdownTimer:
         elif self.countdown_status == FINAL_MINUTE:
             self.__flash_remote_and_hub_light__(ORANGE_HSV, 500, Color.NONE, 250)
         elif self.countdown_status == ENDED:
-            hub.light.on(Color.RED)
-            remote.light.on(Color.RED)
+            hub.light.on(ORANGE_HSV)
+            remote.light.on(ORANGE_HSV)
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
