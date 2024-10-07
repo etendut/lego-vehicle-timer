@@ -1,10 +1,12 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
 # licence MIT
-from typing import Union
-
+try:
+    from typing import Union
+except ImportError:
+    def Union():
+        pass
 from micropython import const
-from pybricks.hubs import CityHub, TechnicHub
 from pybricks.parameters import Color, Side, Button, Port, Direction
 from pybricks.pupdevices import DCMotor, Motor, Remote
 from pybricks.tools import wait, StopWatch
@@ -54,31 +56,32 @@ SERVO_STEER_REVERSE_TURN_MOTOR: bool = False  # set to True if remote + button c
 
 class ErrorFlashCodes:
     def __init__(self):
-        self.flash_count = 1
-        self.loop_delay = 200.0
-
-    def set_error_no_remote(self):
-        self.flash_count = 2
-        self.loop_delay = 200.0
+        self.flash_count = 1 #Other errors
 
     def set_error_no_motor_on_a(self):
-        self.flash_count = 3
-        self.loop_delay = 1500.0
+        self.flash_count = 2
 
     def set_error_no_motor_on_b(self):
+        self.flash_count = 3
+
+    def set_error_no_remote(self):
         self.flash_count = 4
-        self.loop_delay = 1500.0
 
     def flash_error_code(self):
         """
             this flashes the remote led
         """
+
+        global hub
+
         for f in range(self.flash_count):
             hub.light.on(Color.RED)
-            wait(500)
+            wait(350)
             hub.light.on(Color.NONE)
-            wait(200)
-        wait(self.loop_delay)
+            wait(350)
+        if self.flash_count > 1:
+            wait(1500)
+
 
 
 ##################################################################################
@@ -135,6 +138,7 @@ class RunSkidSteerMotors:
             swap the motors so that the left and right controls are the same when it flips
         :return:
         """
+        global hub
         # Check which side of the hub is up.
         up_side = hub.imu.up()
 
@@ -500,6 +504,7 @@ class CountdownTimer:
             wait_for_no_pressed_buttons()
 
     def show_status(self):
+        global hub
         if self.countdown_status == READY:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.RED, 500)
         elif self.countdown_status == ACTIVE:
@@ -521,6 +526,7 @@ class CountdownTimer:
         :param off_color:
         :param off_msec:
         """
+        global hub
         # we use a timer to make it a non-blocking call
         if self.led_flash_stopwatch.time() > (on_msec + off_msec):
             self.led_flash_stopwatch.reset()
@@ -577,11 +583,36 @@ def code_to_button_press_hash(button_code):
 
 PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_press_hash(COUNTDOWN_RESET_CODE)
 
+
 ##################################################################################
 # Main program
 ##################################################################################
+class MockLight:
+    """For typing only, this will be replaced by CityHub or TechnicHub"""
 
-hub: Union[CityHub, TechnicHub, None] = None
+    def blink(self, col, seq):
+        pass
+
+    def on(self, color):
+        pass
+
+
+class MockIMU:
+    """For typing only, this will be replaced by TechnicHub"""
+
+    def up(self) -> Side:
+        pass
+
+
+class MockHub:
+    """For typing only, this will be replaced by CityHub or TechnicHub"""
+
+    def __init__(self):
+        self.imu = MockIMU()
+        self.light = MockLight()
+
+
+hub: MockHub = MockHub()
 
 
 def setup_hub():
@@ -589,11 +620,14 @@ def setup_hub():
 
     try:
         # this import will fail if the city hub is not connected.
+        from pybricks.hubs import CityHub
         hub = CityHub()
         print('Lego City Hub found')
         return False
-    except ImportError:
+    except ImportError as ex1:
+        print(ex1)
         try:
+            from pybricks.hubs import TechnicHub
             hub = TechnicHub()
             print('Lego Technic Hub found')
             return True
@@ -608,6 +642,7 @@ LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
 
 
 def setup_remote(error_flash_code_helper, retry=5):
+    global hub
     global remote
 
     # Flashing led while waiting connection
@@ -635,9 +670,9 @@ def setup_remote(error_flash_code_helper, retry=5):
 def main():
     error_flash_code = ErrorFlashCodes()
     print('SETUP')
+    print('--setup hub')
+    hub_supports_flip = setup_hub()
     try:
-        print('--setup hub')
-        hub_supports_flip = setup_hub()
         print("--setup countdown")
         countdown_timer = CountdownTimer()
         print("--setup motors")
