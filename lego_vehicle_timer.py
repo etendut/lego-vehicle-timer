@@ -12,7 +12,7 @@ from pybricks.pupdevices import DCMotor, Motor, Remote
 from pybricks.tools import wait, StopWatch
 from uerrno import ENODEV
 
-print('Version 1.3.0')
+print('Version 1.3.1')
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -508,7 +508,7 @@ class CountdownTimer:
     def show_status(self):
         global hub
         if self.countdown_status == READY:
-            self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.BLUE, 500)
+            self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == ACTIVE:
             hub.light.on(Color.GREEN)
             remote.light.on(Color.GREEN)

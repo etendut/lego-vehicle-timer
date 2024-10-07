@@ -38,6 +38,33 @@ Left buttons left motor, Right buttons right motor
 Left buttons for drive, Right buttons for steering
 <img src="images/ServoSteerRemote.jpg" alt="Servo Steer Remote Instructions" style="max-height:200px;" />
 
+## Light Codes
+
+### Hub Light Codes
+
+Once the program starts certain errors will be flashed on the hub
+
+|                                                                                                                                                  | Sequence                   | Meaning             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------- |
+| <img src="images/blue_dot.png" alt="Blue" />                                                                                                     | BLUE On                    | Program not running |
+| <img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White" /> | 3 WHITE flashes then pause | Looking for remote  |
+| <img src="images/green_dot_f.png" alt="Green" />                                                                                                 | GREEN flashing             | Ready for start     |
+| <img src="images/green_dot.png" alt="Green" />                                                                                                   | GREEN On                   | Timer Running       |
+| <img src="images/orange_dot_fs.png" alt="Orange" />                                                                                              | ORANGE slow flashing       | Last 60 secs        |
+| <img src="images/orange_dot_f.png" alt="Orange" />                                                                                               | ORANGE fast flashing       | Last 20 secs        |
+| <img src="images/orange_dot.png" alt="Orange" />                                                                                                 | ORANGE On                  | Time complete       |
+
+### Error Codes
+
+Once the program starts certain errors will be flashed on the hub
+
+|                                                                                                                                                                                  | Sequence                  | Meaning                 |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------- |
+| <img src="images/red_dot_f.png" alt="Red" />                                                                                                                                     | Constant RED Flash on/off | Other Error             |
+| <img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" />                                                                                         | 2 RED flashes then pause  | Missing Motor on Port A |
+| <img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" />                                             | 3 RED flashes then pause  | Missing Motor on Port B |
+| <img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /> | 4 RED flashes then pause  | Missing Remote          |
+
 ## Configuration
 
 All configuration should be done in [lego_vehicle_timer](lego_vehicle_timer.py) before installing
@@ -79,36 +106,11 @@ SERVO_STEER_TURN_ANGLE = const(45) # angle to turn wheels
 SERVO_STEER_REVERSE_DRIVE_MOTOR = False # set to True if remote + button cause motor to run backwards
 SERVO_STEER_REVERSE_TURN_MOTOR = False # set to True if remote + button cause motor to turn wrong way
 
-### Hub Light Colors
-
-Once the program starts certain errors will be flashed on the hub
-
-|                                                                                                                                                  | Sequence                   | Meaning             |
-| ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------- |
-| <img src="images/blue_dot.png" alt="Blue" />                                                                                                     | BLUE On                    | Program not running |
-| <img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White" /> | 3 WHITE flashes then pause | Looking for remote  |
-| <img src="images/blue_dot_f.png" alt="Blue" /><img src="images/green_dot_f.png" alt="Green" />                                                   | BLUE/GREEN flashing        | Ready for start     |
-| <img src="images/green_dot.png" alt="Green" />                                                                                                   | GREEN On                   | Timer Running       |
-| <img src="images/orange_dot_fs.png" alt="Orange" />                                                                                              | ORANGE slow flashing       | Last 60 secs        |
-| <img src="images/orange_dot_f.png" alt="Orange" />                                                                                               | ORANGE fast flashing       | Last 20 secs        |
-| <img src="images/orange_dot.png" alt="Orange" />                                                                                                 | ORANGE On                  | Time complete       |
-
-### Error Codes
-
-Once the program starts certain errors will be flashed on the hub
-
-|                                                                                                                                                                                  | Sequence                  | Meaning                 |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------- |
-| <img src="images/red_dot_f.png" alt="Red" />                                                                                                                                     | Constant RED Flash on/off | Other Error             |
-| <img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" />                                                                                         | 2 RED flashes then pause  | Missing Motor on Port A |
-| <img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" />                                             | 3 RED flashes then pause  | Missing Motor on Port B |
-| <img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /><img src="images/red_dot_f.png" alt="Red" /> | 4 RED flashes then pause  | Missing Remote          |
-
 ## Releases
 
-### Version 1.3.0 (current)
+### Version 1.3.1 (current)
 
-Add error flash code for common failures
+Add error and hub flash codes
 
 ### Version 1.1.0
 
