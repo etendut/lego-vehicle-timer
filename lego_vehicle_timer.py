@@ -292,6 +292,8 @@ class RunTrainMotor:
         self.speed_step = speed_step
         self.current_motor_speed = 0
         motor_found = False
+        self.train_motor_1 = None
+        self.train_motor_2 = None
         # noinspection PyBroadException
         try:
             if reverse_motor:
