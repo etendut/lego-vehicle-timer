@@ -412,8 +412,6 @@ FINAL_MINUTE: int = const(20)
 FINAL_20_SECS: int = const(30)
 ENDED: int = const(40)
 
-ORANGE_HSV = Color(h=5, s=100, v=100)
-
 
 class CountdownTimer:
     """
@@ -513,12 +511,12 @@ class CountdownTimer:
             hub.light.on(Color.GREEN)
             remote.light.on(Color.GREEN)
         elif self.countdown_status == FINAL_20_SECS:
-            self.__flash_remote_and_hub_light__(ORANGE_HSV, 200, Color.NONE, 100)
+            self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
         elif self.countdown_status == FINAL_MINUTE:
-            self.__flash_remote_and_hub_light__(ORANGE_HSV, 500, Color.NONE, 250)
+            self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
         elif self.countdown_status == ENDED:
-            hub.light.on(ORANGE_HSV)
-            remote.light.on(ORANGE_HSV)
+            hub.light.on(Color.ORANGE)
+            remote.light.on(Color.ORANGE)
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
