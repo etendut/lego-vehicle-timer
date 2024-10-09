@@ -74,8 +74,8 @@ with [PyBricks](https://code.pybricks.com/)
 
 VEHICLE_TYPE = 'skid_steer' # must be one of 'skid_steer', 'servo_steer' or 'train'
 
-train - Expects a train motor on Port A, and an optional train motor on Port B<br>
-skid_steer - Expects a DC motor on Port and Port B<br>
+train - Expects a train motor on Port A, and an optional train motor or light on Port B<br>
+skid_steer - Expects a DC motor on Port A and Port B<br>
 servo_steer - Expects a DC motor on Port A and a motor with a rotation sensor on Port B<br>
 
 ### Countdown time settings
@@ -108,7 +108,11 @@ SERVO_STEER_REVERSE_TURN_MOTOR = False # set to True if remote + button cause mo
 
 ## Releases
 
-### Version 1.3.1 (current)
+### Version 1.4.0 (current)
+
+Allow trains to have lights plugged into port B
+
+### Version 1.3.1
 
 Add error and hub flash codes
 

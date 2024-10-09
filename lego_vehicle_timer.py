@@ -8,11 +8,11 @@ except ImportError:
         pass
 from micropython import const
 from pybricks.parameters import Color, Side, Button, Port, Direction
-from pybricks.pupdevices import DCMotor, Motor, Remote
+from pybricks.pupdevices import DCMotor, Motor, Remote, Light
 from pybricks.tools import wait, StopWatch
 from uerrno import ENODEV
 
-print('Version 1.3.1')
+print('Version 1.4.0')
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -292,37 +292,53 @@ class RunTrainMotor:
         self.speed_step = speed_step
         self.current_motor_speed = 0
         motor_found = False
-        self.train_motor_1 = None
-        self.train_motor_2 = None
+        self.train_motor_port_a = None
+        self.train_motor_port_b = None
         # noinspection PyBroadException
         try:
             if reverse_motor:
-                self.train_motor_1 = DCMotor(Port.A, Direction.COUNTERCLOCKWISE)
+                self.train_motor_port_a = DCMotor(Port.A, Direction.COUNTERCLOCKWISE)
             else:
-                self.train_motor_1 = DCMotor(Port.A, Direction.CLOCKWISE)
+                self.train_motor_port_a = DCMotor(Port.A, Direction.CLOCKWISE)
             print('Found train motor on ' + str(Port.A))
             motor_found = True
         except:
             pass
-            self.train_motor_1 = None  # ignore not found first motor
+            self.train_motor_port_a = None  # ignore not found first motor
 
         if not motor_found:
             # noinspection PyBroadException
             try:
                 if reverse_motor_2:
-                    self.train_motor_2 = DCMotor(Port.B, Direction.COUNTERCLOCKWISE)
+                    self.train_motor_port_b = DCMotor(Port.B, Direction.COUNTERCLOCKWISE)
                 else:
-                    self.train_motor_2 = DCMotor(Port.B, Direction.CLOCKWISE)
+                    self.train_motor_port_b = DCMotor(Port.B, Direction.CLOCKWISE)
                 print('Found train motor on ' + str(Port.B))
                 motor_found = True
             except:
                 pass
                 # ignore not found
-                self.train_motor_2 = None
+                self.train_motor_port_b = None
 
         if not motor_found:
             self.error_flash_code.set_error_no_motor_on_a()
             raise Exception('Train motor needs to be connected to ' + str(Port.A) + ' or ' + str(Port.B))
+
+        self.lights = None
+        if self.train_motor_port_a is None:
+            # noinspection PyBroadException
+            try:
+                self.lights = Light(Port.A)
+                print('Found lights on ' + str(Port.B))
+            except:
+                pass
+        if self.train_motor_port_b is None:
+            # noinspection PyBroadException
+            try:
+                self.lights = Light(Port.B)
+                print('Found lights on ' + str(Port.B))
+            except:
+                pass
 
     def handle_remote_press(self):
         """
@@ -364,9 +380,16 @@ class RunTrainMotor:
             if self.current_motor_speed < -self.max_speed:  # max reverse
                 self.current_motor_speed = -self.max_speed
 
-        self.train_motor_1.dc(self.current_motor_speed)
-        if self.train_motor_2:
-            self.train_motor_2.dc(self.current_motor_speed)
+        self.train_motor_port_a.dc(self.current_motor_speed)
+        if self.train_motor_port_b:
+            self.train_motor_port_b.dc(self.current_motor_speed)
+        # turn the lights on
+        if self.current_motor_speed != 0:
+            if self.lights is not None:
+                self.lights.on(100)
+        else:
+            if self.lights is not None:
+                self.lights.off()
 
     def handle_flip(self):
         """
@@ -377,9 +400,11 @@ class RunTrainMotor:
 
     # stop all motors
     def stop_motors(self):
-        self.train_motor_1.dc(0)
-        if self.train_motor_2:
-            self.train_motor_2.dc(0)
+        self.train_motor_port_a.dc(0)
+        if self.train_motor_port_b:
+            self.train_motor_port_b.dc(0)
+        if self.lights is not None:
+            self.lights.off()
 
 
 ##################################################################################
