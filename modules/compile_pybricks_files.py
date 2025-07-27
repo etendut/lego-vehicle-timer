@@ -19,38 +19,38 @@ def main():
             vehicle_section = False
             drive_section = False
             for line in vehicle_file:
-                if line.startswith('#IMPORTS_END'):
+                if line.startswith('# IMPORTS_END'):
                     import_section = False
                 if import_section:
                     import_section_content += line
-                if line.startswith('#IMPORTS_START'):
+                if line.startswith('# IMPORTS_START'):
                     import_section = True
 
-                if line.startswith('#VARS_END'):
+                if line.startswith('# VARS_END'):
                     vars_section = False
                 if vars_section:
                     vars_section_content += line
-                if line.startswith('#VARS_START'):
+                if line.startswith('# VARS_START'):
                     vars_section = True
 
-                if line.startswith('#MODULE_END'):
+                if line.startswith('# MODULE_END'):
                     vehicle_section = False
                 if vehicle_section:
                     vehicle_section_content += line
-                if line.startswith('#MODULE_START'):
+                if line.startswith('# MODULE_START'):
                     vehicle_section = True
 
-                if line.startswith('#DRIVE_SETUP_END'):
+                if line.startswith('# DRIVE_SETUP_END'):
                     drive_section = False
                 if drive_section:
                     drive_section_content += line
-                if line.startswith('#DRIVE_SETUP_START'):
+                if line.startswith('# DRIVE_SETUP_START'):
                     drive_section = True
 
 
-        new_content = base_content.replace("#IMPORT_SECTION",import_section_content)
-        new_content = new_content.replace("#VARS_SECTION",vars_section_content)
-        new_content = new_content.replace("#VEHICLE_SECTION",vehicle_section_content)
+        new_content = base_content.replace("# IMPORT_SECTION",import_section_content)
+        new_content = new_content.replace("# VARS_SECTION",vars_section_content)
+        new_content = new_content.replace("# VEHICLE_SECTION",vehicle_section_content)
         new_content = new_content.replace("drive_motors = MotorHelper(False, False)",drive_section_content)
 
         new_path = Path(folder_path.parent.resolve(),f"lego_vehicle_timer_{vehicle}.py")

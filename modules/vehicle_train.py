@@ -2,22 +2,26 @@ from pybricks.parameters import Button
 from pybricks.pupdevices import Remote
 from micropython import const
 from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
+
 error_flash_code = ErrorFlashCodes()
 remote: Remote | None = None
 
-#IMPORTS_START
+# IMPORTS_START
 from pybricks.parameters import Port, Direction
 from pybricks.pupdevices import DCMotor, Light
-#IMPORTS_END
-#VARS_START
+
+# IMPORTS_END
+# VARS_START
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed
 TRAIN_MOTOR_MIN_SPEED: int = const(30)  # lowest speed the train will go set between 30 and 100
 TRAIN_MOTOR_MAX_SPEED: int = const(80)  # set between 80 and 100
 TRAIN_REVERSE_MOTOR_1: bool = False  # set to True if remote + button cause motor to run backwards
 TRAIN_REVERSE_MOTOR_2: bool = True  # only used if a second train motor is on Port B
-#VARS_END
-#MODULE_START
+
+
+# VARS_END
+# MODULE_START
 ##################################################################################
 # Train motor helper
 ##################################################################################
@@ -143,7 +147,9 @@ class RunTrainMotor(MotorHelper):
             self.train_motor_port_b.dc(0)
         if self.lights is not None:
             self.lights.off()
-#MODULE_END
-#DRIVE_SETUP_START
-drive_motors = RunTrainMotor(error_flash_code, TRAIN_MOTOR_MIN_SPEED, TRAIN_MOTOR_MAX_SPEED, TRAIN_MOTOR_SPEED_STEP, TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)
-#DRIVE_SETUP_END
+
+
+# MODULE_END
+# DRIVE_SETUP_START
+drive_motors = RunTrainMotor(error_flash_code, TRAIN_MOTOR_MIN_SPEED, TRAIN_MOTOR_MAX_SPEED, TRAIN_MOTOR_SPEED_STEP,
+                             TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)  # DRIVE_SETUP_END

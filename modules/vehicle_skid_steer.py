@@ -1,25 +1,30 @@
 from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
+
 error_flash_code = ErrorFlashCodes()
 from micropython import const
 from pybricks.parameters import Side, Button
 from pybricks.pupdevices import Remote
 from pybricks.hubs import TechnicHub
+
 hub: TechnicHub | None = None
 remote: Remote | None = None
 
-#IMPORTS_START
+# IMPORTS_START
 from pybricks.parameters import Port, Direction
 from pybricks.pupdevices import DCMotor
 from uerrno import ENODEV
-#IMPORTS_END
-#VARS_START
+
+# IMPORTS_END
+# VARS_START
 # skid steer dual motor settings
 SKID_STEER_SPEED: int = const(80)  # set between 50 and 100
 SKID_STEER_SWAP_MOTOR_SIDES: bool = False  # set to True if Left/Right remote buttons are backwards
 SKID_STEER_REVERSE_LEFT_MOTOR: bool = False  # set to True if remote + button cause motor to run backwards
 SKID_STEER_REVERSE_RIGHT_MOTOR: bool = False  # set to True if remote + button cause motor to run backwards
-#VARS_END
-#MODULE_START
+
+
+# VARS_END
+# MODULE_START
 ##################################################################################
 # Skid steer helper
 ##################################################################################
@@ -124,7 +129,9 @@ class RunSkidSteerMotors(MotorHelper):
     def stop_motors(self):
         self.left_motor.dc(0)
         self.right_motor.dc(0)
-#MODULE_END
-#DRIVE_SETUP_START
-drive_motors = RunSkidSteerMotors(error_flash_code, SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES, SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)
-#DRIVE_SETUP_END
+
+
+# MODULE_END
+# DRIVE_SETUP_START
+drive_motors = RunSkidSteerMotors(error_flash_code, SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES,
+                                  SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)  # DRIVE_SETUP_END

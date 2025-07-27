@@ -1,23 +1,28 @@
 from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
+
 error_flash_code = ErrorFlashCodes()
 from micropython import const
 from pybricks.parameters import Button
 from pybricks.pupdevices import Remote
+
 remote: Remote | None = None
 
-#IMPORTS_START
+# IMPORTS_START
 from pybricks.parameters import Port, Direction
 from pybricks.pupdevices import DCMotor, Motor
 from uerrno import ENODEV
-#IMPORTS_END
-#VARS_START
+
+# IMPORTS_END
+# VARS_START
 # servo steer settings
 SERVO_STEER_SPEED: int = const(80)  # set between 50 and 100
 SERVO_STEER_TURN_ANGLE: int = const(45)  # angle to turn wheels
 SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = False  # set to True if remote + button cause motor to run backwards
 SERVO_STEER_REVERSE_TURN_MOTOR: bool = False  # set to True if remote + button cause motor to turn wrong way
-#VARS_END
-#MODULE_START
+
+
+# VARS_END
+# MODULE_START
 ##################################################################################
 # Servo steer helper
 ##################################################################################
@@ -98,8 +103,9 @@ class RunServoSteerMotors(MotorHelper):
     def stop_motors(self):
         self.drive_motor.dc(0)
         self.steering_motor.run_target(200, 0)
-#MODULE_END
-#DRIVE_SETUP_START
-drive_motors = RunServoSteerMotors(error_flash_code, SERVO_STEER_SPEED, SERVO_STEER_TURN_ANGLE, SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)
-#DRIVE_SETUP_END
 
+
+# MODULE_END
+# DRIVE_SETUP_START
+drive_motors = RunServoSteerMotors(error_flash_code, SERVO_STEER_SPEED, SERVO_STEER_TURN_ANGLE,
+                                   SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)  # DRIVE_SETUP_END

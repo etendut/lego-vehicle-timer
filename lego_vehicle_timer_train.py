@@ -6,8 +6,10 @@ from micropython import const
 from pybricks.parameters import Color, Side, Button
 from pybricks.pupdevices import Remote
 from pybricks.tools import wait, StopWatch
+
 from pybricks.parameters import Port, Direction
 from pybricks.pupdevices import DCMotor, Light
+
 
 
 print('Version 1.4.0')
@@ -21,12 +23,15 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
+
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed
 TRAIN_MOTOR_MIN_SPEED: int = const(30)  # lowest speed the train will go set between 30 and 100
 TRAIN_MOTOR_MAX_SPEED: int = const(80)  # set between 80 and 100
 TRAIN_REVERSE_MOTOR_1: bool = False  # set to True if remote + button cause motor to run backwards
 TRAIN_REVERSE_MOTOR_2: bool = True  # only used if a second train motor is on Port B
+
+
 
 
 ##################################################################################
@@ -85,8 +90,6 @@ class MotorHelper:
         pass
 
 
-
-
 ##################################################################################
 # Countdown helper
 ##################################################################################
@@ -126,6 +129,7 @@ class CountdownTimer:
     def __init__(self):
         # assign external objects to properties of the class
         self.countdown_status = None
+        self.last_countdown_status = None
 
         # Start a timer.
         self.countdown_stopwatch = StopWatch()
@@ -179,6 +183,7 @@ class CountdownTimer:
     def reset(self):
         print('countdown time reset, press Remote CENTER to restart countdown')
         self.countdown_status = READY
+        self.last_countdown_status = None
 
     def check_remote_buttons(self):
         """
@@ -210,6 +215,8 @@ class CountdownTimer:
 
     def show_status(self):
         global hub
+        if self.countdown_status == self.last_countdown_status:
+            return
         if self.countdown_status == READY:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == ACTIVE:
@@ -222,6 +229,7 @@ class CountdownTimer:
         elif self.countdown_status == ENDED:
             hub.light.on(Color.ORANGE)
             remote.light.on(Color.ORANGE)
+        self.last_countdown_status = self.countdown_status
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
@@ -371,6 +379,7 @@ def setup_remote(error_flash_code_helper, retry=5):
         remote_retry_count += 1
         wait(50)
 
+
 ##################################################################################
 # Train motor helper
 ##################################################################################
@@ -498,6 +507,8 @@ class RunTrainMotor(MotorHelper):
             self.lights.off()
 
 
+
+
 def main():
     error_flash_code = ErrorFlashCodes()
     print('SETUP')
@@ -506,7 +517,8 @@ def main():
         print("--setup countdown")
         countdown_timer = CountdownTimer()
         print("--setup motors")
-        drive_motors = RunTrainMotor(error_flash_code, TRAIN_MOTOR_MIN_SPEED, TRAIN_MOTOR_MAX_SPEED, TRAIN_MOTOR_SPEED_STEP, TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)
+        drive_motors = RunTrainMotor(error_flash_code, TRAIN_MOTOR_MIN_SPEED, TRAIN_MOTOR_MAX_SPEED, TRAIN_MOTOR_SPEED_STEP,
+                             TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)  # DRIVE_SETUP_END
 
 
         print('--setup remote')
@@ -518,9 +530,10 @@ def main():
         print('SETUP complete')
 
         countdown_timer.reset()
+        counter = 0
         while True:
             countdown_timer.check_remote_buttons()
-            if countdown_timer.has_time_remaining():
+            if counter % 10 != 0 or countdown_timer.has_time_remaining():
                 if drive_motors.supports_homing:
                     drive_motors.do_homing()
                 if drive_motors.supports_flip:
@@ -533,7 +546,8 @@ def main():
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
-            wait(100)
+            wait(10)
+            counter += 10
     except Exception as e:
         print(e)
         while True:

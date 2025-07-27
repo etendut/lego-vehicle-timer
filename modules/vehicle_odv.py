@@ -1,29 +1,30 @@
 from pybricks.tools import wait
 
 from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
+
 error_flash_code = ErrorFlashCodes()
 from pybricks.hubs import TechnicHub
 from pybricks.pupdevices import Remote
+
 hub: TechnicHub | None = None
 remote: Remote | None = None
 from pybricks.parameters import Button
 
-#IMPORTS_START
+# IMPORTS_START
 from micropython import mem_info
 from pybricks.pupdevices import Motor
-from pybricks.parameters import  Port, Direction
+from pybricks.parameters import Port, Direction
 from uerrno import ENODEV
-#IMPORTS_END
 
-#INCLUDE_AFTER_HERE
+# IMPORTS_END
 
-#VARS_START
+# VARS_START
 # odv settings
 ODV_SPEED: int = 50  # set between 50 and 80
 # X= obstacle, L = Load, U = Unload, # = grid tile
 ODV_GRID = ["###X#XX", "LX###XU", "###X###"]
-#VARS_END
-#MODULE_START
+# VARS_END
+# MODULE_START
 ##################################################################################
 # ODV helper
 ##################################################################################
@@ -47,12 +48,13 @@ UNLOAD = 'U'
 DEFAULT_GRID = ["###X#XX", "LX###XU", "###X###"]
 FINE_GRID_SIZE = 10
 
-GEAR_RATIO                      :int = 80       # Motor rotation angle per grid pitch (deg/pitch)
-MAX_MOTOR_ROT_SPEED             :int = 1400     # Max motor speed (deg/s) ~1500
+GEAR_RATIO: int = 80  # Motor rotation angle per grid pitch (deg/pitch)
+MAX_MOTOR_ROT_SPEED: int = 1400  # Max motor speed (deg/s) ~1500
 HOMING_MOTOR_ROT_SPEED: int = 200  # Homing speed (deg/s)
 HOMING_DUTY: int = 35  # Homing motor duty (%) (adjustment required)
 HOMING_OFFSET_ANGLE_X: int = 110  # X-axis offset distance (deg) (adjustment required)
 HOMING_OFFSET_ANGLE_Y: int = 110  # Y-axis offset distance (deg) (adjustment required)
+
 
 class ODVPosition:
     def __init__(self, x: int, y: int, direction: str = None):
@@ -66,10 +68,11 @@ class ODVPosition:
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 
+
 class ODVGrid:
     def __init__(self):
         self.coarse_grid = {}
-        self.grid ={}
+        self.grid = {}
         self.home = ODVPosition(5, 5)
         self.load_xy = None
         self.unload_xy = None
@@ -105,12 +108,10 @@ class ODVGrid:
         print('Grid Loaded')
 
     def can_unload(self, position: ODVPosition):
-        return False
-        # return position.value() == self.unload_xy.value()
+        return False  # return position.value() == self.unload_xy.value()
 
     def can_load(self, position: ODVPosition):
-        return False
-        # return position.value() == self.load_xy.value()
+        return False  # return position.value() == self.load_xy.value()
 
     def can_move(self, new_position: ODVPosition):
         """
@@ -118,11 +119,7 @@ class ODVGrid:
         :param new_position:
         :return:
         """
-        return True
-        # if self.width < new_position.x < -1 or self.height < new_position.y < -1:
-        #     return False
-        # grid_box = self.fine_grid[new_position.value()]
-        # return grid_box.box_type in [LOAD, UNLOAD, TRACK]
+        return True  # if self.width < new_position.x < -1 or self.height < new_position.y < -1:  #     return False  # grid_box = self.fine_grid[new_position.value()]  # return grid_box.box_type in [LOAD, UNLOAD, TRACK]
 
     def display(self, position: ODVPosition, robot_symbol: str):
         # Display the maze:
@@ -212,19 +209,19 @@ class RunODVMotors(MotorHelper):
         if direction not in DIRECTIONS:
             return position
         if direction == NORTH_WEST:
-            return ODVPosition(position.x-1, position.y - 1, direction)
+            return ODVPosition(position.x - 1, position.y - 1, direction)
         if direction == NORTH:
             return ODVPosition(position.x, position.y - 1, direction)
         if direction == NORTH_EAST:
-            return ODVPosition(position.x+1, position.y - 1, direction)
+            return ODVPosition(position.x + 1, position.y - 1, direction)
         if direction == EAST:
             return ODVPosition(position.x + 1, position.y, direction)
         if direction == SOUTH_EAST:
-            return ODVPosition(position.x+1, position.y + 1, direction)
+            return ODVPosition(position.x + 1, position.y + 1, direction)
         if direction == SOUTH:
             return ODVPosition(position.x, position.y + 1, direction)
         if direction == SOUTH_WEST:
-            return ODVPosition(position.x-1, position.y + 1, direction)
+            return ODVPosition(position.x - 1, position.y + 1, direction)
         if direction == WEST:
             return ODVPosition(position.x - 1, position.y, direction)
         return position
@@ -234,9 +231,7 @@ class RunODVMotors(MotorHelper):
         #     print('you need to unload first')
         #     return False
         # if self.grid.can_move(new_pos):
-        return True
-        # print('cannot move there')
-        # return False
+        return True  # print('cannot move there')  # return False
 
     def get_angular_grid_position(self) -> ODVPosition:
 
@@ -268,22 +263,13 @@ class RunODVMotors(MotorHelper):
         if direction in [SOUTH, SOUTH_EAST, SOUTH_WEST]:
             # self.y_motor.run_target(self.drive_speed, -90)
             self.y_motor.dc(self.drive_speed)
-        if direction in [EAST,NORTH_EAST,SOUTH_EAST]:
+        if direction in [EAST, NORTH_EAST, SOUTH_EAST]:
             # self.x_motor.run_target(self.drive_speed, 90)
             self.x_motor.dc(self.drive_speed)
         if direction in [WEST, NORTH_WEST, SOUTH_WEST]:
             self.x_motor.dc(-self.drive_speed)
 
-        # self.position = new_position
-        #
-        # # handle load/unload
-        # if self.position == self.grid.unload_xy:
-        #     wait(2000)
-        #     self.has_load = False
-        #
-        # if self.position == self.grid.load_xy:
-        #     wait(2000)  # async?
-        #     self.has_load = True
+        # self.position = new_position  #  # # handle load/unload  # if self.position == self.grid.unload_xy:  #     wait(2000)  #     self.has_load = False  #  # if self.position == self.grid.load_xy:  #     wait(2000)  # async?  #     self.has_load = True
 
     # def _bfs_path_to_position(self, end: ODVPosition):
     #     queue: Queue[list[ODVPosition]] = Queue()
@@ -353,7 +339,8 @@ class RunODVMotors(MotorHelper):
 
         self.x_motor.stop()
         self.y_motor.stop()
-#MODULE_END
-#DRIVE_SETUP_START
-drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)
-#DRIVE_SETUP_END
+
+
+# MODULE_END
+# DRIVE_SETUP_START
+drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)  # DRIVE_SETUP_END

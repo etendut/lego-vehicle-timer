@@ -6,7 +6,8 @@ from micropython import const
 from pybricks.parameters import Color, Side, Button
 from pybricks.pupdevices import Remote
 from pybricks.tools import wait, StopWatch
-#IMPORT_SECTION
+
+# IMPORT_SECTION
 
 print('Version 1.4.0')
 ##################################################################################
@@ -19,7 +20,8 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
-#VARS_SECTION
+
+# VARS_SECTION
 
 ##################################################################################
 # ---------Main program below, editing should not be needed -------------
@@ -77,8 +79,6 @@ class MotorHelper:
         pass
 
 
-
-
 ##################################################################################
 # Countdown helper
 ##################################################################################
@@ -118,6 +118,7 @@ class CountdownTimer:
     def __init__(self):
         # assign external objects to properties of the class
         self.countdown_status = None
+        self.last_countdown_status = None
 
         # Start a timer.
         self.countdown_stopwatch = StopWatch()
@@ -171,6 +172,7 @@ class CountdownTimer:
     def reset(self):
         print('countdown time reset, press Remote CENTER to restart countdown')
         self.countdown_status = READY
+        self.last_countdown_status = None
 
     def check_remote_buttons(self):
         """
@@ -202,6 +204,8 @@ class CountdownTimer:
 
     def show_status(self):
         global hub
+        if self.countdown_status == self.last_countdown_status:
+            return
         if self.countdown_status == READY:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == ACTIVE:
@@ -214,6 +218,7 @@ class CountdownTimer:
         elif self.countdown_status == ENDED:
             hub.light.on(Color.ORANGE)
             remote.light.on(Color.ORANGE)
+        self.last_countdown_status = self.countdown_status
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
@@ -363,7 +368,8 @@ def setup_remote(error_flash_code_helper, retry=5):
         remote_retry_count += 1
         wait(50)
 
-#VEHICLE_SECTION
+
+# VEHICLE_SECTION
 
 def main():
     error_flash_code = ErrorFlashCodes()
@@ -384,9 +390,10 @@ def main():
         print('SETUP complete')
 
         countdown_timer.reset()
+        counter = 0
         while True:
             countdown_timer.check_remote_buttons()
-            if countdown_timer.has_time_remaining():
+            if counter % 10 != 0 or countdown_timer.has_time_remaining():
                 if drive_motors.supports_homing:
                     drive_motors.do_homing()
                 if drive_motors.supports_flip:
@@ -399,7 +406,8 @@ def main():
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
-            wait(100)
+            wait(10)
+            counter += 10
     except Exception as e:
         print(e)
         while True:
