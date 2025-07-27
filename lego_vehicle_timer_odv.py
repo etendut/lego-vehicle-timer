@@ -24,7 +24,7 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
 # odv settings
-ODV_SPEED: int = 60  # set between 50 and 80
+ODV_SPEED: int = 50  # set between 50 and 80
 # X= obstacle, L = Load, U = Unload, # = grid tile
 ODV_GRID = ["###X#XX", "LX###XU", "###X###"]
 
@@ -72,7 +72,10 @@ class MotorHelper:
     def handle_flip(self):
         pass
 
-    def handle_homing(self):
+    def do_homing(self):
+        pass
+
+    def reset_homing(self):
         pass
 
     def handle_remote_press(self):
@@ -391,6 +394,8 @@ UNLOAD = 'U'
 DEFAULT_GRID = ["###X#XX", "LX###XU", "###X###"]
 FINE_GRID_SIZE = 10
 
+GEAR_RATIO                      :int = 80       # Motor rotation angle per grid pitch (deg/pitch)
+MAX_MOTOR_ROT_SPEED             :int = 1400     # Max motor speed (deg/s) ~1500
 HOMING_MOTOR_ROT_SPEED: int = 200  # Homing speed (deg/s)
 HOMING_DUTY: int = 35  # Homing motor duty (%) (adjustment required)
 HOMING_OFFSET_ANGLE_X: int = 110  # X-axis offset distance (deg) (adjustment required)
@@ -492,7 +497,7 @@ class RunODVMotors(MotorHelper):
 
         super().__init__(False, True)
         # grid setup
-        self.position = ODVPosition(0, 0)
+        self.angular_grid_position = ODVPosition(0, 0)
         self.grid = ODVGrid()
         self.grid.load_grid(grid_layout)
 
@@ -500,13 +505,14 @@ class RunODVMotors(MotorHelper):
         # motor setup
         self.error_flash_code = error_flash_code_helper
 
-        self.x_motor_port = Port.C
-        self.y_motor_port = Port.A
+        self.x_motor_port = Port.A
+        self.y_motor_port = Port.C
 
         self.drive_speed = drive_speed
-        self.last_side = None
+        self.is_homed = False
+
         try:
-            self.x_motor = Motor(self.x_motor_port, Direction.CLOCKWISE)
+            self.x_motor = Motor(self.x_motor_port, Direction.COUNTERCLOCKWISE)
         except OSError as ex:
             if ex.errno == ENODEV:
                 print('Motor needs to be connected to ' + str(self.x_motor_port))
@@ -522,39 +528,31 @@ class RunODVMotors(MotorHelper):
 
         self.stop_motors()
 
-    def handle_homing(self):
-        """
-            odv only
-        :return:
-        """
-        global hub
-        # Check which side of the hub is up.
-        if hub.imu.up() != Side.BOTTOM:
-            return
+    def reset_homing(self) -> None:
+        self.is_homed = False
 
-        wait(2000)
-        self._homing_()
-
-    def _homing_(self):
+    def do_homing(self):
         # Slowly move until the motor stalls (hits a physical stop),
         # then move forward by an offset distance and set that as the zero origin.
-
+        if self.is_homed:
+            return
         # Homing axis Y
         self.y_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
-        self.y_motor.run_angle(self.drive_speed, HOMING_OFFSET_ANGLE_Y)
+        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, HOMING_OFFSET_ANGLE_Y)
         wait(200)
         self.y_motor.reset_angle(0)
 
         # Homing axis X
         self.x_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
-        self.x_motor.run_angle(self.drive_speed, HOMING_OFFSET_ANGLE_X)
+        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, HOMING_OFFSET_ANGLE_X)
         wait(200)
         self.x_motor.reset_angle(0)
 
         # todo this is wrong
-        self.position = ODVPosition(0, 0)
+        self.angular_grid_position = ODVPosition(0, 0)
+        self.is_homed = True
 
     @staticmethod
     def _get_new_position_(position: ODVPosition, direction: str) -> ODVPosition:
@@ -587,6 +585,12 @@ class RunODVMotors(MotorHelper):
         # print('cannot move there')
         # return False
 
+    def get_angular_grid_position(self) -> ODVPosition:
+
+        x_grid = int(self.x_motor.angle() / GEAR_RATIO)
+        y_grid = int(self.y_motor.angle() / GEAR_RATIO)
+        return ODVPosition(x_grid, y_grid)
+
     def _move_(self, direction: str):
         if direction not in DIRECTIONS:
             print('Invalid direction')
@@ -600,12 +604,17 @@ class RunODVMotors(MotorHelper):
         #     print('cannot move ' + direction)
         #     return
 
+        pos = self.get_angular_grid_position()
+        if pos != self.angular_grid_position:
+            self.angular_grid_position = pos
+            print(self.angular_grid_position.value())
+
         # TODO fix motor movement
         if direction in [NORTH, NORTH_EAST, NORTH_WEST]:
-            self.y_motor.dc(self.drive_speed)
+            self.y_motor.dc(-self.drive_speed)
         if direction in [SOUTH, SOUTH_EAST, SOUTH_WEST]:
             # self.y_motor.run_target(self.drive_speed, -90)
-            self.y_motor.dc(-self.drive_speed)
+            self.y_motor.dc(self.drive_speed)
         if direction in [EAST,NORTH_EAST,SOUTH_EAST]:
             # self.x_motor.run_target(self.drive_speed, 90)
             self.x_motor.dc(self.drive_speed)
@@ -716,13 +725,15 @@ def main():
         while True:
             countdown_timer.check_remote_buttons()
             if countdown_timer.has_time_remaining():
+                if drive_motors.supports_homing:
+                    drive_motors.do_homing()
                 if drive_motors.supports_flip:
                     drive_motors.handle_flip()
                 drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
                 if drive_motors.supports_homing:
-                    drive_motors.handle_homing()
+                    drive_motors.reset_homing()
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur

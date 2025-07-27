@@ -64,7 +64,10 @@ class MotorHelper:
     def handle_flip(self):
         pass
 
-    def handle_homing(self):
+    def do_homing(self):
+        pass
+
+    def reset_homing(self):
         pass
 
     def handle_remote_press(self):
@@ -384,13 +387,15 @@ def main():
         while True:
             countdown_timer.check_remote_buttons()
             if countdown_timer.has_time_remaining():
+                if drive_motors.supports_homing:
+                    drive_motors.do_homing()
                 if drive_motors.supports_flip:
                     drive_motors.handle_flip()
                 drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
                 if drive_motors.supports_homing:
-                    drive_motors.handle_homing()
+                    drive_motors.reset_homing()
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
