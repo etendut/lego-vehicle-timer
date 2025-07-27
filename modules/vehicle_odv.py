@@ -285,6 +285,7 @@ class RunODVMotors(MotorHelper):
 
         # stop motors as this is bang-bang mode where a button
         #  needs to be held down for racer to run
+
         self.stop_motors()
 
         #  handle button press

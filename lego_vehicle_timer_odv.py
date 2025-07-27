@@ -132,7 +132,6 @@ class CountdownTimer:
         # Start a timer.
         self.countdown_stopwatch = StopWatch()
         self.led_flash_stopwatch = StopWatch()
-        self.last_console_msg = None
         self.end_time = 0
 
     def has_time_remaining(self):
@@ -148,10 +147,8 @@ class CountdownTimer:
 
         # print a friendly console message
         con_hour, con_min, con_sec = convert_millis_hours_minutes_seconds(int(remaining_time))
-        msg = 'countdown ending in: {}:{:02}'.format(con_min, con_sec)
-        if self.last_console_msg != msg:
-            self.last_console_msg = msg
-            print(msg)  # when time has run out end countdown
+        if con_sec % 10 == 0:
+            print('countdown ending in: {}:{:02}'.format(con_min, con_sec))  # when time has run out end countdown
         if remaining_time <= 0:
             self.countdown_status = ENDED
             self.show_status()
@@ -637,6 +634,7 @@ class RunODVMotors(MotorHelper):
 
         # stop motors as this is bang-bang mode where a button
         #  needs to be held down for racer to run
+
         self.stop_motors()
 
         #  handle button press
@@ -701,10 +699,9 @@ def main():
         print('SETUP complete')
 
         countdown_timer.reset()
-        counter = 0
         while True:
             countdown_timer.check_remote_buttons()
-            if counter % 10 != 0 or countdown_timer.has_time_remaining():
+            if countdown_timer.has_time_remaining():
                 if drive_motors.supports_homing:
                     drive_motors.do_homing()
                 if drive_motors.supports_flip:
@@ -717,8 +714,7 @@ def main():
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
-            wait(10)
-            counter += 10
+            wait(100)
     except Exception as e:
         print(e)
         while True:
