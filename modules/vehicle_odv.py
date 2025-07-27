@@ -1,6 +1,6 @@
 from pybricks.tools import wait
 
-from .lego_vehicle_timer import MotorHelper, ErrorFlashCodes
+from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
 error_flash_code = ErrorFlashCodes()
 from pybricks.hubs import TechnicHub
 from pybricks.pupdevices import Remote

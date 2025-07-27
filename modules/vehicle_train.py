@@ -1,7 +1,7 @@
 from pybricks.parameters import Button
 from pybricks.pupdevices import Remote
 from micropython import const
-from .lego_vehicle_timer import MotorHelper, ErrorFlashCodes
+from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
 error_flash_code = ErrorFlashCodes()
 remote: Remote | None = None
 

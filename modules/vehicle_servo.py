@@ -1,4 +1,4 @@
-from .lego_vehicle_timer import MotorHelper, ErrorFlashCodes
+from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
 error_flash_code = ErrorFlashCodes()
 from micropython import const
 from pybricks.parameters import Button

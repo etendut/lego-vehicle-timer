@@ -499,6 +499,7 @@ def main():
             if countdown_timer.has_time_remaining():
                 if drive_motors.supports_flip:
                     drive_motors.handle_flip()
+                drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
                 if drive_motors.supports_homing:

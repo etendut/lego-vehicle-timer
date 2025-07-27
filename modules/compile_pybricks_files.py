@@ -6,7 +6,7 @@ def main():
     folder_path = Path(__file__).parent.resolve()
     for vehicle in ['servo', 'train','skid_steer','odv']:
         print(f'Compiling {vehicle}')
-        with open(Path(folder_path, "lego_vehicle_timer.py")) as base_file:
+        with open(Path(folder_path, "lego_vehicle_timer_base.py")) as base_file:
             base_content = base_file.read()
 
         with open(Path(folder_path, f"vehicle_{vehicle}.py")) as vehicle_file:
