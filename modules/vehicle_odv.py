@@ -21,7 +21,7 @@ from pybricks.parameters import Button
 
 # VARS_START
 # odv settings
-ODV_SPEED: int = const(50)  # set between 50 and 80
+ODV_SPEED: int = const(45)  # set between 40 and 70
 # X= obstacle, L = Load, U = Unload, # = grid tile
 # ODV_GRID = ["###X#XX",
 #             "LX###XU",
