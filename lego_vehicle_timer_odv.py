@@ -415,7 +415,7 @@ GEAR_RATIO: int = const(80)  # Motor rotation angle per grid pitch (deg/pitch)
 MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
 HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
 HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
-
+LOAD_UNLOAD_ANGLE: int = const(160)
 
 class ODVPosition:
     def __init__(self, x, y):
@@ -494,10 +494,15 @@ class RunODVMotors(MotorHelper):
         self.motors_running = None
         self.unload_xy = (0, 0)
         self.load_xy = (0, 0)
+        self.fine_grid_max_x = 0
+        """used for unloading"""
+        self.fine_grid_mid_y = 0
+        """used for load/unloading"""
+        self.last_fine_grid_position = ODVPosition(0, 0)
+        """current position"""
+        self.coarse_grid = {}
         self.coarse_grid_width = 0
         self.coarse_grid_height = 0
-        self.last_fine_grid_position = ODVPosition(0, 0)
-        self.coarse_grid = {}
         self._load_grid_(grid_layout)
 
         self.has_load = False
@@ -535,6 +540,7 @@ class RunODVMotors(MotorHelper):
         for y, line in enumerate(lines):
             print(f"line {y + 1}/{len(lines)}")
             self.coarse_grid_width = len(line.rstrip())
+            self.fine_grid_max_x = (self.coarse_grid_width-1 * FINE_GRID_SIZE)
             line = line.rstrip()
             for x, character in enumerate(line):
                 print(f"line {y + 1} |col {x + 1}/{len(line)}")
@@ -547,6 +553,7 @@ class RunODVMotors(MotorHelper):
 
             y += 1
         self.coarse_grid_height = y
+        self.fine_grid_mid_y = int(self.coarse_grid_height  * FINE_GRID_SIZE / 2)
         mem_info()
         print('Grid Loaded')
 
@@ -591,16 +598,16 @@ class RunODVMotors(MotorHelper):
         self.is_homed = True
         self._display_grid_((0, 0), ROBOT)
 
-    def _can_move_in_direction_(self, direction: str) -> bool:
+    def _can_move_in_direction_(self, direction: str) -> tuple[bool,bool,bool]:
         if direction not in DIRECTIONS:
-            return False
+            return False,False,False
 
         # work out cart dimensions
         cart = ODVBox(self.last_fine_grid_position, ODV_SIZE, ODV_SIZE)
         # shrink the cart to make moving smoother
         cart.buffer(-1)
 
-        print("Cart", cart)
+        # print("Cart", cart)
 
         ok_moves = [TRACK, LOAD, UNLOAD]
         tl = self._get_grid_tile_from_fine_xy_(cart.top_left.position_from_direction(direction))
@@ -610,8 +617,11 @@ class RunODVMotors(MotorHelper):
 
         can_move = tl in ok_moves and tr in ok_moves and br in ok_moves and bl in ok_moves
 
-        print("Cart", direction, can_move)
-        return can_move
+        can_load = tl == tr == br == bl == LOAD
+        can_unload = tl == tr == br == bl == UNLOAD
+
+        # print("Cart", direction, can_move)
+        return can_move, can_load, can_unload
 
     def _get_fine_grid_position_(self) -> ODVPosition:
 
@@ -623,7 +633,7 @@ class RunODVMotors(MotorHelper):
 
         x_grid = floor(fine_position.x / FINE_GRID_SIZE)
         y_grid = floor(fine_position.y / FINE_GRID_SIZE)
-        print("Coarse", x_grid, y_grid)
+        # print("Coarse", x_grid, y_grid)
 
         if fine_position.x < 1 or fine_position.y < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
             return WALL
@@ -653,6 +663,44 @@ class RunODVMotors(MotorHelper):
         self.motors_running = True
         return True
 
+    def _do_load_(self):
+        if self.has_load:
+            print('Already loaded')
+            return
+
+        print(f'current cart position({self.x_motor.angle()},{self.y_motor.angle()})')
+        mid_y_angle = int(self.fine_grid_mid_y * GEAR_RATIO)
+        print(f"position cart for load (0,{mid_y_angle})")
+        # position cart
+        # self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, mid_y_angle, wait=False)
+        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, 0)
+        wait(200)
+        # do load
+        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, -LOAD_UNLOAD_ANGLE)
+        wait(2000)
+        print("loading..")
+        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, 0)
+        wait(200)
+        self.has_load = True
+        print("ready to go")
+
+    def _do_unload_(self):
+
+        mid_y_angle = int(self.fine_grid_mid_y * GEAR_RATIO)
+        max_x_angle = int(self.fine_grid_max_x * GEAR_RATIO)
+        print(f'current cart position({self.x_motor.angle()},{self.y_motor.angle()})')
+        print(f"position cart for unload ({max_x_angle},{mid_y_angle})")
+        # self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, mid_y_angle, wait=False)
+        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, max_x_angle)
+        wait(200)
+        print("unloading..")
+        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, max_x_angle+LOAD_UNLOAD_ANGLE)
+        wait(2000)
+        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, max_x_angle)
+        wait(200)
+        self.has_load = False
+        print("ready to go")
+
     # def _bfs_path_to_position(self, end: ODVPosition):
     #     queue: Queue[list[ODVPosition]] = Queue()
     #     queue.put([self.position])  # Enqueue the start position
@@ -678,10 +726,6 @@ class RunODVMotors(MotorHelper):
         """
         # Check which remote_buttons are pressed.
         remote_buttons_pressed = remote.buttons.pressed()
-
-        # stop motors as this is bang-bang mode where a button
-        #  needs to be held down for racer to run
-
         #  handle button press
         # left +      North
         # right - West    East  right +
@@ -723,7 +767,15 @@ class RunODVMotors(MotorHelper):
             return
 
         print(direction)
-        if not self._can_move_in_direction_(direction):
+        can_move, can_load, can_unload = self._can_move_in_direction_(direction)
+        if can_load and not self.has_load and direction == WEST:
+            self._do_load_()
+            return
+        if can_unload and direction == EAST:
+            self._do_unload_()
+            return
+
+        if not can_move:
             return
 
         self._move_in_direction_(direction)
