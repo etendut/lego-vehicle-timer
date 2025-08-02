@@ -254,11 +254,10 @@ class RunODVMotors(MotorHelper):
 
         if x_grid < 0 or x_grid > self.coarse_grid_width or y_grid < 0 or y_grid > self.coarse_grid_height:
             return WALL
-        try:
-            tile = self.coarse_grid[x_grid, y_grid]
-            return tile
-        except IndexError:
-            return WALL
+        if (x_grid, y_grid) in  self.coarse_grid:
+            return self.coarse_grid[(x_grid, y_grid)]
+
+        return WALL
 
     def _move_in_direction_(self, direction: str) -> bool:
 
