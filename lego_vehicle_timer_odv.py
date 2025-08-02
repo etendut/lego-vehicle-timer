@@ -721,18 +721,18 @@ class RunODVMotors(MotorHelper):
         self.has_load = False
         print("ready to go")
 
-    def _navigate_to_grid_tile(self, tile:ODVPosition, stop = Stop.HOLD):
+    def _navigate_to_grid_tile(self, tile: ODVPosition, stop=Stop.HOLD):
         print(f"navigating to tile {tile}")
         tile_angle_x = tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
         tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
-        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_y,then=stop)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x,then=stop)
+        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
         return tile_angle_x, tile_angle_y
 
-    def _navigate_grid_tile_path(self, grid_tile_path:list[ODVPosition]):
+    def _navigate_grid_tile_path(self, grid_tile_path: list[ODVPosition]):
 
         for i, p in enumerate(grid_tile_path):
-            if i < len(grid_tile_path) and grid_tile_path[i+1].direction == p.direction:
+            if i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1].direction == p.direction:
                 self._navigate_to_grid_tile(p, Stop.NONE)
             else:
                 self._navigate_to_grid_tile(p, Stop.COAST)
