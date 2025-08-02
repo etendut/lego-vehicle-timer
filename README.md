@@ -1,4 +1,4 @@
-# Train, Servo Steer, and Skid Steer timed vehicle Program
+# Train, Servo Steer, Skid Steer, and ODV timed vehicle Program
 
 A python program to enable a time limited running of a Train, Servo Steer, or Skid Steer Lego vehicle.
 
