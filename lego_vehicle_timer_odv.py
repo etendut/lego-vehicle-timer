@@ -732,7 +732,7 @@ class RunODVMotors(MotorHelper):
     def _navigate_grid_tile_path(self, grid_tile_path: list[ODVPosition]):
 
         for i, p in enumerate(grid_tile_path):
-            if i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1].direction == p.direction:
+            if p.direction is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1].direction is not None and grid_tile_path[i + 1].direction == p.direction:
                 self._navigate_to_grid_tile(p, Stop.NONE)
             else:
                 self._navigate_to_grid_tile(p, Stop.COAST)
