@@ -59,7 +59,6 @@ HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
 HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
 
-
 class ODVPosition:
     def __init__(self, x, y):
         self.x = x
@@ -405,7 +404,7 @@ class RunODVMotors(MotorHelper):
 
         # print(direction)
         can_move, can_load, can_unload = self._can_move_in_direction_(direction)
-        if can_load and not self.has_load and direction == WEST:
+        if can_load and direction == WEST:
             self._do_load_()
             return
         if can_unload and direction == EAST:
