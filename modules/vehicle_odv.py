@@ -1,7 +1,7 @@
 # IMPORTS_START
 from micropython import mem_info
 from pybricks.pupdevices import Motor
-from pybricks.parameters import Port, Direction
+from pybricks.parameters import Port, Direction, Stop
 from uerrno import ENODEV
 from umath import floor
 # IMPORTS_END
@@ -48,6 +48,7 @@ WALL = 'X'
 TRACK = '#'
 LOAD = 'L'
 UNLOAD = 'U'
+OK_MOVES = [TRACK, LOAD, UNLOAD]
 
 DEFAULT_GRID = ["###X#XX", "LX###XU", "###X###"]
 FINE_GRID_SIZE = const(10)
@@ -63,6 +64,7 @@ class ODVPosition:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.direction = None
 
     def position_from_direction(self, direction):
         if direction == NORTH:
@@ -122,6 +124,24 @@ class ODVBox:
 
     def __str__(self):
         return f"[{self.top_left}, {self.top_right}]\n[{self.bottom_left}, {self.bottom_right}]"
+
+
+class Queue:
+    """ No Queue in micropython :("""
+
+    def __init__(self) -> None:
+        self._queue: list[list[ODVPosition]] = []
+
+    def put(self, item: list[ODVPosition]):
+        self._queue.append(item)
+
+    def empty(self):
+        return len(self._queue) == 0
+
+    def get(self) -> list[ODVPosition]:
+        first = self._queue[0]
+        del self._queue[0]
+        return first
 
 
 class RunODVMotors(MotorHelper):
@@ -245,13 +265,12 @@ class RunODVMotors(MotorHelper):
 
         # print("Cart", cart)
 
-        ok_moves = [TRACK, LOAD, UNLOAD]
-        tl = self._get_grid_tile_from_fine_xy_(cart.top_left.position_from_direction(direction))
-        tr = self._get_grid_tile_from_fine_xy_(cart.top_right.position_from_direction(direction))
-        br = self._get_grid_tile_from_fine_xy_(cart.bottom_right.position_from_direction(direction))
-        bl = self._get_grid_tile_from_fine_xy_(cart.bottom_left.position_from_direction(direction))
+        _, tl = self._get_grid_tile_from_fine_xy_(cart.top_left.position_from_direction(direction))
+        _, tr = self._get_grid_tile_from_fine_xy_(cart.top_right.position_from_direction(direction))
+        _, br = self._get_grid_tile_from_fine_xy_(cart.bottom_right.position_from_direction(direction))
+        _, bl = self._get_grid_tile_from_fine_xy_(cart.bottom_left.position_from_direction(direction))
 
-        can_move = tl in ok_moves and tr in ok_moves and br in ok_moves and bl in ok_moves
+        can_move = tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES
 
         can_load = tl == tr == br == bl == LOAD
         can_unload = tl == tr == br == bl == UNLOAD
@@ -265,18 +284,18 @@ class RunODVMotors(MotorHelper):
         y_grid = int(self.y_motor.angle() / GEAR_RATIO_TO_GRID)
         return ODVPosition(x_grid, y_grid)
 
-    def _get_grid_tile_from_fine_xy_(self, fine_position: ODVPosition) -> str:
+    def _get_grid_tile_from_fine_xy_(self, fine_position: ODVPosition) -> tuple[ODVPosition, str]:
 
         x_grid = floor(fine_position.x / FINE_GRID_SIZE)
         y_grid = floor(fine_position.y / FINE_GRID_SIZE)
         # print("Coarse", x_grid, y_grid)
-
+        tile = ODVPosition(x_grid, y_grid)
         if fine_position.x < 1 or fine_position.y < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
-            return WALL
+            return tile, WALL
         if (x_grid, y_grid) in self.coarse_grid:
-            return self.coarse_grid[(x_grid, y_grid)]
+            return tile, self.coarse_grid[(x_grid, y_grid)]
 
-        return WALL
+        return tile, WALL
 
     def _move_in_direction_(self, direction: str) -> bool:
 
@@ -304,13 +323,7 @@ class RunODVMotors(MotorHelper):
             print('Already loaded')
             return
 
-        load_angle_x = 0
-        load_angle_y = (self.load_tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
-
-        print(f"position cart for load ({load_angle_x},{load_angle_y})")
-        # position cart
-        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_y, wait=False)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x)
+        self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         # do load
         self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, (GEAR_RATIO_TO_GRID * -3))
@@ -322,39 +335,76 @@ class RunODVMotors(MotorHelper):
         print("ready to go")
 
     def _do_unload_(self):
-
-        load_angle_x = self.unload_tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
-        load_angle_y = (self.unload_tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
-        print(f"position cart for unload ({load_angle_x},{load_angle_y})")
-        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_y, wait=False)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x)
+        tile_angle_x, _ = self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         print("unloading..")
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x + (GEAR_RATIO_TO_GRID * 4))
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x + (GEAR_RATIO_TO_GRID * 4))
         wait(2000)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x)
         wait(200)
         self.has_load = False
         print("ready to go")
 
-    # def _bfs_path_to_position(self, end: ODVPosition):
-    #     queue: Queue[list[ODVPosition]] = Queue()
-    #     queue.put([self.position])  # Enqueue the start position
-    #
-    #     while not queue.empty():
-    #         path = queue.get()  # Dequeue the path
-    #         current_pos = path[-1]  # Current position is the last element of the path
-    #
-    #         if current_pos == end:
-    #             return path  # Return the path if end is reached
-    #
-    #         for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
-    #             new_pos = self._get_new_position_(current_pos, direction)
-    #             if self._can_move_(new_pos) and new_pos not in path:
-    #                 new_path = list(path)
-    #                 new_path.append(new_pos)
-    #                 queue.put(new_path)  # Enqueue the new path
-    #     return []
+    def _navigate_to_grid_tile(self, tile:ODVPosition, stop = Stop.HOLD):
+        print(f"navigating to tile {tile}")
+        tile_angle_x = tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
+        tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
+        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_y,then=stop)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x,then=stop)
+        return tile_angle_x, tile_angle_y
+
+    def _navigate_grid_tile_path(self, grid_tile_path:list[ODVPosition]):
+
+        for i, p in enumerate(grid_tile_path):
+            if i < len(grid_tile_path) and grid_tile_path[i+1].direction == p.direction:
+                self._navigate_to_grid_tile(p, Stop.NONE)
+            else:
+                self._navigate_to_grid_tile(p, Stop.COAST)
+
+    def auto_home(self):
+        if not self.is_homed:
+            return
+        print('getting path to home')
+        path = self._bfs_path_to_position(ODVPosition(0, 0))
+        self._navigate_grid_tile_path(path)
+        print('homed')
+
+    def auto_load(self):
+        if not self.is_homed:
+            return
+        print('getting path to load')
+        path = self._bfs_path_to_position(self.load_tile)
+        self._navigate_grid_tile_path(path)
+        self._do_load_()
+
+    def auto_unload(self):
+        if not self.is_homed:
+            return
+        print('getting path to unload')
+        path = self._bfs_path_to_position(self.unload_tile)
+        self._navigate_grid_tile_path(path)
+        self._do_unload_()
+
+    def _bfs_path_to_position(self, end: ODVPosition):
+        queue: Queue = Queue()
+        tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
+        queue.put([tile])  # Enqueue the start position
+
+        while not queue.empty():
+            path = queue.get()  # Dequeue the path
+            current_pos = path[-1]  # Current position is the last element of the path
+
+            if current_pos == end:
+                return path  # Return the path if end is reached
+
+            for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
+                new_pos = current_pos.position_from_direction(direction)
+                if new_pos.value() in self.coarse_grid and self.coarse_grid[new_pos.value()] in OK_MOVES:
+                    new_path = list(path)
+                    new_pos.direction = direction
+                    new_path.append(new_pos)
+                    queue.put(new_path)  # Enqueue the new path
+        return []
 
     def handle_remote_press(self):
         """
@@ -374,8 +424,6 @@ class RunODVMotors(MotorHelper):
         if fine_grid_pos != self.last_fine_grid_position:
             self.last_fine_grid_position = fine_grid_pos.copy()
         elif self.motors_running:
-            # print("current_pos", fine_grid_pos)
-            # print("last_fine_grid_position", self.last_fine_grid_position)
             return
 
         direction = None
@@ -418,18 +466,6 @@ class RunODVMotors(MotorHelper):
 
     # stop all motors
     def stop_motors(self):
-        # unload the module
-        # if self.has_load:
-        #     unload_moves = self._bfs_path_to_position(self.grid.unload_xy)
-        #     for move in unload_moves:
-        #         self._move_(move.direction)
-        #
-        # if self.position != self.grid.home:
-        #     # return to home
-        #     homing_moves = self._bfs_path_to_position(self.grid.home)
-        #     for move in homing_moves:
-        #         self._move_(move.direction)
-
         self.x_motor.stop()
         self.y_motor.stop()
         self.motors_running = False

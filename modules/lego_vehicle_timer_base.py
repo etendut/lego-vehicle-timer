@@ -64,18 +64,35 @@ class MotorHelper:
         self.supports_homing = supports_homing
 
     def handle_flip(self):
+        """Tracked racer only"""
         pass
 
     def do_homing(self):
+        """ODV only"""
         pass
 
     def reset_homing(self):
+        """ODV only"""
+        pass
+
+    def auto_unload(self):
+        """ODV only"""
+        pass
+
+    def auto_load(self):
+        """ODV only"""
+        pass
+
+    def auto_home(self):
+        """ODV only"""
         pass
 
     def handle_remote_press(self):
+        """All vehicles"""
         pass
 
     def stop_motors(self):
+        """All vehicles"""
         pass
 
 
@@ -139,7 +156,7 @@ class CountdownTimer:
 
         # print a friendly console message
         con_hour, con_min, con_sec = convert_millis_hours_minutes_seconds(int(remaining_time))
-        
+
         if con_sec % 10 == 0 and con_min < 1:
             countdown_message = 'countdown ending in: {}:{:02}'.format(con_min, con_sec)
             if self.last_countdown_message != countdown_message:
@@ -202,8 +219,9 @@ class CountdownTimer:
         if len(remote_buttons_pressed) == 0:
             return
         # if reset sequence pressed at other times, end countdown
-        if self.countdown_status != READY and all(i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
-                i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
+        if self.countdown_status != READY and all(
+                i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
+            i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
             print('reset code pressed')
             self.reset()
             wait_for_no_pressed_buttons()
@@ -407,6 +425,8 @@ def main():
             else:
                 drive_motors.stop_motors()
                 if drive_motors.supports_homing:
+                    drive_motors.auto_unload()
+                    drive_motors.auto_home()
                     drive_motors.reset_homing()
 
             countdown_timer.show_status()
