@@ -411,11 +411,12 @@ DEFAULT_GRID = ["###X#XX", "LX###XU", "###X###"]
 FINE_GRID_SIZE = const(10)
 ODV_SIZE = const(8)
 
-GEAR_RATIO: int = const(80)  # Motor rotation angle per grid pitch (deg/pitch)
+GEAR_RATIO_TO_GRID: int = const(80)  # Motor rotation angle per grid pitch (deg/pitch)
 MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
 HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
 HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
-LOAD_UNLOAD_ANGLE: int = const(160)
+
+
 
 class ODVPosition:
     def __init__(self, x, y):
@@ -492,12 +493,8 @@ class RunODVMotors(MotorHelper):
         super().__init__(False, True)
         # grid setup
         self.motors_running = None
-        self.unload_xy = (0, 0)
-        self.load_xy = (0, 0)
-        self.fine_grid_max_x = 0
-        """used for unloading"""
-        self.fine_grid_mid_y = 0
-        """used for load/unloading"""
+        self.unload_tile: ODVPosition
+        self.load_tile: ODVPosition
         self.last_fine_grid_position = ODVPosition(0, 0)
         """current position"""
         self.coarse_grid = {}
@@ -540,20 +537,18 @@ class RunODVMotors(MotorHelper):
         for y, line in enumerate(lines):
             print(f"line {y + 1}/{len(lines)}")
             self.coarse_grid_width = len(line.rstrip())
-            self.fine_grid_max_x = (self.coarse_grid_width-1 * FINE_GRID_SIZE)
             line = line.rstrip()
             for x, character in enumerate(line):
                 print(f"line {y + 1} |col {x + 1}/{len(line)}")
                 self.coarse_grid[x, y] = character
                 # set load/unload points
                 if character == LOAD:
-                    self.load_xy = x, y
+                    self.load_tile = ODVPosition(x, y)
                 if character == UNLOAD:
-                    self.unload_xy = x, y
+                    self.unload_tile = ODVPosition(x, y)
 
             y += 1
         self.coarse_grid_height = y
-        self.fine_grid_mid_y = int(self.coarse_grid_height  * FINE_GRID_SIZE / 2)
         mem_info()
         print('Grid Loaded')
 
@@ -563,9 +558,9 @@ class RunODVMotors(MotorHelper):
             for x in range(self.coarse_grid_width):
                 if (x, y) == position:
                     print(robot_symbol, end='')
-                elif (x, y) == self.load_xy:
+                elif (x, y) == self.load_tile.value():
                     print(LOAD, end='')
-                elif (x, y) == self.unload_xy:
+                elif (x, y) == self.unload_tile.value():
                     print(UNLOAD, end='')
                 elif self.coarse_grid[(x, y)] == WALL:
                     print(WALL, end='')
@@ -585,22 +580,22 @@ class RunODVMotors(MotorHelper):
         self.y_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
         self.y_motor.reset_angle(0)
-        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO)
+        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO_TO_GRID)
         wait(200)
 
         # Homing axis X
         self.x_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
         self.x_motor.reset_angle(0)
-        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO)
+        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO_TO_GRID)
         wait(200)
 
         self.is_homed = True
         self._display_grid_((0, 0), ROBOT)
 
-    def _can_move_in_direction_(self, direction: str) -> tuple[bool,bool,bool]:
+    def _can_move_in_direction_(self, direction: str) -> tuple[bool, bool, bool]:
         if direction not in DIRECTIONS:
-            return False,False,False
+            return False, False, False
 
         # work out cart dimensions
         cart = ODVBox(self.last_fine_grid_position, ODV_SIZE, ODV_SIZE)
@@ -625,8 +620,8 @@ class RunODVMotors(MotorHelper):
 
     def _get_fine_grid_position_(self) -> ODVPosition:
 
-        x_grid = int(self.x_motor.angle() / GEAR_RATIO)
-        y_grid = int(self.y_motor.angle() / GEAR_RATIO)
+        x_grid = int(self.x_motor.angle() / GEAR_RATIO_TO_GRID)
+        y_grid = int(self.y_motor.angle() / GEAR_RATIO_TO_GRID)
         return ODVPosition(x_grid, y_grid)
 
     def _get_grid_tile_from_fine_xy_(self, fine_position: ODVPosition) -> str:
@@ -668,35 +663,35 @@ class RunODVMotors(MotorHelper):
             print('Already loaded')
             return
 
-        print(f'current cart position({self.x_motor.angle()},{self.y_motor.angle()})')
-        mid_y_angle = int(self.fine_grid_mid_y * GEAR_RATIO)
-        print(f"position cart for load (0,{mid_y_angle})")
+        load_angle_x = 0
+        load_angle_y = (self.load_tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
+
+        print(f"position cart for load ({load_angle_x},{load_angle_y})")
         # position cart
-        # self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, mid_y_angle, wait=False)
-        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, 0)
+        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_y, wait=False)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x)
         wait(200)
         # do load
-        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, -LOAD_UNLOAD_ANGLE)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, (GEAR_RATIO_TO_GRID * -3))
         wait(2000)
         print("loading..")
-        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, 0)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, 0)
         wait(200)
         self.has_load = True
         print("ready to go")
 
     def _do_unload_(self):
 
-        mid_y_angle = int(self.fine_grid_mid_y * GEAR_RATIO)
-        max_x_angle = int(self.fine_grid_max_x * GEAR_RATIO)
-        print(f'current cart position({self.x_motor.angle()},{self.y_motor.angle()})')
-        print(f"position cart for unload ({max_x_angle},{mid_y_angle})")
-        # self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, mid_y_angle, wait=False)
-        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, max_x_angle)
+        load_angle_x = self.unload_tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
+        load_angle_y = (self.unload_tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
+        print(f"position cart for unload ({load_angle_x},{load_angle_y})")
+        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_y, wait=False)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x)
         wait(200)
         print("unloading..")
-        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, max_x_angle+LOAD_UNLOAD_ANGLE)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x + (GEAR_RATIO_TO_GRID * 4))
         wait(2000)
-        # self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, max_x_angle)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, load_angle_x)
         wait(200)
         self.has_load = False
         print("ready to go")
@@ -766,7 +761,7 @@ class RunODVMotors(MotorHelper):
             print('Invalid direction')
             return
 
-        print(direction)
+        # print(direction)
         can_move, can_load, can_unload = self._can_move_in_direction_(direction)
         if can_load and not self.has_load and direction == WEST:
             self._do_load_()
