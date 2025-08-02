@@ -94,14 +94,16 @@ class RunTrainMotor(MotorHelper):
             handle remote button clicks
         """
         # Check which remote_buttons are pressed.
-        remote_buttons = remote.buttons.pressed()
-
+        remote_buttons_pressed = remote.buttons.pressed()
+        if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
+            self.stop_motors()
+            return
         # left remote_buttons
         # noinspection DuplicatedCode
-        if Button.LEFT in remote_buttons or Button.RIGHT in remote_buttons:
+        if Button.LEFT in remote_buttons_pressed or Button.RIGHT in remote_buttons_pressed:
             self.current_motor_speed = 0
 
-        elif Button.LEFT_PLUS in remote_buttons or Button.RIGHT_PLUS in remote_buttons:
+        elif Button.LEFT_PLUS in remote_buttons_pressed or Button.RIGHT_PLUS in remote_buttons_pressed:
 
             if self.current_motor_speed == 0:  # if stopped go forward
                 self.current_motor_speed = self.min_speed
@@ -115,7 +117,7 @@ class RunTrainMotor(MotorHelper):
             if self.current_motor_speed > self.max_speed:
                 self.current_motor_speed = self.max_speed
 
-        elif Button.LEFT_MINUS in remote_buttons or Button.RIGHT_MINUS in remote_buttons:
+        elif Button.LEFT_MINUS in remote_buttons_pressed or Button.RIGHT_MINUS in remote_buttons_pressed:
 
             if self.current_motor_speed == 0:  # if stopped go in reverse
                 self.current_motor_speed = -self.min_speed

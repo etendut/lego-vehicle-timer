@@ -84,9 +84,9 @@ class MotorHelper:
 ##################################################################################
 
 def wait_for_no_pressed_buttons():
-    buttons_pressed = remote.buttons.pressed()
-    while buttons_pressed:
-        buttons_pressed = remote.buttons.pressed()
+    remote_buttons_pressed = remote.buttons.pressed()
+    while remote_buttons_pressed:
+        remote_buttons_pressed = remote.buttons.pressed()
         wait(100)
 
 
@@ -117,6 +117,7 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
+        self.last_countdown_message = None
         self.countdown_status = None
         self.last_countdown_status = None
 
@@ -138,8 +139,12 @@ class CountdownTimer:
 
         # print a friendly console message
         con_hour, con_min, con_sec = convert_millis_hours_minutes_seconds(int(remaining_time))
-        if con_sec % 10 == 0:
-            print('countdown ending in: {}:{:02}'.format(con_min, con_sec))  # when time has run out end countdown
+        
+        if con_sec % 10 == 0 and con_min < 1:
+            countdown_message = 'countdown ending in: {}:{:02}'.format(con_min, con_sec)
+            if self.last_countdown_message != countdown_message:
+                self.last_countdown_message = countdown_message
+                print(self.last_countdown_message)  # when time has run out end countdown
         if remaining_time <= 0:
             self.countdown_status = ENDED
             self.show_status()
@@ -175,15 +180,17 @@ class CountdownTimer:
         """
             check countdown time buttons
         """
-        pressed = remote.buttons.pressed()
+        remote_buttons_pressed = remote.buttons.pressed()
+        if len(remote_buttons_pressed) == 0:
+            return
 
-        if self.countdown_status == READY and Button.CENTER in pressed:
+        if self.countdown_status == READY and Button.CENTER in remote_buttons_pressed:
             self.__start_countdown__()
             wait_for_no_pressed_buttons()
 
         # if reset sequence pressed reset the countdown timer
-        if all(i in pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
-                i in pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
+        if all(i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
+                i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
             self.reset()
             wait_for_no_pressed_buttons()
 
@@ -191,10 +198,12 @@ class CountdownTimer:
         """
            Check if reset code was pressed
         """
-        pressed = remote.buttons.pressed()
+        remote_buttons_pressed = remote.buttons.pressed()
+        if len(remote_buttons_pressed) == 0:
+            return
         # if reset sequence pressed at other times, end countdown
-        if self.countdown_status != READY and all(i in pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
-                i in pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
+        if self.countdown_status != READY and all(i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
+                i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
             print('reset code pressed')
             self.reset()
             wait_for_no_pressed_buttons()
@@ -402,7 +411,7 @@ def main():
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
-            wait(100)
+            wait(10)
     except Exception as e:
         print(e)
         while True:

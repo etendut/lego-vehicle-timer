@@ -23,7 +23,10 @@ from pybricks.parameters import Button
 # odv settings
 ODV_SPEED: int = 50  # set between 50 and 80
 # X= obstacle, L = Load, U = Unload, # = grid tile
-ODV_GRID = ["###X#XX", "LX###XU", "###X###"]
+# ODV_GRID = ["###X#XX",
+#             "LX###XU",
+#             "###X###"]
+ODV_GRID = ["###X", "LX#U", "###X"]
 # VARS_END
 # MODULE_START
 ##################################################################################
@@ -53,10 +56,60 @@ ODV_SIZE = 8
 GEAR_RATIO: int = 80  # Motor rotation angle per grid pitch (deg/pitch)
 MAX_MOTOR_ROT_SPEED: int = 1400  # Max motor speed (deg/s) ~1500
 HOMING_MOTOR_ROT_SPEED: int = 200  # Homing speed (deg/s)
-HOMING_DUTY: int = 35  # Homing motor duty (%) (adjustment required)
+HOMING_DUTY: int = 45  # Homing motor duty (%) (adjustment required)
 HOMING_OFFSET_ANGLE_X: int = 110  # X-axis offset distance (deg) (adjustment required)
 HOMING_OFFSET_ANGLE_Y: int = 110  # Y-axis offset distance (deg) (adjustment required)
 
+
+class ODVPosition:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def position_from_direction(self, direction):
+        if direction == NORTH:
+            return ODVPosition(self.x, self.y - 1)
+        if direction == NORTH_EAST:
+            return ODVPosition(self.x + 1, self.y - 1)
+        if direction == EAST:
+            return ODVPosition(self.x + 1, self.y)
+        if direction == SOUTH_EAST:
+            return ODVPosition(self.x + 1, self.y + 1)
+        if direction == SOUTH:
+            return ODVPosition(self.x, self.y + 1)
+        if direction == SOUTH_WEST:
+            return ODVPosition(self.x - 1, self.y + 1)
+        if direction == WEST:
+            return ODVPosition(self.x - 1, self.y)
+        if direction == NORTH_WEST:
+            return ODVPosition(self.x - 1, self.y - 1)
+
+        return ODVPosition(self.x, self.y)
+
+    def value(self):
+        return self.x, self.y
+
+    def __str__(self):
+        return f"({self.x}, {self.y})"
+
+    def copy(self):
+        return ODVPosition(self.x, self.y)
+
+    def __eq__(self, other):
+        return self.value() == other.value()
+
+
+class ODVBox:
+    def __init__(self, top_left: ODVPosition, width: int, height: int):
+        self.width = width
+        self.height = height
+        self.top_left = top_left
+        self.top_right = ODVPosition(self.top_left.x + self.width, self.top_left.y)
+        self.bottom_right = ODVPosition(self.top_right.x, self.top_left.y + self.height)
+        self.bottom_left = ODVPosition(self.top_left.x, self.bottom_right.y)
+
+    def __str__(self):
+        return f"[{self.top_left}, {self.top_right}]\n[{self.bottom_left}, {self.bottom_right}]"
 
 class RunODVMotors(MotorHelper):
     """
@@ -67,13 +120,14 @@ class RunODVMotors(MotorHelper):
 
         super().__init__(False, True)
         # grid setup
+        self.motors_running = None
         self.unload_xy = (0, 0)
         self.load_xy = (0, 0)
-        self.grid_width = 0
-        self.grid_height = 0
-        self.angular_grid_position = (0, 0)
-        self.grid = {}
-        self.load_grid(grid_layout)
+        self.coarse_grid_width = 0
+        self.coarse_grid_height = 0
+        self.last_fine_grid_position = ODVPosition(0, 0)
+        self.coarse_grid = {}
+        self._load_grid_(grid_layout)
 
         self.has_load = False
         # motor setup
@@ -102,18 +156,18 @@ class RunODVMotors(MotorHelper):
 
         self.stop_motors()
 
-    def load_grid(self, lines: list[str]):
+    def _load_grid_(self, lines: list[str]):
         # loop through grid lines
         y = 0
         print('Loading grid')
         mem_info()
         for y, line in enumerate(lines):
             print(f"line {y + 1}/{len(lines)}")
-            self.grid_width = len(line.rstrip())
+            self.coarse_grid_width = len(line.rstrip())
             line = line.rstrip()
             for x, character in enumerate(line):
                 print(f"line {y + 1} |col {x + 1}/{len(line)}")
-                self.grid[x, y] = character
+                self.coarse_grid[x, y] = character
                 # set load/unload points
                 if character == LOAD:
                     self.load_xy = x, y
@@ -121,24 +175,24 @@ class RunODVMotors(MotorHelper):
                     self.unload_xy = x, y
 
             y += 1
-        self.grid_height = y
+        self.coarse_grid_height = y
         mem_info()
         print('Grid Loaded')
 
-    def display_grid(self, position: tuple[int, int], robot_symbol: str):
+    def _display_grid_(self, position: tuple[int, int], robot_symbol: str):
         # Display the maze:
-        for y in range(self.grid_height):
-            for x in range(self.grid_width):
+        for y in range(self.coarse_grid_height):
+            for x in range(self.coarse_grid_width):
                 if (x, y) == position:
                     print(robot_symbol, end='')
                 elif (x, y) == self.load_xy:
                     print(LOAD, end='')
                 elif (x, y) == self.unload_xy:
                     print(UNLOAD, end='')
-                elif self.grid[(x, y)] == WALL:
+                elif self.coarse_grid[(x, y)] == WALL:
                     print(WALL, end='')
                 else:
-                    print(self.grid[(x, y)], end='')
+                    print(self.coarse_grid[(x, y)], end='')
             print()  # Print a newline after printing the row.
 
     def reset_homing(self) -> None:
@@ -152,98 +206,65 @@ class RunODVMotors(MotorHelper):
         # Homing axis Y
         self.y_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
+        self.y_motor.reset_angle(0)
         self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, HOMING_OFFSET_ANGLE_Y)
         wait(200)
-        self.y_motor.reset_angle(0)
 
         # Homing axis X
         self.x_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
+        self.x_motor.reset_angle(0)
         self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, HOMING_OFFSET_ANGLE_X)
         wait(200)
-        self.x_motor.reset_angle(0)
 
-        self.angular_grid_position = (0, 0)
         self.is_homed = True
-        self.display_grid((0, 0), ROBOT)
+        self._display_grid_((0, 0), ROBOT)
 
-    def _can_move_(self, direction: str) -> bool:
+    def _can_move_in_direction_(self, direction: str) -> bool:
         if direction not in DIRECTIONS:
             return False
-        # get angular grid pos
-        x_pos = self.angular_grid_position[0]
-        y_pos = self.angular_grid_position[1]
 
         # work out cart dimensions
-        top_left = (x_pos, y_pos)
-        top_right = (x_pos + ODV_SIZE, y_pos)
-        bottom_right = (x_pos + ODV_SIZE, y_pos + ODV_SIZE)
-        bottom_left = (x_pos, y_pos + ODV_SIZE)
-        print("Cart", top_left, top_right, bottom_right, bottom_left)
+        cart = ODVBox(self.last_fine_grid_position, ODV_SIZE, ODV_SIZE)
 
-        can_move = False
+        print("Cart", cart)
+
         ok_moves = [TRACK, LOAD, UNLOAD]
-        # if direction == NORTH_WEST:
-        #     x_tile = self.get_grid_tile(x_pos - 1, y_pos)
-        #     y_tile = self.get_grid_tile(x_pos - 1, y_pos)
+        tl = self._get_grid_tile_from_fine_xy_(cart.top_left.position_from_direction(direction))
+        tr = self._get_grid_tile_from_fine_xy_(cart.top_right.position_from_direction(direction))
+        br = self._get_grid_tile_from_fine_xy_(cart.bottom_right.position_from_direction(direction))
+        bl = self._get_grid_tile_from_fine_xy_(cart.bottom_left.position_from_direction(direction))
 
-        if direction == NORTH:
-            tl = self.get_grid_tile(top_left[0], top_left[1] - 1)
-            tr = self.get_grid_tile(top_right[0], top_right[1] - 1)
-            can_move = tl in ok_moves and tr in ok_moves
-
-        # if direction == NORTH_EAST:
-        #     return ODVPosition(position[0] + 1, position[1] - 1, direction)
-        if direction == EAST:
-            tr = self.get_grid_tile(top_right[0] + 1, top_right[1])
-            br = self.get_grid_tile(bottom_right[0] + 1, bottom_right[1])
-            can_move = tr in ok_moves and br in ok_moves  # if direction == SOUTH_EAST:
-        #     return ODVPosition(position[0] + 1, position[1] + 1, direction)
-        if direction == SOUTH:
-            br = self.get_grid_tile(bottom_right[0] + 1, bottom_right[1])
-            bl = self.get_grid_tile(bottom_left[0] + 1, bottom_left[1])
-            can_move = bl in ok_moves and br in ok_moves
-
-        # if direction == SOUTH_WEST:
-        #     return ODVPosition(position[0] - 1, position[1] + 1, direction)
-        if direction == WEST:
-            tl = self.get_grid_tile(top_left[0] - 1, top_left[1])
-            bl = self.get_grid_tile(bottom_left[0] - 1, bottom_left[1])
-            can_move = bl in ok_moves and tl in ok_moves
+        can_move = tl in ok_moves and tr in ok_moves and br in ok_moves and bl in ok_moves
 
         print("Cart", direction, can_move)
         return can_move
 
-    def get_angular_grid_position(self) -> tuple[int, int]:
+    def _get_fine_grid_position_(self) -> ODVPosition:
 
         x_grid = int(self.x_motor.angle() / GEAR_RATIO)
         y_grid = int(self.y_motor.angle() / GEAR_RATIO)
-        return x_grid, y_grid
+        return ODVPosition(x_grid, y_grid)
 
-    def get_grid_tile(self, angular_position_x: int, angular_position_y: int) -> str:
+    def _get_grid_tile_from_fine_xy_(self, fine_position: ODVPosition) -> str:
 
-        x_grid = floor(angular_position_x / FINE_GRID_SIZE)
-        if x_grid < 0:
-            x_grid = 1
-        y_grid = floor(angular_position_y / FINE_GRID_SIZE)
-        if y_grid < 1:
-            y_grid = 1
+        x_grid = floor(fine_position.x / FINE_GRID_SIZE)
+        y_grid = floor(fine_position.y / FINE_GRID_SIZE)
+        print("Coarse", x_grid, y_grid)
+
+        if x_grid < 0 or x_grid > self.coarse_grid_width or y_grid < 0 or y_grid > self.coarse_grid_height:
+            return WALL
         try:
-            return self.grid[x_grid, y_grid]
+            tile = self.coarse_grid[x_grid, y_grid]
+            return tile
         except IndexError:
             return WALL
 
-    def _move_(self, direction: str):
+    def _move_in_direction_(self, direction: str) -> bool:
+
         if direction not in DIRECTIONS:
             print('Invalid direction')
-            self.stop_motors()
-        #     return
-        angular_pos = self.get_angular_grid_position()
-        if angular_pos != self.angular_grid_position:
-            self.angular_grid_position = angular_pos
-
-        if not self._can_move_(direction):
-            return
+            return False
 
         if direction in [NORTH, NORTH_EAST, NORTH_WEST]:
             self.y_motor.dc(-self.drive_speed)
@@ -256,6 +277,9 @@ class RunODVMotors(MotorHelper):
             self.x_motor.dc(self.drive_speed)
         if direction in [WEST, NORTH_WEST, SOUTH_WEST]:
             self.x_motor.dc(-self.drive_speed)
+
+        self.motors_running = True
+        return True
 
     # def _bfs_path_to_position(self, end: ODVPosition):
     #     queue: Queue[list[ODVPosition]] = Queue()
@@ -281,34 +305,56 @@ class RunODVMotors(MotorHelper):
             handle remote button clicks
         """
         # Check which remote_buttons are pressed.
-        remote_buttons = remote.buttons.pressed()
+        remote_buttons_pressed = remote.buttons.pressed()
 
         # stop motors as this is bang-bang mode where a button
         #  needs to be held down for racer to run
-
-        self.stop_motors()
 
         #  handle button press
         # left +      North
         # right - West    East  right +
         # left -      South
+        if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
+            self.stop_motors()
+            return
 
-        if Button.LEFT_PLUS in remote_buttons and Button.RIGHT_PLUS in remote_buttons:
-            self._move_(NORTH_EAST)
-        elif Button.LEFT_PLUS in remote_buttons and Button.RIGHT_MINUS in remote_buttons:
-            self._move_(NORTH_WEST)
-        elif Button.LEFT_MINUS in remote_buttons and Button.RIGHT_PLUS in remote_buttons:
-            self._move_(SOUTH_EAST)
-        elif Button.LEFT_MINUS in remote_buttons and Button.RIGHT_MINUS in remote_buttons:
-            self._move_(SOUTH_WEST)
-        elif Button.LEFT_PLUS in remote_buttons:
-            self._move_(NORTH)
-        elif Button.LEFT_MINUS in remote_buttons:
-            self._move_(SOUTH)
-        elif Button.RIGHT_PLUS in remote_buttons:
-            self._move_(EAST)
-        elif Button.RIGHT_MINUS in remote_buttons:
-            self._move_(WEST)
+        fine_grid_pos = self._get_fine_grid_position_()
+        if fine_grid_pos != self.last_fine_grid_position:
+            self.last_fine_grid_position = fine_grid_pos.copy()
+        elif self.motors_running:
+            # print("current_pos", fine_grid_pos)
+            # print("last_fine_grid_position", self.last_fine_grid_position)
+            return
+
+        direction = None
+        if Button.LEFT_PLUS in remote_buttons_pressed and Button.RIGHT_PLUS in remote_buttons_pressed:
+            direction = NORTH_EAST
+        elif Button.LEFT_PLUS in remote_buttons_pressed and Button.RIGHT_MINUS in remote_buttons_pressed:
+            direction = NORTH_WEST
+        elif Button.LEFT_MINUS in remote_buttons_pressed and Button.RIGHT_PLUS in remote_buttons_pressed:
+            direction = SOUTH_EAST
+        elif Button.LEFT_MINUS in remote_buttons_pressed and Button.RIGHT_MINUS in remote_buttons_pressed:
+            direction = SOUTH_WEST
+        elif Button.LEFT_PLUS in remote_buttons_pressed:
+            direction = NORTH
+        elif Button.LEFT_MINUS in remote_buttons_pressed:
+            direction = SOUTH
+        elif Button.RIGHT_PLUS in remote_buttons_pressed:
+            direction = EAST
+        elif Button.RIGHT_MINUS in remote_buttons_pressed:
+            direction = WEST
+
+        self.stop_motors()
+
+        if direction not in DIRECTIONS:
+            print('Invalid direction')
+            return
+
+        print(direction)
+        if not self._can_move_in_direction_(direction):
+            return
+
+        self._move_in_direction_(direction)
 
     # stop all motors
     def stop_motors(self):
@@ -326,6 +372,7 @@ class RunODVMotors(MotorHelper):
 
         self.x_motor.stop()
         self.y_motor.stop()
+        self.motors_running = False
 
 
 # MODULE_END

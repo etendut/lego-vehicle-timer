@@ -12,6 +12,10 @@ A python program to enable a time limited running of a Train, Servo Steer, or Sk
 - Servo Steer
   - 1 motor for drive
   - 1 motor with rotation sensor for steering
+- ODV: 
+  - This mode is specific to the  [Omni-Directional Vehicles GBC, by Akiyuki](https://rebrickable.com/mocs/MOC-224417/Planet%20GBC/omni-directional-vehicles-gbc-by-akiyuki/#details)
+  - a built ODV vehicle with 2 motors
+  - a grid course to run on
 - Lego Remote
 
 ## How do I get set up?
@@ -37,6 +41,11 @@ Left buttons left motor, Right buttons right motor
 
 Left buttons for drive, Right buttons for steering
 <img src="images/ServoSteerRemote.jpg" alt="Servo Steer Remote Instructions" style="max-height:200px;" />
+
+### ODV
+
+Left buttons for Y, Right buttons for X
+<img src="images/ODVRemote.jpg" alt="ODV Remote Instructions" style="max-height:200px;" />
 
 ## Light Codes
 
@@ -72,11 +81,12 @@ with [PyBricks](https://code.pybricks.com/)
 
 ### Vehicle type
 
-VEHICLE_TYPE = 'skid_steer' # must be one of 'skid_steer', 'servo_steer' or 'train'
+VEHICLE_TYPE = 'skid_steer' # must be one of 'skid_steer', 'servo_steer', 'train' or 'odv'
 
 train - Expects a train motor on Port A, and an optional train motor or light on Port B<br>
 skid_steer - Expects a DC motor on Port A and Port B<br>
 servo_steer - Expects a DC motor on Port A and a motor with a rotation sensor on Port B<br>
+odv - Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
 ### Countdown time settings
 
@@ -106,9 +116,23 @@ SERVO_STEER_TURN_ANGLE = const(45) # angle to turn wheels<br>
 SERVO_STEER_REVERSE_DRIVE_MOTOR = False # set to True if remote + button cause motor to run backwards<br>
 SERVO_STEER_REVERSE_TURN_MOTOR = False # set to True if remote + button cause motor to turn wrong way<br>
 
+### odv settings
+
+ODV_SPEED             :int = 1400     # Max motor speed (deg/s) ~1500
+X= obstacle, L = Load, U = Unload, # = grid tile
+ODV_GRID = ```[
+                "###X#XX",
+                "LX###XU",
+                "###X###"
+]```
+
 ## Releases
 
-### Version 1.4.0 (current)
+### Version 1.5.0 (current)
+
+Add ODV Robot to vehicles
+
+### Version 1.4.0
 
 Allow trains to have lights plugged into port B
 

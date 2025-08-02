@@ -79,22 +79,24 @@ class RunServoSteerMotors(MotorHelper):
             handle remote button clicks
         """
         # Check which remote_buttons are pressed.
-        remote_buttons = remote.buttons.pressed()
-
+        remote_buttons_pressed = remote.buttons.pressed()
+        if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
+            self.stop_motors()
+            return
         # stop motors as this is bang-bang mode where a button
         #  needs to be held down for racer to run
 
         #  handle button press
-        if Button.LEFT_PLUS in remote_buttons:
+        if Button.LEFT_PLUS in remote_buttons_pressed:
             self.drive_motor.dc(self.drive_speed)
-        elif Button.LEFT_MINUS in remote_buttons:
+        elif Button.LEFT_MINUS in remote_buttons_pressed:
             self.drive_motor.dc(-self.drive_speed)
         else:
             self.drive_motor.dc(0)
 
-        if Button.RIGHT_PLUS in remote_buttons:
+        if Button.RIGHT_PLUS in remote_buttons_pressed:
             self.steering_motor.run_target(200, self.turn_angle, wait=False)
-        elif Button.RIGHT_MINUS in remote_buttons:
+        elif Button.RIGHT_MINUS in remote_buttons_pressed:
             self.steering_motor.run_target(200, -self.turn_angle, wait=False)
         else:
             self.steering_motor.run_target(200, 0, wait=False)
