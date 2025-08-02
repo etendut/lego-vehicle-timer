@@ -578,14 +578,14 @@ class RunODVMotors(MotorHelper):
         self.y_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
         self.y_motor.reset_angle(0)
-        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, (GEAR_RATIO * 2))
+        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO)
         wait(200)
 
         # Homing axis X
         self.x_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
         self.x_motor.reset_angle(0)
-        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, (GEAR_RATIO * 2))
+        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO)
         wait(200)
 
         self.is_homed = True
@@ -625,7 +625,7 @@ class RunODVMotors(MotorHelper):
         y_grid = floor(fine_position.y / FINE_GRID_SIZE)
         print("Coarse", x_grid, y_grid)
 
-        if x_grid < 1 or x_grid > self.coarse_grid_width or y_grid < 1 or y_grid > self.coarse_grid_height:
+        if fine_position.x < 1 or fine_position.y < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
             return WALL
         if (x_grid, y_grid) in self.coarse_grid:
             return self.coarse_grid[(x_grid, y_grid)]
