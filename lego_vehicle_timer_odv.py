@@ -27,7 +27,7 @@ COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right cente
 
 
 # odv settings
-ODV_SPEED: int = 50  # set between 50 and 80
+ODV_SPEED: int = const(50)  # set between 50 and 80
 # X= obstacle, L = Load, U = Unload, # = grid tile
 # ODV_GRID = ["###X#XX",
 #             "LX###XU",
@@ -408,15 +408,13 @@ LOAD = 'L'
 UNLOAD = 'U'
 
 DEFAULT_GRID = ["###X#XX", "LX###XU", "###X###"]
-FINE_GRID_SIZE = 10
-ODV_SIZE = 8
+FINE_GRID_SIZE = const(10)
+ODV_SIZE = const(8)
 
-GEAR_RATIO: int = 80  # Motor rotation angle per grid pitch (deg/pitch)
-MAX_MOTOR_ROT_SPEED: int = 1400  # Max motor speed (deg/s) ~1500
-HOMING_MOTOR_ROT_SPEED: int = 200  # Homing speed (deg/s)
-HOMING_DUTY: int = 45  # Homing motor duty (%) (adjustment required)
-HOMING_OFFSET_ANGLE_X: int = 110  # X-axis offset distance (deg) (adjustment required)
-HOMING_OFFSET_ANGLE_Y: int = 110  # Y-axis offset distance (deg) (adjustment required)
+GEAR_RATIO: int = const(80)  # Motor rotation angle per grid pitch (deg/pitch)
+MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
+HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
+HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
 
 class ODVPosition:
@@ -459,6 +457,16 @@ class ODVPosition:
 
 class ODVBox:
     def __init__(self, top_left: ODVPosition, width: int, height: int):
+        self.width = 0
+        self.height = 0
+        self.top_left: ODVPosition
+        self.top_right: ODVPosition
+        self.bottom_right: ODVPosition
+        self.bottom_left: ODVPosition
+        self.upper_left: ODVPosition
+        self._update_dimensions_(top_left, width, height)
+
+    def _update_dimensions_(self, top_left: ODVPosition, width: int, height: int):
         self.width = width
         self.height = height
         self.top_left = top_left
@@ -466,8 +474,13 @@ class ODVBox:
         self.bottom_right = ODVPosition(self.top_right.x, self.top_left.y + self.height)
         self.bottom_left = ODVPosition(self.top_left.x, self.bottom_right.y)
 
+    def buffer(self, buffer: int):
+        new_tl = ODVPosition(self.top_left.x - buffer, self.top_left.y - buffer)
+        self._update_dimensions_(new_tl, self.width + (buffer * 2), self.height + (buffer * 2))
+
     def __str__(self):
         return f"[{self.top_left}, {self.top_right}]\n[{self.bottom_left}, {self.bottom_right}]"
+
 
 class RunODVMotors(MotorHelper):
     """
@@ -565,14 +578,14 @@ class RunODVMotors(MotorHelper):
         self.y_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
         self.y_motor.reset_angle(0)
-        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, HOMING_OFFSET_ANGLE_Y)
+        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, (GEAR_RATIO * 2))
         wait(200)
 
         # Homing axis X
         self.x_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
         self.x_motor.reset_angle(0)
-        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, HOMING_OFFSET_ANGLE_X)
+        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, (GEAR_RATIO * 2))
         wait(200)
 
         self.is_homed = True
@@ -584,6 +597,8 @@ class RunODVMotors(MotorHelper):
 
         # work out cart dimensions
         cart = ODVBox(self.last_fine_grid_position, ODV_SIZE, ODV_SIZE)
+        # shrink the cart to make moving smoother
+        cart.buffer(-1)
 
         print("Cart", cart)
 
@@ -610,11 +625,11 @@ class RunODVMotors(MotorHelper):
         y_grid = floor(fine_position.y / FINE_GRID_SIZE)
         print("Coarse", x_grid, y_grid)
 
-        if x_grid < 0 or x_grid > self.coarse_grid_width or y_grid < 0 or y_grid > self.coarse_grid_height:
+        if x_grid < 1 or x_grid > self.coarse_grid_width or y_grid < 1 or y_grid > self.coarse_grid_height:
             return WALL
-        if (x_grid, y_grid) in  self.coarse_grid:
+        if (x_grid, y_grid) in self.coarse_grid:
             return self.coarse_grid[(x_grid, y_grid)]
-        
+
         return WALL
 
     def _move_in_direction_(self, direction: str) -> bool:
