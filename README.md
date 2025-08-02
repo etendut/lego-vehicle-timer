@@ -12,8 +12,8 @@ A python program to enable a time limited running of a Train, Servo Steer, or Sk
 - Servo Steer
   - 1 motor for drive
   - 1 motor with rotation sensor for steering
-- ODV: 
-  - This mode is specific to the  [Omni-Directional Vehicles GBC, by Akiyuki](https://rebrickable.com/mocs/MOC-224417/Planet%20GBC/omni-directional-vehicles-gbc-by-akiyuki/#details)
+- ODV:
+  - This mode is specific to the [Omni-Directional Vehicles GBC, by Akiyuki](https://rebrickable.com/mocs/MOC-224417/Planet%20GBC/omni-directional-vehicles-gbc-by-akiyuki/#details)
   - a built ODV vehicle with 2 motors
   - a grid course to run on
 - Lego Remote
@@ -45,7 +45,7 @@ Left buttons for drive, Right buttons for steering
 ### ODV
 
 Left buttons for Y, Right buttons for X
-<img src="images/ODVRemote.jpg" alt="ODV Remote Instructions" style="max-height:200px;" />
+<img src="images/ODVSteerRemote.jpg" alt="ODV Remote Instructions" style="max-height:200px;" />
 
 ## Light Codes
 
@@ -76,73 +76,97 @@ Once the program starts certain errors will be flashed on the hub
 
 ## Configuration
 
-All configuration should be done in [lego_vehicle_timer](lego_vehicle_timer.py) before installing
-with [PyBricks](https://code.pybricks.com/)
+Each vehicle has it's own configuration
 
-### Vehicle type
+### Common
 
-VEHICLE_TYPE = 'skid_steer' # must be one of 'skid_steer', 'servo_steer', 'train' or 'odv'
-
-train - Expects a train motor on Port A, and an optional train motor or light on Port B<br>
-skid_steer - Expects a DC motor on Port A and Port B<br>
-servo_steer - Expects a DC motor on Port A and a motor with a rotation sensor on Port B<br>
-odv - Expects a Servo motor on Port A and a Servo motor on Port C<br>
-
-### Countdown time settings
+#### Countdown time settings
 
 COUNTDOWN_LIMIT_MINUTES = const(3) # run for (x) minutes, min 1 minute, max up to you. the default of 3 minutes is play
 tested :).<br>
 c = center button, + = + button, - = - button<br>
 COUNTDOWN_RESET_CODE = 'c,c,c' # left center button, center button, right center button<br>
 
-### Train mode settings
+### Train
+
+Configuration should be done in [lego_vehicle_timer_train](lego_vehicle_timer_train.py) before installing
+with [PyBricks](https://code.pybricks.com/)
+
+Expects a train motor on Port A, and an optional train motor or light on Port B<br>
 
 TRAIN_MOTOR_SPEED_STEP = const(10) # the amount each button press changes the train speed<br>
 TRAIN_MOTOR_MIN_SPEED = const(30) # lowest speed the train will go set between 0 and 100<br>
 TRAIN_MOTOR_MAX_SPEED = const(80) # set between 0 and 100<br>
 TRAIN_REVERSE_MOTOR = False # set to True if remote + button cause motor to run backwards<br>
 
-### skid steer dual motor settings
+### Skid Steer
+
+Configuration should be done in [lego_vehicle_timer_skid_steer](lego_vehicle_timer_skid_steer.py) before installing
+with [PyBricks](https://code.pybricks.com/)
+
+Expects a DC motor on Port A and Port B<br>
 
 SKID_STEER_SPEED = const(80) # set between 0 and 100<br>
 SKID_STEER_SWAP_MOTOR_SIDES = False # set to True if Left/Right remote buttons are backwards<br>
 SKID_STEER_REVERSE_LEFT_MOTOR = False # set to True if remote + button cause motor to run backwards<br>
 SKID_STEER_REVERSE_RIGHT_MOTOR = False # set to True if remote + button cause motor to run backwards<br>
 
-### servo steer settings
+### Servo Steer
+
+Configuration should be done in [lego_vehicle_timer_servo](lego_vehicle_timer_servo.py) before installing
+with [PyBricks](https://code.pybricks.com/)
+
+Expects a DC motor on Port A and a motor with a rotation sensor on Port B<br>
 
 SERVO_STEER_SPEED = const(80) # set between 50 and 100<br>
 SERVO_STEER_TURN_ANGLE = const(45) # angle to turn wheels<br>
 SERVO_STEER_REVERSE_DRIVE_MOTOR = False # set to True if remote + button cause motor to run backwards<br>
 SERVO_STEER_REVERSE_TURN_MOTOR = False # set to True if remote + button cause motor to turn wrong way<br>
 
-### odv settings
+### ODV
 
-ODV_SPEED             :int = 1400     # Max motor speed (deg/s) ~1500
+Configuration should be done in [lego_vehicle_timer_odv](lego_vehicle_timer_odv.py) before installing
+with [PyBricks](https://code.pybricks.com/)
+
+Expects a Servo motor on Port A and a Servo motor on Port C<br>
+
+ODV_SPEED: int = const(50) # set between 50 and 80<br>
+ODV_GRID = [] grid tiles specified in a list
+
 X= obstacle, L = Load, U = Unload, # = grid tile
-ODV_GRID = ```[
-                "###X#XX",
-                "LX###XU",
-                "###X###"
-]```
+
+**Example 1**<br>
+ODV_GRID = `["###X","LX#U","###X"]`<br>
+<img src="images/odv_grid_1.png" alt="Grid example 1" />
+
+**Example 2**<br>
+ODV_GRID = `["###X#XX","LX###XU","###X###"]`<br>
+<img src="images/odv_grid_2.png" alt="Grid example 2" /> <br>
 
 ## Releases
 
-### Version 1.5.0 (current)
+### Version 2.0.0 (current)
 
-Add ODV Robot to vehicles
+- Add ODV Robot to vehicles
+- Split vehicle python files to reduce memory footprint
 
 ### Version 1.4.0
 
-Allow trains to have lights plugged into port B
+- Allow trains to have lights plugged into port B
 
 ### Version 1.3.1
 
-Add error and hub flash codes
+- Add error and hub flash codes
 
 ### Version 1.1.0
 
-Initial release
+- Initial release
+
+## Customising the code
+
+- Clone this repo
+- Update code in the [modules](/modules/) folder as needed
+- run [compile_pybricks_files](/modules/compile_pybricks_files.py) to create the lego*vehicle_timer*\* files for use in [PyBricks](https://code.pybricks.com/)
 
 ## Licence
 
