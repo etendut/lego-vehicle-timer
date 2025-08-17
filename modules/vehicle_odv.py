@@ -51,7 +51,7 @@ LOAD = 'L'
 UNLOAD = 'U'
 OK_MOVES = [TRACK, LOAD, UNLOAD]
 
-DEFAULT_GRID = ["H######","###X#XX", "LX###XU", "###X###"]
+DEFAULT_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
 FINE_GRID_SIZE = const(10)
 ODV_SIZE = const(8)
 
@@ -158,7 +158,7 @@ class RunODVMotors(MotorHelper):
         self.home_tile: ODVPosition
         self.unload_tile: ODVPosition
         self.load_tile: ODVPosition
-        self.last_fine_grid_position: ODVPosition
+        self.last_fine_grid_position = ODVPosition(0, 0)
         """current position"""
         self.coarse_grid = {}
         self.coarse_grid_width = 0
@@ -358,16 +358,22 @@ class RunODVMotors(MotorHelper):
         tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
         return ODVPosition(tile_angle_x, tile_angle_y)
 
-    def _navigate_to_grid_tile(self, tile: ODVPosition)-> ODVPosition:
+    def _navigate_to_grid_tile(self, tile: ODVPosition, stop=Stop.HOLD) -> ODVPosition:
         print(f"navigating to tile {tile}")
-        tile_angle = self._tile_to_angle(tile)
-        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle.y)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle.x)
-        return tile_angle
+        tile_angle_x = tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
+        tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
+        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
+        return ODVPosition(tile_angle_x, tile_angle_y)
 
     def _navigate_grid_tile_path(self, grid_tile_path: list[ODVPosition]):
+
         for i, p in enumerate(grid_tile_path):
-            self._navigate_to_grid_tile(p)
+            if p.direction is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[
+                i + 1].direction is not None and grid_tile_path[i + 1].direction == p.direction:
+                self._navigate_to_grid_tile(p, Stop.NONE)
+            else:
+                self._navigate_to_grid_tile(p, Stop.COAST)
 
     def auto_home(self):
         if not self.is_homed:
@@ -381,8 +387,6 @@ class RunODVMotors(MotorHelper):
     def auto_load(self):
         if not self.is_homed:
             return
-        if self.has_load:
-            return
         print('getting path to load')
         tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
         path = self._bfs_path_to_grid_tile(tile, self.load_tile)
@@ -391,8 +395,6 @@ class RunODVMotors(MotorHelper):
 
     def auto_unload(self):
         if not self.is_homed:
-            return
-        if not self.has_load:
             return
         print('getting path to unload')
         tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
