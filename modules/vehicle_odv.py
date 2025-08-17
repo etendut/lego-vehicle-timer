@@ -361,7 +361,8 @@ class RunODVMotors(MotorHelper):
         if not self.is_homed:
             return
         print('getting path to home')
-        path = self._bfs_path_to_position(ODVPosition(0, 0))
+        tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
+        path = self._bfs_path_to_grid_tile(tile, ODVPosition(0, 0))
         self._navigate_grid_tile_path(path)
         print('homed')
 
@@ -371,7 +372,8 @@ class RunODVMotors(MotorHelper):
         if self.has_load:
             return
         print('getting path to load')
-        path = self._bfs_path_to_position(self.load_tile)
+        tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
+        path = self._bfs_path_to_grid_tile(tile, self.load_tile)
         self._navigate_grid_tile_path(path)
         self._do_load_()
 
@@ -381,20 +383,20 @@ class RunODVMotors(MotorHelper):
         if not self.has_load:
             return
         print('getting path to unload')
-        path = self._bfs_path_to_position(self.unload_tile)
+        tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
+        path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
         self._navigate_grid_tile_path(path)
         self._do_unload_()
 
-    def _bfs_path_to_position(self, end: ODVPosition):
+    def _bfs_path_to_grid_tile(self, start_tile: ODVPosition, end_tile: ODVPosition):
         queue: Queue = Queue()
-        tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
-        queue.put([tile])  # Enqueue the start position
+        queue.put([start_tile])  # Enqueue the start position
 
         while not queue.empty():
             path = queue.get()  # Dequeue the path
             current_pos = path[-1]  # Current position is the last element of the path
 
-            if current_pos == end:
+            if current_pos == end_tile:
                 return path  # Return the path if end is reached
 
             for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
