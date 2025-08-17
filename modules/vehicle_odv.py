@@ -373,7 +373,7 @@ class RunODVMotors(MotorHelper):
                 i + 1].direction is not None and grid_tile_path[i + 1].direction == p.direction:
                 self._navigate_to_grid_tile(p, Stop.NONE)
             else:
-                self._navigate_to_grid_tile(p, Stop.COAST)
+                self._navigate_to_grid_tile(p)
 
     def auto_home(self):
         if not self.is_homed:
