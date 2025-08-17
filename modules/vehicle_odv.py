@@ -46,11 +46,12 @@ DIRECTIONS = [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORT
 ROBOT = "R"
 WALL = 'X'
 TRACK = '#'
+HOME = 'H'
 LOAD = 'L'
 UNLOAD = 'U'
 OK_MOVES = [TRACK, LOAD, UNLOAD]
 
-DEFAULT_GRID = ["###X#XX", "LX###XU", "###X###"]
+DEFAULT_GRID = ["H######","###X#XX", "LX###XU", "###X###"]
 FINE_GRID_SIZE = const(10)
 ODV_SIZE = const(8)
 
@@ -154,9 +155,10 @@ class RunODVMotors(MotorHelper):
         super().__init__(False, True)
         # grid setup
         self.motors_running = None
+        self.home_tile: ODVPosition
         self.unload_tile: ODVPosition
         self.load_tile: ODVPosition
-        self.last_fine_grid_position = ODVPosition(0, 0)
+        self.last_fine_grid_position: ODVPosition
         """current position"""
         self.coarse_grid = {}
         self.coarse_grid_width = 0
@@ -203,6 +205,8 @@ class RunODVMotors(MotorHelper):
                 print(f"line {y + 1} |col {x + 1}/{len(line)}")
                 self.coarse_grid[x, y] = character
                 # set load/unload points
+                if character == HOME:
+                    self.home_tile = ODVPosition(x, y)
                 if character == LOAD:
                     self.load_tile = ODVPosition(x, y)
                 if character == UNLOAD:
@@ -213,12 +217,14 @@ class RunODVMotors(MotorHelper):
         mem_info()
         print('Grid Loaded')
 
-    def _display_grid_(self, position: tuple[int, int], robot_symbol: str):
+    def _display_grid_(self, position: ODVPosition, robot_symbol: str):
         # Display the maze:
         for y in range(self.coarse_grid_height):
             for x in range(self.coarse_grid_width):
-                if (x, y) == position:
+                if (x, y) == position.value():
                     print(robot_symbol, end='')
+                elif (x, y) == self.home_tile.value():
+                    print(HOME, end='')
                 elif (x, y) == self.load_tile.value():
                     print(LOAD, end='')
                 elif (x, y) == self.unload_tile.value():
@@ -240,19 +246,20 @@ class RunODVMotors(MotorHelper):
         # Homing axis Y
         self.y_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
-        self.y_motor.reset_angle(0)
+        home_tile_angle = self._tile_to_angle(self.home_tile)
+        self.y_motor.reset_angle(home_tile_angle.y)
         self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO_TO_GRID)
         wait(200)
 
         # Homing axis X
         self.x_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
         wait(200)
-        self.x_motor.reset_angle(0)
+        self.x_motor.reset_angle(home_tile_angle.x)
         self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO_TO_GRID)
         wait(200)
 
         self.is_homed = True
-        self._display_grid_((0, 0), ROBOT)
+        self._display_grid_(self.home_tile, ROBOT)
 
     def _can_move_in_direction_(self, direction: str) -> tuple[bool, bool, bool]:
         if direction not in DIRECTIONS:
@@ -335,23 +342,28 @@ class RunODVMotors(MotorHelper):
         print("ready to go")
 
     def _do_unload_(self):
-        tile_angle_x, _ = self._navigate_to_grid_tile(self.unload_tile)
+        tile_angle = self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         print("unloading..")
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x + (GEAR_RATIO_TO_GRID * 4))
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle.x + (GEAR_RATIO_TO_GRID * 4))
         wait(2000)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle.x)
         wait(200)
         self.has_load = False
         print("ready to go")
 
-    def _navigate_to_grid_tile(self, tile: ODVPosition):
-        print(f"navigating to tile {tile}")
+    @staticmethod
+    def _tile_to_angle(tile: ODVPosition) -> ODVPosition:
         tile_angle_x = tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
         tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
-        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_y)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x)
-        return tile_angle_x, tile_angle_y
+        return ODVPosition(tile_angle_x, tile_angle_y)
+
+    def _navigate_to_grid_tile(self, tile: ODVPosition)-> ODVPosition:
+        print(f"navigating to tile {tile}")
+        tile_angle = self._tile_to_angle(tile)
+        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle.y)
+        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle.x)
+        return tile_angle
 
     def _navigate_grid_tile_path(self, grid_tile_path: list[ODVPosition]):
         for i, p in enumerate(grid_tile_path):
@@ -362,7 +374,7 @@ class RunODVMotors(MotorHelper):
             return
         print('getting path to home')
         tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
-        path = self._bfs_path_to_grid_tile(tile, ODVPosition(0, 0))
+        path = self._bfs_path_to_grid_tile(tile, self.home_tile)
         self._navigate_grid_tile_path(path)
         print('homed')
 
