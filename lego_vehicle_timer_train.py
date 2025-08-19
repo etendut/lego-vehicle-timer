@@ -1,6 +1,7 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
 # licence MIT
+import time
 
 from micropython import const
 from pybricks.parameters import Color, Side, Button
@@ -136,6 +137,7 @@ ACTIVE: int = const(10)
 FINAL_MINUTE: int = const(20)
 FINAL_20_SECS: int = const(30)
 ENDED: int = const(40)
+UNKNOWN: int = const(99)
 
 
 class CountdownTimer:
@@ -145,9 +147,9 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
-        self.last_countdown_message = None
-        self.countdown_status = None
-        self.last_countdown_status = None
+        self.remote_buttons_last_pressed:int = 0
+        self.last_countdown_message:str = ''
+        self.countdown_status:int = UNKNOWN
 
         # Start a timer.
         self.countdown_stopwatch = StopWatch()
@@ -202,7 +204,6 @@ class CountdownTimer:
     def reset(self):
         print('countdown time reset, press Remote CENTER to restart countdown')
         self.countdown_status = READY
-        self.last_countdown_status = None
 
     def check_remote_buttons(self):
         """
@@ -211,6 +212,8 @@ class CountdownTimer:
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0:
             return
+
+        self.remote_buttons_last_pressed = int(time.time())
 
         if self.countdown_status == READY and Button.CENTER in remote_buttons_pressed:
             self.__start_countdown__()
@@ -239,8 +242,7 @@ class CountdownTimer:
 
     def show_status(self):
         global hub
-        if self.countdown_status == self.last_countdown_status:
-            return
+        global remote
         if self.countdown_status == READY:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == ACTIVE:
@@ -253,7 +255,7 @@ class CountdownTimer:
         elif self.countdown_status == ENDED:
             hub.light.on(Color.ORANGE)
             remote.light.on(Color.ORANGE)
-        self.last_countdown_status = self.countdown_status
+
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
