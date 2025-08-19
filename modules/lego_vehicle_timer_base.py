@@ -191,7 +191,6 @@ class CountdownTimer:
     def reset(self):
         print('countdown time reset, press Remote CENTER to restart countdown')
         self.countdown_status = READY
-        self.last_countdown_status = None
 
     def check_remote_buttons(self):
         """
@@ -228,8 +227,7 @@ class CountdownTimer:
 
     def show_status(self):
         global hub
-        if self.countdown_status == self.last_countdown_status:
-            return
+        global remote
         if self.countdown_status == READY:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == ACTIVE:
@@ -242,7 +240,7 @@ class CountdownTimer:
         elif self.countdown_status == ENDED:
             hub.light.on(Color.ORANGE)
             remote.light.on(Color.ORANGE)
-        self.last_countdown_status = self.countdown_status
+
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
