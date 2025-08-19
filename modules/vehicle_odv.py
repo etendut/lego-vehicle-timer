@@ -62,12 +62,11 @@ HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
 
 class ODVPosition:
-    def __init__(self, x, y):
+    def __init__(self, x:int, y:int):
         self.x = x
         self.y = y
-        self.direction = None
 
-    def position_from_direction(self, direction):
+    def position_from_direction(self, direction:str):
         if direction == NORTH:
             return ODVPosition(self.x, self.y - 1)
         if direction == NORTH_EAST:
@@ -99,28 +98,55 @@ class ODVPosition:
     def __eq__(self, other):
         return self.value() == other.value()
 
+class ODVTilePosition(ODVPosition):
+    def __init__(self, x:int, y:int):
+        super().__init__(x, y)
+        self.type = 'tile'
+        self.direction = None
+
+    def tile_path_from_direction(self, direction:str):
+        """
+        gets position_from_direction and adds direction property
+        :param direction:
+        :return:
+        """
+        pos = super().position_from_direction(direction)
+        tp = ODVTilePosition(pos.x, pos.y)
+        tp.direction = direction
+        return tp
+
+
+class ODVGridPosition(ODVPosition):
+    def __init__(self, x:int, y:int):
+        super().__init__(x, y)
+        self.type = 'grid'
+
+class ODVAnglePosition(ODVPosition):
+    def __init__(self, x:int, y:int):
+        super().__init__(x, y)
+        self.type = 'angle'
 
 class ODVBox:
-    def __init__(self, top_left: ODVPosition, width: int, height: int):
+    def __init__(self, top_left: ODVGridPosition, width: int, height: int):
         self.width = 0
         self.height = 0
-        self.top_left: ODVPosition
-        self.top_right: ODVPosition
-        self.bottom_right: ODVPosition
-        self.bottom_left: ODVPosition
-        self.upper_left: ODVPosition
+        self.top_left: ODVGridPosition
+        self.top_right: ODVGridPosition
+        self.bottom_right: ODVGridPosition
+        self.bottom_left: ODVGridPosition
+        self.upper_left: ODVGridPosition
         self._update_dimensions_(top_left, width, height)
 
-    def _update_dimensions_(self, top_left: ODVPosition, width: int, height: int):
+    def _update_dimensions_(self, top_left: ODVGridPosition, width: int, height: int):
         self.width = width
         self.height = height
         self.top_left = top_left
-        self.top_right = ODVPosition(self.top_left.x + self.width, self.top_left.y)
-        self.bottom_right = ODVPosition(self.top_right.x, self.top_left.y + self.height)
-        self.bottom_left = ODVPosition(self.top_left.x, self.bottom_right.y)
+        self.top_right = ODVGridPosition(self.top_left.x + self.width, self.top_left.y)
+        self.bottom_right = ODVGridPosition(self.top_right.x, self.top_left.y + self.height)
+        self.bottom_left = ODVGridPosition(self.top_left.x, self.bottom_right.y)
 
     def buffer(self, buffer: int):
-        new_tl = ODVPosition(self.top_left.x - buffer, self.top_left.y - buffer)
+        new_tl = ODVGridPosition(self.top_left.x - buffer, self.top_left.y - buffer)
         self._update_dimensions_(new_tl, self.width + (buffer * 2), self.height + (buffer * 2))
 
     def __str__(self):
@@ -131,15 +157,15 @@ class Queue:
     """ No Queue in micropython :("""
 
     def __init__(self) -> None:
-        self._queue: list[list[ODVPosition]] = []
+        self._queue: list[list[ODVTilePosition]] = []
 
-    def put(self, item: list[ODVPosition]):
+    def put(self, item: list[ODVTilePosition]):
         self._queue.append(item)
 
     def empty(self):
         return len(self._queue) == 0
 
-    def get(self) -> list[ODVPosition]:
+    def get(self) -> list[ODVTilePosition]:
         first = self._queue[0]
         del self._queue[0]
         return first
@@ -154,11 +180,12 @@ class RunODVMotors(MotorHelper):
 
         super().__init__(False, True)
         # grid setup
+        self.auto_mode = False
         self.motors_running = None
-        self.home_tile: ODVPosition
-        self.unload_tile: ODVPosition
-        self.load_tile: ODVPosition
-        self.last_fine_grid_position = ODVPosition(0, 0)
+        self.home_tile: ODVTilePosition
+        self.unload_tile: ODVTilePosition
+        self.load_tile: ODVTilePosition
+        self.last_fine_grid_position = ODVGridPosition(0, 0)
         """current position"""
         self.coarse_grid = {}
         self.coarse_grid_width = 0
@@ -206,18 +233,18 @@ class RunODVMotors(MotorHelper):
                 self.coarse_grid[x, y] = character
                 # set load/unload points
                 if character == HOME:
-                    self.home_tile = ODVPosition(x, y)
+                    self.home_tile = ODVTilePosition(x, y)
                 if character == LOAD:
-                    self.load_tile = ODVPosition(x, y)
+                    self.load_tile = ODVTilePosition(x, y)
                 if character == UNLOAD:
-                    self.unload_tile = ODVPosition(x, y)
+                    self.unload_tile = ODVTilePosition(x, y)
 
             y += 1
         self.coarse_grid_height = y
         mem_info()
         print('Grid Loaded')
 
-    def _display_grid_(self, position: ODVPosition, robot_symbol: str):
+    def _display_grid_(self, position: ODVTilePosition, robot_symbol: str):
         # Display the maze:
         for y in range(self.coarse_grid_height):
             for x in range(self.coarse_grid_width):
@@ -285,18 +312,18 @@ class RunODVMotors(MotorHelper):
         # print("Cart", direction, can_move)
         return can_move, can_load, can_unload
 
-    def _get_fine_grid_position_(self) -> ODVPosition:
+    def _get_fine_grid_position_(self) -> ODVGridPosition:
 
         x_grid = int(self.x_motor.angle() / GEAR_RATIO_TO_GRID)
         y_grid = int(self.y_motor.angle() / GEAR_RATIO_TO_GRID)
-        return ODVPosition(x_grid, y_grid)
+        return ODVGridPosition(x_grid, y_grid)
 
-    def _get_grid_tile_from_fine_xy_(self, fine_position: ODVPosition) -> tuple[ODVPosition, str]:
+    def _get_grid_tile_from_fine_xy_(self, fine_position: ODVGridPosition) -> tuple[ODVTilePosition, str]:
 
         x_grid = floor(fine_position.x / FINE_GRID_SIZE)
         y_grid = floor(fine_position.y / FINE_GRID_SIZE)
         # print("Coarse", x_grid, y_grid)
-        tile = ODVPosition(x_grid, y_grid)
+        tile = ODVTilePosition(x_grid, y_grid)
         if fine_position.x < 1 or fine_position.y < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
             return tile, WALL
         if (x_grid, y_grid) in self.coarse_grid:
@@ -353,22 +380,34 @@ class RunODVMotors(MotorHelper):
         print("ready to go")
 
     @staticmethod
-    def _tile_to_angle(tile: ODVPosition) -> ODVPosition:
+    def _tile_to_angle(tile: ODVTilePosition) -> ODVAnglePosition:
+        """
+        Convert grid tile to angle
+        :param tile: ODVTilePosition
+        :return: ODVAnglePosition
+        """
         tile_angle_x = tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
         tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
-        return ODVPosition(tile_angle_x, tile_angle_y)
+        return ODVAnglePosition(tile_angle_x, tile_angle_y)
 
-    def _navigate_to_grid_tile(self, tile: ODVPosition, stop=Stop.HOLD) -> ODVPosition:
+    def _navigate_to_grid_tile(self, tile: ODVTilePosition, stop=Stop.HOLD) -> ODVAnglePosition:
         print(f"navigating to tile {tile}")
         tile_angle_x = tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
         tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
         self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
         self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
-        return ODVPosition(tile_angle_x, tile_angle_y)
+        return ODVAnglePosition(tile_angle_x, tile_angle_y)
 
-    def _navigate_grid_tile_path(self, grid_tile_path: list[ODVPosition]):
-
+    def _navigate_grid_tile_path(self, grid_tile_path: list[ODVTilePosition]):
+        """
+        Navigates robot through list of ODVTilePosition
+        :param grid_tile_path:
+        """
         for i, p in enumerate(grid_tile_path):
+            # if user takes over break
+            if self.auto_mode and  len(remote.buttons.pressed()) > 0:
+                self.auto_mode = False
+                break                
             if p.direction is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[
                 i + 1].direction is not None and grid_tile_path[i + 1].direction == p.direction:
                 self._navigate_to_grid_tile(p, Stop.NONE)
@@ -402,7 +441,7 @@ class RunODVMotors(MotorHelper):
         self._navigate_grid_tile_path(path)
         self._do_unload_()
 
-    def _bfs_path_to_grid_tile(self, start_tile: ODVPosition, end_tile: ODVPosition):
+    def _bfs_path_to_grid_tile(self, start_tile: ODVTilePosition, end_tile: ODVTilePosition):
         queue: Queue = Queue()
         queue.put([start_tile])  # Enqueue the start position
 
@@ -414,10 +453,9 @@ class RunODVMotors(MotorHelper):
                 return path  # Return the path if end is reached
 
             for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
-                new_pos = current_pos.position_from_direction(direction)
+                new_pos = current_pos.tile_path_from_direction(direction)
                 if new_pos.value() in self.coarse_grid and self.coarse_grid[new_pos.value()] in OK_MOVES:
                     new_path = list(path)
-                    new_pos.direction = direction
                     new_path.append(new_pos)
                     queue.put(new_path)  # Enqueue the new path
         return []
