@@ -2,7 +2,6 @@
 # Copyright Etendut
 # licence MIT
 
-import sys
 from micropython import const
 from pybricks.parameters import Color, Side, Button
 from pybricks.pupdevices import Remote
@@ -566,7 +565,7 @@ def main():
 
             if REMOTE_DISABLED and ODV_AUTO_DRIVE_TIMEOUT_SECS == 0:
                 print("No remote or auto drive exiting")
-                sys.exit(0)
+                raise SystemExit
 
     except Exception as e:
         print(e)
