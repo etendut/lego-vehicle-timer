@@ -1,11 +1,18 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
 # licence MIT
-
 from micropython import const, mem_info
-from pybricks.parameters import Color, Side, Button
+from pybricks.parameters import Color, Button
 from pybricks.pupdevices import Remote
 from pybricks.tools import wait, StopWatch
+
+try:
+    from typing import TYPE_CHECKING
+except ImportError:
+    TYPE_CHECKING = False
+
+if TYPE_CHECKING:
+    from modules.mock_types import MockHub, MockRemote
 
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Direction, Stop
@@ -146,6 +153,8 @@ class MotorHelper:
 ##################################################################################
 
 def wait_for_no_pressed_buttons():
+    if REMOTE_DISABLED:
+        return
     remote_buttons_pressed = remote.buttons.pressed()
     while remote_buttons_pressed:
         remote_buttons_pressed = remote.buttons.pressed()
@@ -255,6 +264,9 @@ class CountdownTimer:
         """
             check countdown time buttons
         """
+        if REMOTE_DISABLED:
+            return
+
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0:
             return
@@ -278,14 +290,16 @@ class CountdownTimer:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == _ACTIVE:
             hub.light.on(Color.GREEN)
-            remote.light.on(Color.GREEN)
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.GREEN)
         elif self.countdown_status == _FINAL_20_SECS:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
         elif self.countdown_status == _FINAL_MINUTE:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
         elif self.countdown_status == _ENDED:
             hub.light.on(Color.ORANGE)
-            remote.light.on(Color.ORANGE)
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.ORANGE)
 
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
@@ -300,10 +314,12 @@ class CountdownTimer:
         # we use a timer to make it a non-blocking call
         if self.stopwatch.time() > (on_msec + off_msec + self.led_flash_sw_time):
             self.led_flash_sw_time = self.stopwatch.time()
-            remote.light.on(off_color)
+            if not REMOTE_DISABLED:
+                remote.light.on(off_color)
             hub.light.on(off_color)
         elif self.stopwatch.time() > (off_msec + self.led_flash_sw_time):
-            remote.light.on(on_color)
+            if not REMOTE_DISABLED:
+                remote.light.on(on_color)
             hub.light.on(on_color)
 
 
@@ -357,45 +373,11 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 ##################################################################################
 # Main program
 ##################################################################################
-class MockLight:
-    """For typing only, this will be replaced by CityHub or TechnicHub"""
-
-    def blink(self, col, seq):
-        pass
-
-    def on(self, color):
-        pass
 
 
-class MockIMU:
-    """For typing only, this will be replaced by TechnicHub"""
 
-    def up(self) -> Side:
-        pass
-
-
-class MockHub:
-    """For typing only, this will be replaced by CityHub or TechnicHub"""
-
-    def __init__(self):
-        self.imu = MockIMU()
-        self.light = MockLight()
-
-class MockRemoteButtons:
-    """For typing only, this will be replaced by RemoteButtons"""
-    def pressed(self)->list:
-        print(self.__class__.__name__)
-        return []
-
-class MockRemote:
-    """For typing only, this will be replaced by RemoteButtons"""
-    def __init__(self):
-        self.buttons = MockRemoteButtons()
-        self.light = MockLight()
-
-
-hub: MockHub = MockHub()
-remote: MockRemote = MockRemote()
+hub: "MockHub"
+remote: "MockRemote"
 
 def setup_hub():
     global hub
@@ -812,15 +794,17 @@ class RunODVMotors(MotorHelper):
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
         return tile_angle_x, tile_angle_y
 
+    # noinspection PyGlobalUndefined
     def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[tuple[int, int], int]]) -> bool:
         """
         Navigates robot through list of tuple[int,int]
         :param grid_tile_path:
         :return: succeeded
         """
+        global REMOTE_DISABLED
         for i, path in enumerate(grid_tile_path):
             # if user takes over break
-            if self.mh_auto_drive and len(remote.buttons.pressed()) > 0:
+            if self.mh_auto_drive and REMOTE_DISABLED or len(remote.buttons.pressed()) > 0:
                 self.disable_auto_drive()
                 self.stop_motors()
                 return False
@@ -959,6 +943,7 @@ def main():
     error_flash_code = ErrorFlashCodes()
     print('SETUP')
     print('--setup hub')
+    setup_hub()
     try:
         print("--setup countdown")
         countdown_timer = CountdownTimer()

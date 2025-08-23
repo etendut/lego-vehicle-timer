@@ -2,7 +2,7 @@ from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
 
 error_flash_code = ErrorFlashCodes()
 from micropython import const
-from pybricks.parameters import Side, Button
+from pybricks.parameters import Button
 from pybricks.pupdevices import Remote
 from pybricks.hubs import TechnicHub
 
@@ -10,7 +10,7 @@ hub: TechnicHub | None = None
 remote: Remote | None = None
 
 # IMPORTS_START
-from pybricks.parameters import Port, Direction
+from pybricks.parameters import Port, Side, Direction
 from pybricks.pupdevices import DCMotor
 from uerrno import ENODEV
 

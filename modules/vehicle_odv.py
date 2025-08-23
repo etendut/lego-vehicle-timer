@@ -391,15 +391,17 @@ class RunODVMotors(MotorHelper):
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
         return tile_angle_x, tile_angle_y
 
+    # noinspection PyGlobalUndefined
     def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[tuple[int, int], int]]) -> bool:
         """
         Navigates robot through list of tuple[int,int]
         :param grid_tile_path:
         :return: succeeded
         """
+        global REMOTE_DISABLED
         for i, path in enumerate(grid_tile_path):
             # if user takes over break
-            if self.mh_auto_drive and len(remote.buttons.pressed()) > 0:
+            if self.mh_auto_drive and REMOTE_DISABLED or len(remote.buttons.pressed()) > 0:
                 self.disable_auto_drive()
                 self.stop_motors()
                 return False
