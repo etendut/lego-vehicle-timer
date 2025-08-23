@@ -20,10 +20,14 @@ remote: Remote | None = None
 from pybricks.parameters import Button
 
 # VARS_START
+
 # odv settings
 ODV_SPEED: int = const(45)  # set between 40 and 70
 # X= obstacle, H= Home, L = Load, U = Unload, # = grid tile
-ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
+# ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
+ODV_GRID = ["L###XU",
+            "H#X#X#",
+            "XXX###"]
 # VARS_END
 # MODULE_START
 ##################################################################################
@@ -176,7 +180,6 @@ class RunODVMotors(MotorHelper):
 
         super().__init__(False, True)
         # grid setup
-        self.auto_mode = False
         self.motors_running = None
         self.home_tile: ODVTilePosition
         self.unload_tile: ODVTilePosition
@@ -230,25 +233,26 @@ class RunODVMotors(MotorHelper):
                 # set load/unload points
                 if character == HOME:
                     self.home_tile = ODVTilePosition(x, y)
-                    print(f"home tile is {self.home_tile}")
                 if character == LOAD:
                     self.load_tile = ODVTilePosition(x, y)
-                    print(f"loads tile is {self.load_tile}")
                 if character == UNLOAD:
                     self.unload_tile = ODVTilePosition(x, y)
-                    print(f"unload tile is {self.unload_tile}")
 
             y += 1
         self.coarse_grid_height = y
         mem_info()
         print('Grid Loaded')
+        print(f"--home tile is {self.home_tile}")
+        print(f"--loads tile is {self.load_tile}")
+        print(f"--unload tile is {self.unload_tile}")
+        self._display_grid_()
 
-    def _display_grid_(self, position: ODVTilePosition, robot_symbol: str):
+    def _display_grid_(self, position: ODVTilePosition=None):
         # Display the maze:
         for y in range(self.coarse_grid_height):
             for x in range(self.coarse_grid_width):
-                if (x, y) == position.value():
-                    print(robot_symbol, end='')
+                if position is not None and (x, y) == position.value():
+                    print(ROBOT, end='')
                 elif (x, y) == self.home_tile.value():
                     print(HOME, end='')
                 elif (x, y) == self.load_tile.value():
@@ -285,7 +289,7 @@ class RunODVMotors(MotorHelper):
         wait(200)
 
         self.is_homed = True
-        self._display_grid_(self.home_tile, ROBOT)
+        self._display_grid_(self.home_tile)
 
     def _can_move_in_direction_(self, direction: str) -> tuple[bool, bool, bool]:
         if direction not in DIRECTIONS:
@@ -417,21 +421,25 @@ class RunODVMotors(MotorHelper):
         self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
         return ODVAnglePosition(tile_angle_x, tile_angle_y)
 
-    def _navigate_grid_tile_path(self, grid_tile_path: list[ODVTilePosition]):
+    def _navigate_grid_tile_path(self, grid_tile_path: list[ODVTilePosition])-> bool:
         """
         Navigates robot through list of ODVTilePosition
         :param grid_tile_path:
+        :return: succeeded
         """
         for i, p in enumerate(grid_tile_path):
             # if user takes over break
-            if self.auto_mode and  len(remote.buttons.pressed()) > 0:
-                self.auto_mode = False
-                break                
+            if self.mh_auto_drive and  len(remote.buttons.pressed()) > 0:
+                self.disable_auto_drive()
+                self.stop_motors()
+                return False
             if p.direction is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[
                 i + 1].direction is not None and grid_tile_path[i + 1].direction == p.direction:
                 self._navigate_to_grid_tile(p, Stop.NONE)
             else:
                 self._navigate_to_grid_tile(p)
+
+        return True
 
     def auto_home(self):
         if not self.is_homed:
@@ -448,8 +456,8 @@ class RunODVMotors(MotorHelper):
         print('getting path to load')
         tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
         path = self._bfs_path_to_grid_tile(tile, self.load_tile)
-        self._navigate_grid_tile_path(path)
-        self._do_load_()
+        if self._navigate_grid_tile_path(path):
+            self._do_load_()
 
     def auto_unload(self):
         if not self.is_homed:
@@ -457,8 +465,8 @@ class RunODVMotors(MotorHelper):
         print('getting path to unload')
         tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
-        self._navigate_grid_tile_path(path)
-        self._do_unload_()
+        if self._navigate_grid_tile_path(path):
+            self._do_unload_()
 
     def _bfs_path_to_grid_tile(self, start_tile: ODVTilePosition, end_tile: ODVTilePosition):
         queue: Queue = Queue()
