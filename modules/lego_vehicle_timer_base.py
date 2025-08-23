@@ -1,8 +1,6 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
 # licence MIT
-import time
-
 from micropython import const
 from pybricks.parameters import Color, Side, Button
 from pybricks.pupdevices import Remote
@@ -139,13 +137,13 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
-        self.remote_buttons_last_pressed:int = 0
         self.last_countdown_message:str = ''
         self.countdown_status:int = UNKNOWN
 
         # Start a timer.
         self.countdown_stopwatch = StopWatch()
         self.led_flash_stopwatch = StopWatch()
+        self.remote_buttons_pressed_stopwatch = StopWatch()
         self.end_time = 0
 
     def has_time_remaining(self):
@@ -207,7 +205,7 @@ class CountdownTimer:
         if len(remote_buttons_pressed) == 0:
             return
 
-        self.remote_buttons_last_pressed = int(time.time())
+        self.remote_buttons_pressed_stopwatch.reset()
 
         if self.countdown_status == READY and Button.CENTER in remote_buttons_pressed:
             self.__start_countdown__()
