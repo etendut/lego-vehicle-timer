@@ -202,7 +202,10 @@ class CountdownTimer:
         self.end_time = self.countdown_stopwatch.time() + (COUNTDOWN_LIMIT_MINUTES * 60 * 1000)
 
     def reset(self):
-        print('countdown time reset, press Remote CENTER to restart countdown')
+        if REMOTE_DISABLED:
+            print('countdown time reset')
+        else:
+            print('countdown time reset, press Remote CENTER to restart countdown')
         self.countdown_status = READY
 
     def check_remote_buttons(self):
