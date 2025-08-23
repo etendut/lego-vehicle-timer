@@ -24,6 +24,7 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
+HAS_REMOTE=True #for debugging or ODV full auto
 
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed
@@ -113,6 +114,8 @@ class MotorHelper:
 ##################################################################################
 
 def wait_for_no_pressed_buttons():
+    if not HAS_REMOTE:
+        return
     remote_buttons_pressed = remote.buttons.pressed()
     while remote_buttons_pressed:
         remote_buttons_pressed = remote.buttons.pressed()
@@ -209,6 +212,8 @@ class CountdownTimer:
         """
             check countdown time buttons
         """
+        if not HAS_REMOTE:
+            return
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0:
             return
@@ -225,21 +230,6 @@ class CountdownTimer:
             self.reset()
             wait_for_no_pressed_buttons()
 
-    def check_reset_code_pressed(self):
-        """
-           Check if reset code was pressed
-        """
-        remote_buttons_pressed = remote.buttons.pressed()
-        if len(remote_buttons_pressed) == 0:
-            return
-        # if reset sequence pressed at other times, end countdown
-        if self.countdown_status != READY and all(
-                i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
-            i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
-            print('reset code pressed')
-            self.reset()
-            wait_for_no_pressed_buttons()
-
     def show_status(self):
         global hub
         global remote
@@ -247,14 +237,16 @@ class CountdownTimer:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == ACTIVE:
             hub.light.on(Color.GREEN)
-            remote.light.on(Color.GREEN)
+            if HAS_REMOTE:
+                remote.light.on(Color.GREEN)
         elif self.countdown_status == FINAL_20_SECS:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
         elif self.countdown_status == FINAL_MINUTE:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
         elif self.countdown_status == ENDED:
             hub.light.on(Color.ORANGE)
-            remote.light.on(Color.ORANGE)
+            if HAS_REMOTE:
+                remote.light.on(Color.ORANGE)
 
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
@@ -269,10 +261,12 @@ class CountdownTimer:
         # we use a timer to make it a non-blocking call
         if self.led_flash_stopwatch.time() > (on_msec + off_msec):
             self.led_flash_stopwatch.reset()
-            remote.light.on(off_color)
+            if HAS_REMOTE:
+                remote.light.on(off_color)
             hub.light.on(off_color)
         elif self.led_flash_stopwatch.time() > off_msec:
-            remote.light.on(on_color)
+            if HAS_REMOTE:
+                remote.light.on(on_color)
             hub.light.on(on_color)
 
 
@@ -381,6 +375,9 @@ LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
 
 
 def setup_remote(error_flash_code_helper, retry=5):
+    if not HAS_REMOTE:
+        return
+
     global hub
     global remote
 
@@ -394,7 +391,7 @@ def setup_remote(error_flash_code_helper, retry=5):
         # noinspection PyBroadException
         try:
             print("--looking for remote try " + str(remote_retry_count))
-            # Connect to the remote.
+            # Connect to the remote
             remote = Remote()
             print("--remote connected.")
             break
@@ -550,7 +547,8 @@ def main():
 
 
         print('--setup remote')
-        setup_remote(error_flash_code)
+        if HAS_REMOTE:
+            setup_remote(error_flash_code)
 
         # give everything a chance to warm up
         wait(500)
@@ -559,13 +557,15 @@ def main():
 
         countdown_timer.reset()
         while True:
-            countdown_timer.check_remote_buttons()
+            if HAS_REMOTE:
+                countdown_timer.check_remote_buttons()
             if countdown_timer.has_time_remaining():
                 if drive_motors.supports_homing:
                     drive_motors.do_homing()
                 if drive_motors.supports_flip:
                     drive_motors.handle_flip()
-                drive_motors.handle_remote_press()
+                if HAS_REMOTE:
+                    drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
                 if drive_motors.supports_homing:
