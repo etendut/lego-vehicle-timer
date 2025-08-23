@@ -32,7 +32,7 @@ ODV_SPEED: int = const(45)  # set between 40 and 70
 # ODV_GRID = ["###X#XX",
 #             "LX###XU",
 #             "###X###"]
-ODV_GRID = ["###X", "LX#U", "###X"]
+ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
 
 
 ##################################################################################
@@ -428,7 +428,6 @@ LOAD = 'L'
 UNLOAD = 'U'
 OK_MOVES = [TRACK, LOAD, UNLOAD]
 
-DEFAULT_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
 FINE_GRID_SIZE = const(10)
 ODV_SIZE = const(8)
 
@@ -606,15 +605,18 @@ class RunODVMotors(MotorHelper):
             self.coarse_grid_width = len(line.rstrip())
             line = line.rstrip()
             for x, character in enumerate(line):
-                print(f"line {y + 1} |col {x + 1}/{len(line)}")
+                print(f"line {y + 1} |col {x + 1}/{len(line)}|{character}")
                 self.coarse_grid[x, y] = character
                 # set load/unload points
                 if character == HOME:
                     self.home_tile = ODVTilePosition(x, y)
+                    print(f"home tile is {self.home_tile}")
                 if character == LOAD:
                     self.load_tile = ODVTilePosition(x, y)
+                    print(f"loads tile is {self.load_tile}")
                 if character == UNLOAD:
                     self.unload_tile = ODVTilePosition(x, y)
+                    print(f"unload tile is {self.unload_tile}")
 
             y += 1
         self.coarse_grid_height = y
