@@ -1,5 +1,4 @@
 # IMPORTS_START
-from micropython import mem_info
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Direction, Stop
 from uerrno import ENODEV
@@ -7,6 +6,7 @@ from umath import floor
 # IMPORTS_END
 
 # local var only
+from micropython import mem_info
 from pybricks.tools import wait
 from micropython import const
 from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
