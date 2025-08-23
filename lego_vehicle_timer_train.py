@@ -1,6 +1,8 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
 # licence MIT
+
+import sys
 from micropython import const
 from pybricks.parameters import Color, Side, Button
 from pybricks.pupdevices import Remote
@@ -25,8 +27,8 @@ COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right cente
 #How many seconds to wait before doing a load/unload automatically. 0 = disabled
 ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 
-
-REMOTE_DISABLED=False #for debugging or ODV full auto
+# for debugging or ODV full auto
+REMOTE_DISABLED=False
 
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed
@@ -606,6 +608,11 @@ def main():
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
             wait(10)
+
+            if REMOTE_DISABLED and ODV_AUTO_DRIVE_TIMEOUT_SECS == 0:
+                print("No remote or auto drive exiting")
+                sys.exit(0)
+
     except Exception as e:
         print(e)
         while True:
