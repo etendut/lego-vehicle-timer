@@ -24,10 +24,10 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
 #How many seconds to wait before doing a load/unload automatically. 0 = disabled
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(10)
 
 # for debugging or ODV full auto
-REMOTE_DISABLED=False
+REMOTE_DISABLED=True
 
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed
@@ -79,6 +79,7 @@ class MotorHelper:
         self.mh_supports_flip = supports_flip
         self.mh_supports_homing = supports_homing
         self.mh_auto_drive = False
+        self.mh_is_homed = False
 
     def handle_flip(self):
         """Tracked racer only"""
@@ -105,14 +106,32 @@ class MotorHelper:
         pass
 
     def enable_auto_drive(self):
-        """ODV only"""
+        """enable mh_auto_drive, ODV only"""
+        if self.mh_auto_drive:
+            return
         print("Enable Auto-Drive")
         self.mh_auto_drive = True
 
     def disable_auto_drive(self):
-        """ODV only"""
+        """Disables mh_auto_drive, ODV only"""
+        if not self.mh_auto_drive:
+            return
         print("Disable Auto-Drive")
         self.mh_auto_drive = False
+
+    def set_is_homed(self):
+        """Set mh_is_homed, ODV only"""
+        if self.mh_is_homed:
+            return
+        print("Set IsHomed")
+        self.mh_is_homed = True
+
+    def reset_is_homed(self):
+        """Reset mh_is_homed, ODV only"""
+        if not self.mh_is_homed:
+            return
+        print("Reset IsHomed")
+        self.mh_is_homed = False
 
     def handle_remote_press(self):
         """All vehicles"""
@@ -147,12 +166,12 @@ def convert_millis_hours_minutes_seconds(millis: int):
     return hours, minutes, seconds
 
 
-READY: int = const(0)
-ACTIVE: int = const(10)
-FINAL_MINUTE: int = const(20)
-FINAL_20_SECS: int = const(30)
-ENDED: int = const(40)
-UNKNOWN: int = const(99)
+_READY: int = const(0)
+_ACTIVE: int = const(10)
+_FINAL_MINUTE: int = const(20)
+_FINAL_20_SECS: int = const(30)
+_ENDED: int = const(40)
+_UNKNOWN: int = const(99)
 
 
 class CountdownTimer:
@@ -163,20 +182,34 @@ class CountdownTimer:
     def __init__(self):
         # assign external objects to properties of the class
         self.last_countdown_message:str = ''
-        self.countdown_status:int = UNKNOWN
+        self.countdown_status:int = _UNKNOWN
 
         # Start a timer.
         self.countdown_stopwatch = StopWatch()
         self.led_flash_stopwatch = StopWatch()
-        self.remote_buttons_pressed_stopwatch = StopWatch()
         self.end_time = 0
+        # remote timing
+        self.remote_buttons_stopwatch = StopWatch()
+        self.remote_buttons_last_pressed_time = 0
+        self.reset_time_since_last_remote_press()
+
+
+
+    def reset_time_since_last_remote_press(self):
+        self.remote_buttons_stopwatch.reset()
+        self.remote_buttons_last_pressed_time = self.remote_buttons_stopwatch.time()
+
+    def secs_since_last_remote_button_press(self)->int:
+        secs = int((self.remote_buttons_stopwatch.time() - self.remote_buttons_last_pressed_time) / 1000.0)
+        # print("secs since last remote button press: ", secs)
+        return secs
 
     def has_time_remaining(self):
         """
             Checks if countdown has time remaining
         :return:
         """
-        if self.countdown_status == ENDED or self.countdown_status == READY:
+        if self.countdown_status == _ENDED or self.countdown_status == _READY:
             return False
 
         # calculate remaining_time time
@@ -191,17 +224,17 @@ class CountdownTimer:
                 self.last_countdown_message = countdown_message
                 print(self.last_countdown_message)  # when time has run out end countdown
         if remaining_time <= 0:
-            self.countdown_status = ENDED
+            self.countdown_status = _ENDED
             self.show_status()
             return False
         # in last 25s slow flash a warning
         if remaining_time < (1000 * 20):
-            self.countdown_status = FINAL_20_SECS
+            self.countdown_status = _FINAL_20_SECS
             self.show_status()
 
             # in last minute slow flash a warning
         if remaining_time < (1000 * 60):
-            self.countdown_status = FINAL_MINUTE
+            self.countdown_status = _FINAL_MINUTE
             self.show_status()
 
         return True
@@ -211,7 +244,7 @@ class CountdownTimer:
             start the countdown sequence by resetting timers and status
         """
         print('start countdown')
-        self.countdown_status = ACTIVE
+        self.countdown_status = _ACTIVE
         self.show_status()
         self.countdown_stopwatch.reset()
         self.end_time = self.countdown_stopwatch.time() + (COUNTDOWN_LIMIT_MINUTES * 60 * 1000)
@@ -221,7 +254,8 @@ class CountdownTimer:
             print('countdown time reset')
         else:
             print('countdown time reset, press Remote CENTER to restart countdown')
-        self.countdown_status = READY
+        self.countdown_status = _READY
+        self.reset_time_since_last_remote_press()
 
     def check_remote_buttons(self):
         """
@@ -231,9 +265,9 @@ class CountdownTimer:
         if len(remote_buttons_pressed) == 0:
             return
 
-        self.remote_buttons_pressed_stopwatch.reset()
+        self.reset_time_since_last_remote_press()
 
-        if self.countdown_status == READY and Button.CENTER in remote_buttons_pressed:
+        if self.countdown_status == _READY and Button.CENTER in remote_buttons_pressed:
             self.__start_countdown__()
             wait_for_no_pressed_buttons()
 
@@ -246,16 +280,16 @@ class CountdownTimer:
     def show_status(self):
         global hub
         global remote
-        if self.countdown_status == READY:
+        if self.countdown_status == _READY:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
-        elif self.countdown_status == ACTIVE:
+        elif self.countdown_status == _ACTIVE:
             hub.light.on(Color.GREEN)
             remote.light.on(Color.GREEN)
-        elif self.countdown_status == FINAL_20_SECS:
+        elif self.countdown_status == _FINAL_20_SECS:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
-        elif self.countdown_status == FINAL_MINUTE:
+        elif self.countdown_status == _FINAL_MINUTE:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
-        elif self.countdown_status == ENDED:
+        elif self.countdown_status == _ENDED:
             hub.light.on(Color.ORANGE)
             remote.light.on(Color.ORANGE)
 
@@ -578,15 +612,16 @@ def main():
         print('SETUP complete')
 
         countdown_timer.reset()
+
         while True:
             if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
 
             if ODV_AUTO_DRIVE_TIMEOUT_SECS > 0:
-                if ODV_AUTO_DRIVE_TIMEOUT_SECS > (countdown_timer.remote_buttons_pressed_stopwatch.time()/1000):
+                if countdown_timer.secs_since_last_remote_button_press() > ODV_AUTO_DRIVE_TIMEOUT_SECS:
                     drive_motors.enable_auto_drive()
 
-            if drive_motors.mh_auto_drive:
+            if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
                 drive_motors.auto_unload()
                 drive_motors.auto_load()
             # if there is no remote, then there is no point in a countdown
