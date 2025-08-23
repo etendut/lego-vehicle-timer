@@ -22,6 +22,10 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
+#How many seconds to wait before doing a load/unload automatically. 0 = disabled
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
+
+
 REMOTE_DISABLED=False #for debugging or ODV full auto
 
 # Train mode settings
@@ -71,8 +75,9 @@ class ErrorFlashCodes:
 class MotorHelper:
 
     def __init__(self, supports_flip: bool, supports_homing: bool):
-        self.supports_flip = supports_flip
-        self.supports_homing = supports_homing
+        self.mh_supports_flip = supports_flip
+        self.mh_supports_homing = supports_homing
+        self.mh_auto_drive = False
 
     def handle_flip(self):
         """Tracked racer only"""
@@ -97,6 +102,16 @@ class MotorHelper:
     def auto_home(self):
         """ODV only"""
         pass
+
+    def enable_auto_drive(self):
+        """ODV only"""
+        print("Enable Auto-Drive")
+        self.mh_auto_drive = True
+
+    def disable_auto_drive(self):
+        """ODV only"""
+        print("Disable Auto-Drive")
+        self.mh_auto_drive = False
 
     def handle_remote_press(self):
         """All vehicles"""
@@ -565,17 +580,25 @@ def main():
         while True:
             if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
+
+            if ODV_AUTO_DRIVE_TIMEOUT_SECS > 0:
+                if ODV_AUTO_DRIVE_TIMEOUT_SECS > (countdown_timer.remote_buttons_pressed_stopwatch.time()/1000):
+                    drive_motors.enable_auto_drive()
+
+            if drive_motors.mh_auto_drive:
+                drive_motors.auto_unload()
+                drive_motors.auto_load()
             # if there is no remote, then there is no point in a countdown
-            if countdown_timer.has_time_remaining() or REMOTE_DISABLED:
-                if drive_motors.supports_homing:
+            elif countdown_timer.has_time_remaining() or REMOTE_DISABLED:
+                if drive_motors.mh_supports_homing:
                     drive_motors.do_homing()
-                if drive_motors.supports_flip:
+                if drive_motors.mh_supports_flip:
                     drive_motors.handle_flip()
                 if not REMOTE_DISABLED:
                     drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
-                if drive_motors.supports_homing:
+                if drive_motors.mh_supports_homing:
                     drive_motors.auto_unload()
                     drive_motors.auto_home()
                     drive_motors.reset_homing()
