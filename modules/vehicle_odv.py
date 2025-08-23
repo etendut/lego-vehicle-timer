@@ -303,7 +303,27 @@ class RunODVMotors(MotorHelper):
         _, br = self._get_grid_tile_from_fine_xy_(cart.bottom_right.position_from_direction(direction))
         _, bl = self._get_grid_tile_from_fine_xy_(cart.bottom_left.position_from_direction(direction))
 
-        can_move = tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES
+        # most tiles support universal movement
+        # TRACK - any direction
+        # LOAD - only on left
+        # UNLOAD - only on right
+        # HOME - can only be moved into from bottom or right
+
+        can_move = (tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES)
+        # handle home tile only supporting 2 directions
+        if not can_move and HOME in [tl,tr,bl,br]:
+            # cart in home tile
+            if tl == tr == br == bl == HOME:
+                can_move = True
+            # moving NW into tile
+            elif tl == HOME and tr == br == bl == TRACK:
+                can_move = True
+            # moving N or S
+            elif tl == tr == HOME and br == bl == TRACK:
+                can_move = True
+            # moving E or W
+            elif tl == bl == HOME and tr == br == TRACK:
+                can_move = True
 
         can_load = tl == tr == br == bl == LOAD
         can_unload = tl == tr == br == bl == UNLOAD
