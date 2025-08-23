@@ -2,7 +2,7 @@
 # Copyright Etendut
 # licence MIT
 
-from micropython import const
+from micropython import const, mem_info
 from pybricks.parameters import Color, Side, Button
 from pybricks.pupdevices import Remote
 from pybricks.tools import wait, StopWatch
@@ -185,24 +185,20 @@ class CountdownTimer:
         self.countdown_status:int = _UNKNOWN
 
         # Start a timer.
-        self.countdown_stopwatch = StopWatch()
-        self.led_flash_stopwatch = StopWatch()
+        self.stopwatch = StopWatch()
+        self.led_flash_sw_time = 0
         self.end_time = 0
         # remote timing
-        self.remote_buttons_stopwatch = StopWatch()
-        self.remote_buttons_last_pressed_time = 0
+        self.remote_buttons_time_out_ms = 0
         self.reset_time_since_last_remote_press()
 
 
 
     def reset_time_since_last_remote_press(self):
-        self.remote_buttons_stopwatch.reset()
-        self.remote_buttons_last_pressed_time = self.remote_buttons_stopwatch.time()
+        self.remote_buttons_time_out_ms = self.stopwatch.time() + (ODV_AUTO_DRIVE_TIMEOUT_SECS*1000)
 
-    def secs_since_last_remote_button_press(self)->int:
-        secs = int((self.remote_buttons_stopwatch.time() - self.remote_buttons_last_pressed_time) / 1000.0)
-        # print("secs since last remote button press: ", secs)
-        return secs
+    def remote_button_press_timed_out(self)->bool:
+        return self.stopwatch.time() > self.remote_buttons_time_out_ms
 
     def has_time_remaining(self):
         """
@@ -213,7 +209,7 @@ class CountdownTimer:
             return False
 
         # calculate remaining_time time
-        remaining_time = self.end_time - self.countdown_stopwatch.time()
+        remaining_time = self.end_time - self.stopwatch.time()
 
         # print a friendly console message
         con_hour, con_min, con_sec = convert_millis_hours_minutes_seconds(int(remaining_time))
@@ -246,8 +242,7 @@ class CountdownTimer:
         print('start countdown')
         self.countdown_status = _ACTIVE
         self.show_status()
-        self.countdown_stopwatch.reset()
-        self.end_time = self.countdown_stopwatch.time() + (COUNTDOWN_LIMIT_MINUTES * 60 * 1000)
+        self.end_time = self.stopwatch.time() + (COUNTDOWN_LIMIT_MINUTES * 60 * 1000)
 
     def reset(self):
         if REMOTE_DISABLED:
@@ -304,11 +299,11 @@ class CountdownTimer:
         """
         global hub
         # we use a timer to make it a non-blocking call
-        if self.led_flash_stopwatch.time() > (on_msec + off_msec):
-            self.led_flash_stopwatch.reset()
+        if self.stopwatch.time() > (on_msec + off_msec + self.led_flash_sw_time):
+            self.led_flash_sw_time = self.stopwatch.time()
             remote.light.on(off_color)
             hub.light.on(off_color)
-        elif self.led_flash_stopwatch.time() > off_msec:
+        elif self.stopwatch.time() > (off_msec + self.led_flash_sw_time):
             remote.light.on(on_color)
             hub.light.on(on_color)
 
@@ -567,13 +562,12 @@ def main():
         print('SETUP complete')
 
         countdown_timer.reset()
-
+        mem_info()
         while True:
             if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
 
-            if ODV_AUTO_DRIVE_TIMEOUT_SECS > 0:
-                if countdown_timer.secs_since_last_remote_button_press() > ODV_AUTO_DRIVE_TIMEOUT_SECS:
+            if ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
                     drive_motors.enable_auto_drive()
 
             if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
