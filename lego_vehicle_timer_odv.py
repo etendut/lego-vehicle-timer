@@ -24,7 +24,7 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
-HAS_REMOTE=True #for debugging or ODV full auto
+REMOTE_DISABLED=False #for debugging or ODV full auto
 
 # odv settings
 ODV_SPEED: int = const(45)  # set between 40 and 70
@@ -113,8 +113,6 @@ class MotorHelper:
 ##################################################################################
 
 def wait_for_no_pressed_buttons():
-    if not HAS_REMOTE:
-        return
     remote_buttons_pressed = remote.buttons.pressed()
     while remote_buttons_pressed:
         remote_buttons_pressed = remote.buttons.pressed()
@@ -211,8 +209,6 @@ class CountdownTimer:
         """
             check countdown time buttons
         """
-        if not HAS_REMOTE:
-            return
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0:
             return
@@ -236,16 +232,14 @@ class CountdownTimer:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == ACTIVE:
             hub.light.on(Color.GREEN)
-            if HAS_REMOTE:
-                remote.light.on(Color.GREEN)
+            remote.light.on(Color.GREEN)
         elif self.countdown_status == FINAL_20_SECS:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
         elif self.countdown_status == FINAL_MINUTE:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
         elif self.countdown_status == ENDED:
             hub.light.on(Color.ORANGE)
-            if HAS_REMOTE:
-                remote.light.on(Color.ORANGE)
+            remote.light.on(Color.ORANGE)
 
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
@@ -260,12 +254,10 @@ class CountdownTimer:
         # we use a timer to make it a non-blocking call
         if self.led_flash_stopwatch.time() > (on_msec + off_msec):
             self.led_flash_stopwatch.reset()
-            if HAS_REMOTE:
-                remote.light.on(off_color)
+            remote.light.on(off_color)
             hub.light.on(off_color)
         elif self.led_flash_stopwatch.time() > off_msec:
-            if HAS_REMOTE:
-                remote.light.on(on_color)
+            remote.light.on(on_color)
             hub.light.on(on_color)
 
 
@@ -343,9 +335,21 @@ class MockHub:
         self.imu = MockIMU()
         self.light = MockLight()
 
+class MockRemoteButtons:
+    """For typing only, this will be replaced by RemoteButtons"""
+    def pressed(self)->list:
+        print(self.__class__.__name__)
+        return []
+
+class MockRemote:
+    """For typing only, this will be replaced by RemoteButtons"""
+    def __init__(self):
+        self.buttons = MockRemoteButtons()
+        self.light = MockLight()
+
 
 hub: MockHub = MockHub()
-
+remote: MockRemote = MockRemote()
 
 def setup_hub():
     global hub
@@ -369,14 +373,11 @@ def setup_hub():
             raise Exception('This program only support Lego City hub and Lego Technic hub')
 
 
-remote: Remote | None = None
+
 LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
 
 
 def setup_remote(error_flash_code_helper, retry=5):
-    if not HAS_REMOTE:
-        return
-
     global hub
     global remote
 
@@ -911,9 +912,13 @@ def main():
         drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)  # DRIVE_SETUP_END
 
 
-        print('--setup remote')
-        if HAS_REMOTE:
+
+        if REMOTE_DISABLED:
+            print('--no remote')
+        else:
+            print('--setup remote')
             setup_remote(error_flash_code)
+
 
         # give everything a chance to warm up
         wait(500)
@@ -922,14 +927,15 @@ def main():
 
         countdown_timer.reset()
         while True:
-            if HAS_REMOTE:
+            if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
-            if countdown_timer.has_time_remaining():
+            # if there is no remote, then there is no point in a countdown
+            if countdown_timer.has_time_remaining() or REMOTE_DISABLED:
                 if drive_motors.supports_homing:
                     drive_motors.do_homing()
                 if drive_motors.supports_flip:
                     drive_motors.handle_flip()
-                if HAS_REMOTE:
+                if not REMOTE_DISABLED:
                     drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
