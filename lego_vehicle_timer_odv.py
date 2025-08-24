@@ -32,11 +32,12 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
-#How many seconds to wait before doing a load/unload automatically. 0 = disabled
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(10)
+# How many seconds to wait before doing a load/unload automatically. 0 = disabled
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30)
 
 # for debugging or ODV full auto
-REMOTE_DISABLED=True
+REMOTE_DISABLED = False
+
 
 
 # odv settings
@@ -191,8 +192,8 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
-        self.last_countdown_message:str = ''
-        self.countdown_status:int = _UNKNOWN
+        self.last_countdown_message: str = ''
+        self.countdown_status: int = _UNKNOWN
 
         # Start a timer.
         self.stopwatch = StopWatch()
@@ -202,12 +203,10 @@ class CountdownTimer:
         self.remote_buttons_time_out_ms = 0
         self.reset_time_since_last_remote_press()
 
-
-
     def reset_time_since_last_remote_press(self):
-        self.remote_buttons_time_out_ms = self.stopwatch.time() + (ODV_AUTO_DRIVE_TIMEOUT_SECS*1000)
+        self.remote_buttons_time_out_ms = self.stopwatch.time() + (ODV_AUTO_DRIVE_TIMEOUT_SECS * 1000)
 
-    def remote_button_press_timed_out(self)->bool:
+    def remote_button_press_timed_out(self) -> bool:
         return self.stopwatch.time() > self.remote_buttons_time_out_ms
 
     def has_time_remaining(self):
@@ -303,7 +302,6 @@ class CountdownTimer:
             if not REMOTE_DISABLED:
                 remote.light.on(Color.ORANGE)
 
-
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
             this flashes the remote led
@@ -371,15 +369,14 @@ def code_to_button_press_hash(button_code):
 
 PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_press_hash(COUNTDOWN_RESET_CODE)
 
-
 ##################################################################################
 # Main program
 ##################################################################################
 
 
-
 hub: "MockHub"
 remote: "MockRemote"
+
 
 def setup_hub():
     global hub
@@ -401,7 +398,6 @@ def setup_hub():
         except ImportError as ex2:
             print(ex2)
             raise Exception('This program only support Lego City hub and Lego Technic hub')
-
 
 
 LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
@@ -981,13 +977,11 @@ def main():
 
         drive_motors.mh__remote_disabled = REMOTE_DISABLED
 
-
         if REMOTE_DISABLED:
             print('--no remote')
         else:
             print('--setup remote')
             setup_remote(error_flash_code)
-
 
         # give everything a chance to warm up
         wait(500)
@@ -1000,12 +994,14 @@ def main():
             if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
 
-            if ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
+            if drive_motors.mh_supports_homing:
+                if not drive_motors.mh_auto_drive and ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
                     drive_motors.enable_auto_drive()
 
-            if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
-                drive_motors.auto_unload()
-                drive_motors.auto_load()
+                if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
+                    drive_motors.auto_unload()
+                    drive_motors.auto_load()
+
             # if there is no remote, then there is no point in a countdown
             elif countdown_timer.has_time_remaining() or REMOTE_DISABLED:
                 if drive_motors.mh_supports_homing:

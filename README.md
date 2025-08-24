@@ -21,9 +21,13 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
 ## How do I get set up?
 
 - Use [PyBricks](https://code.pybricks.com/) to configure your hub
-- load [lego_vehicle_timer](lego_vehicle_timer.py) into PyBricks
+- select the program based on the vehicle type
+  - [lego_vehicle_timer_train](lego_vehicle_timer_train.py)
+  - [lego_vehicle_timer_skid_steer](lego_vehicle_timer_skid_steer.py)
+  - [lego_vehicle_timer_servo](lego_vehicle_timer_odv.py)
+  - [lego_vehicle_timer_odv](lego_vehicle_timer_servo.py)
 - configure the settings as per below [Configuration](#configuration)
-- flash to hub using PyBricks
+- load the program onto your hub using PyBricks
 
 ## Using the Remote
 
@@ -54,7 +58,7 @@ Left buttons for Y, Right buttons for X
 Once the program starts certain errors will be flashed on the hub
 
 |                                                                                                                                                                    | Sequence                   | Meaning             |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------- |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|---------------------|
 | <img src="images/blue_dot.png" alt="Blue" /> or <img src="images/blue_dot_f.png" alt="Blue flashing" />                                                            | BLUE On or flashing        | Program not running |
 | <img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White flashing" /><img src="images/white_dot_f.png" alt="White flashing" /> | 3 WHITE flashes then pause | Looking for remote  |
 | <img src="images/green_dot_f.png" alt="Green flashing" />                                                                                                          | GREEN flashing             | Ready for start     |
@@ -68,7 +72,7 @@ Once the program starts certain errors will be flashed on the hub
 Once the program starts certain errors will be flashed on the hub
 
 |                                                                                                                                                                                                                      | Sequence                  | Meaning                 |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------- |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|-------------------------|
 | <img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                | Constant RED Flash on/off | Other Error             |
 | <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                           | 2 RED flashes then pause  | Missing Motor on Port A |
 | <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                      | 3 RED flashes then pause  | Missing Motor on Port B |
@@ -76,7 +80,7 @@ Once the program starts certain errors will be flashed on the hub
 
 ## Configuration
 
-Each vehicle has it's own configuration
+Each vehicle has its own configuration
 
 ### Common
 
@@ -87,6 +91,7 @@ tested :).<br>
 c = center button, + = + button, - = - button<br>
 COUNTDOWN_RESET_CODE = 'c,c,c' # left center button, center button, right center button<br>
 
+REMOTE_DISABLED = False # for debugging or ODV full auto
 ### Train
 
 Configuration should be done in [lego_vehicle_timer_train](lego_vehicle_timer_train.py) before installing
@@ -95,7 +100,7 @@ with [PyBricks](https://code.pybricks.com/)
 Expects a train motor on Port A, and an optional train motor or light on Port B<br>
 
 TRAIN_MOTOR_SPEED_STEP = const(10) # the amount each button press changes the train speed<br>
-TRAIN_MOTOR_MIN_SPEED = const(30) # lowest speed the train will go set between 0 and 100<br>
+TRAIN_MOTOR_MIN_SPEED = const(30) # the lowest speed the train will go set between 0 and 100<br>
 TRAIN_MOTOR_MAX_SPEED = const(80) # set between 0 and 100<br>
 TRAIN_REVERSE_MOTOR = False # set to True if remote + button cause motor to run backwards<br>
 
@@ -131,6 +136,8 @@ with [PyBricks](https://code.pybricks.com/)
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
 ODV_SPEED: int = const(50) # set between 50 and 80<br>
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30) # set to 0 to disable. Module will start automatic load and unload cycles if no user interaction.
+
 ODV_GRID = [] grid tiles specified in a list
 
 X= obstacle, L = Load, U = Unload, # = grid tile
@@ -170,7 +177,7 @@ ODV_GRID = `["###X#XX","LX###XU","###X###"]`<br>
 ## Customising the code
 
 - Clone this repo
-- Update code in the [modules](/modules/) folder as needed
+- Update code in the [modules](/modules) folder as needed
 - run [compile_pybricks_files](/modules/compile_pybricks_files.py) to create the lego*vehicle_timer*\* files for use in [PyBricks](https://code.pybricks.com/)
 
 ## Licence
