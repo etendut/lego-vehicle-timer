@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Direction, Stop
 from uerrno import ENODEV
-from umath import floor
+from umath import floor, sqrt
 
 
 print('Version 2.1.0')
@@ -460,7 +460,8 @@ _MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
 _HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
 _HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
-def position_from_direction(position: tuple[int, int], direction: int)->tuple[int, int]:
+
+def position_from_direction(position: tuple[int, int], direction: int) -> tuple[int, int]:
     if direction == _NORTH:
         return position[0], position[1] - 1
     if direction == _NORTH_EAST:
@@ -512,15 +513,15 @@ class Queue:
     """ No Queue in micropython :("""
 
     def __init__(self) -> None:
-        self._queue: list[list[tuple[int, int]]] = []
+        self._queue: list[list[tuple[tuple[int, int], int]]] = []
 
-    def put(self, item: list[tuple[int, int]]):
+    def put(self, item: list[tuple[tuple[int, int], int]]):
         self._queue.append(item)
 
     def empty(self):
         return len(self._queue) == 0
 
-    def get(self) -> list[tuple[int, int]]:
+    def get(self) -> list[tuple[tuple[int, int], int]]:
         first = self._queue[0]
         del self._queue[0]
         return first
@@ -703,21 +704,21 @@ class RunODVMotors(MotorHelper):
         # print("Cart", direction, can_move)
         return can_move, can_load, can_unload
 
-    def _get_fine_grid_position_(self) -> tuple:
+    def _get_fine_grid_position_(self) -> tuple[int,int]:
 
         x_grid = int(self.motor_x.angle() / _GEAR_RATIO_TO_GRID)
         y_grid = int(self.motor_y.angle() / _GEAR_RATIO_TO_GRID)
         return x_grid, y_grid
 
-    def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple) -> str:
+    def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int,int]) -> str:
         tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position)
         return tile_type
 
-    def _get_grid_tile_position_from_fine_xy_(self, fine_position: tuple) -> tuple[int, int]:
+    def _get_grid_tile_position_from_fine_xy_(self, fine_position: tuple[int,int]) -> tuple[int, int]:
         tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position)
         return tile_position
 
-    def _get_grid_tile_from_fine_xy_(self, fine_position: tuple) -> tuple[tuple[int, int], str]:
+    def _get_grid_tile_from_fine_xy_(self, fine_position: tuple[int,int]) -> tuple[tuple[int, int], str]:
 
         x_grid = floor(fine_position[0] / _FINE_GRID_SIZE)
         y_grid = floor(fine_position[1] / _FINE_GRID_SIZE)
@@ -755,8 +756,8 @@ class RunODVMotors(MotorHelper):
             print('Already loaded')
             return
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
-        if tile != self.load_tile:
-            print(f'Not on load_tile')
+        if tile != self.load_tile and self._distance(tile, self.load_tile) > 1:
+            print(f'{tile} is too far away from load_tile {self.load_tile}')
             return
         self._navigate_to_grid_tile(self.load_tile)
         wait(200)
@@ -772,8 +773,8 @@ class RunODVMotors(MotorHelper):
     def _do_unload_(self):
 
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
-        if tile != self.unload_tile:
-            print('Not on unload_tile')
+        if tile != self.unload_tile and self._distance(tile, self.unload_tile) > 1:
+            print(f'{tile} is too far away from unload_tile {self.load_tile}')
             return
 
         tile_angle = self._navigate_to_grid_tile(self.unload_tile)
@@ -805,7 +806,7 @@ class RunODVMotors(MotorHelper):
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
         return tile_angle_x, tile_angle_y
 
-    def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[int, int]]) -> bool:
+    def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[tuple[int, int], int]]) -> bool:
         """
         Navigates robot through list of tuple[int,int]
         :param grid_tile_path:
@@ -817,12 +818,12 @@ class RunODVMotors(MotorHelper):
                 self.disable_auto_drive()
                 self.stop_motors()
                 return False
-            # TODO logic for direction
-            # if path[1] is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1][1] is not None and \
-            #         grid_tile_path[i + 1][1] == path[1]:
-            #     self._navigate_to_grid_tile(path, Stop.NONE)
-            # else:
-            self._navigate_to_grid_tile(path)
+
+            if path[1] is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1][1] is not None and \
+                    grid_tile_path[i + 1][1] == path[1]:
+                self._navigate_to_grid_tile(path[0], Stop.NONE)
+            else:
+                self._navigate_to_grid_tile(path[0])
 
         return True
 
@@ -848,24 +849,28 @@ class RunODVMotors(MotorHelper):
         if not self.mh_is_homed:
             return
         print('getting path to unload')
-        tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
         self._navigate_grid_tile_path(path)
         self._do_unload_()
 
+    @staticmethod
+    def _distance(start_tile: tuple[int, int], end_tile: tuple[int, int])->int:
+        return floor(sqrt(pow(start_tile[0] - end_tile[0], 2) + pow(start_tile[1] - end_tile[1], 2)))
+
     def _bfs_path_to_grid_tile(self, start_tile: tuple[int, int], end_tile: tuple[int, int]) -> list[
-        tuple[int, int]]:
+        tuple[tuple[int, int], int]]:
         print("---bfs_path_to_grid_tile---")
         self._display_grid_()
-        print("--start",start_tile)
-        print("--end",end_tile)
-        print("--grid_tracks",self.grid_tracks)
-        print("--home_tile",self.home_tile)
-        print("--load_tile",self.load_tile)
-        print("--unload_tile",self.unload_tile)
+        print("--start", start_tile)
+        print("--end", end_tile)
+        print("--grid_tracks", self.grid_tracks)
+        print("--home_tile", self.home_tile)
+        print("--load_tile", self.load_tile)
+        print("--unload_tile", self.unload_tile)
         mem_info()
         queue: Queue = Queue()
-        queue.put([start_tile])  # Enqueue the start position
+        queue.put([(start_tile, -1)])  # Enqueue the start position
 
         path = []
         visited = [start_tile]
@@ -877,13 +882,13 @@ class RunODVMotors(MotorHelper):
                 break
 
             for direction in [_EAST, _NORTH, _WEST, _SOUTH]:  # Possible movements
-                new_pos = position_from_direction(current_path, direction)
+                new_pos = position_from_direction(current_path[0], direction)
                 if new_pos in visited:
                     continue
-                if  new_pos in self.grid_tracks or new_pos == self.home_tile:
+                if new_pos in self.grid_tracks or new_pos == self.home_tile:
                     visited.append(new_pos)
                     new_path = list(path)
-                    new_path.append(new_pos)
+                    new_path.append((new_pos, direction))
                     queue.put(new_path)  # Enqueue the new path
         if len(path) == 0:
             print("no path found")
@@ -969,7 +974,7 @@ def main():
         print("--setup countdown")
         countdown_timer = CountdownTimer()
         print("--setup motors")
-        drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)  # DRIVE_SETUP_END
+        drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)
 
         drive_motors.mh__remote_disabled = REMOTE_DISABLED
 
