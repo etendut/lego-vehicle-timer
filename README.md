@@ -1,6 +1,6 @@
 # Train, Servo Steer, Skid Steer, and ODV timed vehicle Program
 
-A python program to enable a time limited running of a Train, Servo Steer, or Skid Steer Lego vehicle.
+A python program to enable a time limited running of a Train, Servo Steer, Skid Steer, or ODV Lego vehicle.
 
 ## Requires
 
@@ -145,7 +145,12 @@ ODV_GRID = `["###X#XX","LX###XU","###X###"]`<br>
 
 ## Releases
 
-### Version 2.0.0 (current)
+### Version 2.1.0 (current)
+
+- ODV autodrive fixes
+- reduce memory footprint
+
+### Version 2.0.0
 
 - Add ODV Robot to vehicles
 - Split vehicle python files to reduce memory footprint
