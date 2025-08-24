@@ -138,4 +138,5 @@ class RunSkidSteerMotors(MotorHelper):
 # MODULE_END
 # DRIVE_SETUP_START
 drive_motors = RunSkidSteerMotors(error_flash_code, SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES,
-                                  SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)  # DRIVE_SETUP_END
+                                  SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)
+# DRIVE_SETUP_END

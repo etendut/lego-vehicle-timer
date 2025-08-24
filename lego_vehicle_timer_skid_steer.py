@@ -556,7 +556,7 @@ def main():
         countdown_timer = CountdownTimer()
         print("--setup motors")
         drive_motors = RunSkidSteerMotors(error_flash_code, SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES,
-                                  SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)  # DRIVE_SETUP_END
+                                  SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)
 
         drive_motors.mh__remote_disabled = REMOTE_DISABLED
 

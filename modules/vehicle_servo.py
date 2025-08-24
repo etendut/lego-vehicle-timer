@@ -112,4 +112,5 @@ class RunServoSteerMotors(MotorHelper):
 # MODULE_END
 # DRIVE_SETUP_START
 drive_motors = RunServoSteerMotors(error_flash_code, SERVO_STEER_SPEED, SERVO_STEER_TURN_ANGLE,
-                                   SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)  # DRIVE_SETUP_END
+                                   SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)
+# DRIVE_SETUP_END

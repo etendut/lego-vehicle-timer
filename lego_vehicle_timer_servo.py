@@ -532,7 +532,7 @@ def main():
         countdown_timer = CountdownTimer()
         print("--setup motors")
         drive_motors = RunServoSteerMotors(error_flash_code, SERVO_STEER_SPEED, SERVO_STEER_TURN_ANGLE,
-                                   SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)  # DRIVE_SETUP_END
+                                   SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)
 
         drive_motors.mh__remote_disabled = REMOTE_DISABLED
 
