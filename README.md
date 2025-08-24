@@ -140,15 +140,19 @@ ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30) # set to 0 to disable. Module will 
 
 ODV_GRID = [] grid tiles specified in a list
 
-X= obstacle, L = Load, U = Unload, # = grid tile
+X= obstacle, H = Home,L = Load, U = Unload, # = grid tile
 
 **Example 1**<br>
-ODV_GRID = `["###X","LX#U","###X"]`<br>
+ODV_GRID = `["H##X","LX#U","###X"]`<br>
 <img src="images/odv_grid_1.png" alt="Grid example 1" />
 
 **Example 2**<br>
-ODV_GRID = `["###X#XX","LX###XU","###X###"]`<br>
+ODV_GRID = `["H##X#XX","LX###XU","###X###"]`<br>
 <img src="images/odv_grid_2.png" alt="Grid example 2" /> <br>
+
+**Example 3**<br>
+ODV_GRID = `["XL##XU", "H#X###"]`<br>
+<img src="images/odv_grid_3.png" alt="Grid example 3" /> <br>
 
 ## Releases
 
