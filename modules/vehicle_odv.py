@@ -184,23 +184,23 @@ class RunODVMotors(MotorHelper):
                     self.grid_tracks.append((x, y))
                 # set load/unload points
                 if character == HOME:
-                    print('----home_tile----')
-                    mem_info()
+                    # print('----home_tile----')
+                    # mem_info()
                     self.home_tile = const((x, y))
-                    mem_info()
-                    print('----home_tile----')
+                    # mem_info()
+                    # print('----home_tile----')
                 if character == LOAD:
-                    print('----load_tile----')
-                    mem_info()
+                    # print('----load_tile----')
+                    # mem_info()
                     self.load_tile = const((x, y))
-                    mem_info()
-                    print('----load_tile----')
+                    # mem_info()
+                    # print('----load_tile----')
                 if character == UNLOAD:
-                    print('----unload_tile----')
-                    mem_info()
+                    # print('----unload_tile----')
+                    # mem_info()
                     self.unload_tile = const((x, y))
-                    mem_info()
-                    print('----unload_tile----')
+                    # mem_info()
+                    # print('----unload_tile----')
 
             y += 1
         self.coarse_grid_height = const(y)
@@ -303,7 +303,9 @@ class RunODVMotors(MotorHelper):
 
         x_grid = int(self.motor_x.angle() / _GEAR_RATIO_TO_GRID)
         y_grid = int(self.motor_y.angle() / _GEAR_RATIO_TO_GRID)
-        return x_grid, y_grid
+        fine_grid_position = (x_grid, y_grid)
+        print("fine_grid_position", fine_grid_position)
+        return fine_grid_position
 
     def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int,int]) -> str:
         tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position)
@@ -315,8 +317,8 @@ class RunODVMotors(MotorHelper):
 
     def _get_grid_tile_from_fine_xy_(self, fine_position: tuple[int,int]) -> tuple[tuple[int, int], str]:
 
-        x_grid = floor(fine_position[0] / _FINE_GRID_SIZE)
-        y_grid = floor(fine_position[1] / _FINE_GRID_SIZE)
+        x_grid = floor((fine_position[0]) / _FINE_GRID_SIZE)
+        y_grid = floor((fine_position[1]) / _FINE_GRID_SIZE)
         # print("Coarse", x_grid, y_grid)
         tile = (x_grid, y_grid)
         if fine_position[0] < 1 or fine_position[
@@ -453,16 +455,19 @@ class RunODVMotors(MotorHelper):
     def _distance(start_tile: tuple[int, int], end_tile: tuple[int, int])->int:
         return floor(sqrt(pow(start_tile[0] - end_tile[0], 2) + pow(start_tile[1] - end_tile[1], 2)))
 
+    def print_tile_pos(self,tile_name:str, tile: tuple[int, int]):
+        print(f"tile {tile_name} at {tile}, {self._tile_to_angle(tile)}")
+
     def _bfs_path_to_grid_tile(self, start_tile: tuple[int, int], end_tile: tuple[int, int]) -> list[
         tuple[tuple[int, int], int]]:
         print("---bfs_path_to_grid_tile---")
         self._display_grid_()
-        print("--start", start_tile)
-        print("--end", end_tile)
+        self.print_tile_pos("--start", start_tile)
+        self.print_tile_pos("--end", end_tile)
         print("--grid_tracks", self.grid_tracks)
-        print("--home_tile", self.home_tile)
-        print("--load_tile", self.load_tile)
-        print("--unload_tile", self.unload_tile)
+        self.print_tile_pos("--home_tile", self.home_tile)
+        self.print_tile_pos("--load_tile", self.load_tile)
+        self.print_tile_pos("--unload_tile", self.unload_tile)
         mem_info()
         queue: Queue = Queue()
         queue.put([(start_tile, -1)])  # Enqueue the start position
