@@ -589,23 +589,17 @@ class RunODVMotors(MotorHelper):
                     self.grid_tracks.append((x, y))
                 # set load/unload points
                 if character == HOME:
-                    print('----home_tile----')
-                    mem_info()
-                    self.home_tile = const((x, y))
-                    mem_info()
-                    print('----home_tile----')
+                    # print('----home_tile----')
+                    # mem_info()
+                    self.home_tile = const((x, y))  # mem_info()  # print('----home_tile----')
                 if character == LOAD:
-                    print('----load_tile----')
-                    mem_info()
-                    self.load_tile = const((x, y))
-                    mem_info()
-                    print('----load_tile----')
+                    # print('----load_tile----')
+                    # mem_info()
+                    self.load_tile = const((x, y))  # mem_info()  # print('----load_tile----')
                 if character == UNLOAD:
-                    print('----unload_tile----')
-                    mem_info()
-                    self.unload_tile = const((x, y))
-                    mem_info()
-                    print('----unload_tile----')
+                    # print('----unload_tile----')
+                    # mem_info()
+                    self.unload_tile = const((x, y))  # mem_info()  # print('----unload_tile----')
 
             y += 1
         self.coarse_grid_height = const(y)
@@ -671,10 +665,10 @@ class RunODVMotors(MotorHelper):
 
         # print("Cart", cart)
 
-        tl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_left, direction))
-        tr = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_right, direction))
-        br = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_right, direction))
-        bl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction))
+        tl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_left, direction), False)
+        tr = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_right, direction), False)
+        br = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_right, direction), False)
+        bl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction), False)
 
         # most tiles support universal movement
         # TRACK - any direction
@@ -704,25 +698,30 @@ class RunODVMotors(MotorHelper):
         # print("Cart", direction, can_move)
         return can_move, can_load, can_unload
 
-    def _get_fine_grid_position_(self) -> tuple[int,int]:
+    def _get_fine_grid_position_(self) -> tuple[int, int]:
 
         x_grid = int(self.motor_x.angle() / _GEAR_RATIO_TO_GRID)
         y_grid = int(self.motor_y.angle() / _GEAR_RATIO_TO_GRID)
-        return x_grid, y_grid
+        fine_grid_position = (x_grid, y_grid)
+        print("fine_grid_position", fine_grid_position)
+        return fine_grid_position
 
-    def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int,int]) -> str:
-        tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position)
+    def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> str:
+        tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position, use_fuzzy)
         return tile_type
 
-    def _get_grid_tile_position_from_fine_xy_(self, fine_position: tuple[int,int]) -> tuple[int, int]:
-        tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position)
+    def _get_grid_tile_position_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> tuple[int, int]:
+        tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position, use_fuzzy)
         return tile_position
 
-    def _get_grid_tile_from_fine_xy_(self, fine_position: tuple[int,int]) -> tuple[tuple[int, int], str]:
+    def _get_grid_tile_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> tuple[tuple[int, int], str]:
 
-        x_grid = floor(fine_position[0] / _FINE_GRID_SIZE)
-        y_grid = floor(fine_position[1] / _FINE_GRID_SIZE)
-        # print("Coarse", x_grid, y_grid)
+        # move to center of cart
+        fuzzy = floor(_ODV_SIZE / 2) if use_fuzzy else 0
+        x_grid = floor((fine_position[0] + fuzzy) / _FINE_GRID_SIZE)
+        y_grid = floor((fine_position[1] + fuzzy) / _FINE_GRID_SIZE)
+        print("Fine", fine_position)
+        print("Coarse", (x_grid, y_grid))
         tile = (x_grid, y_grid)
         if fine_position[0] < 1 or fine_position[
             1] < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
@@ -755,24 +754,24 @@ class RunODVMotors(MotorHelper):
         if self.has_load:
             print('Already loaded')
             return
-        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         if tile != self.load_tile and self._distance(tile, self.load_tile) > 1:
             print(f'{tile} is too far away from load_tile {self.load_tile}')
             return
         tile_angle = self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         # do load
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * -3))
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] - (_GEAR_RATIO_TO_GRID * 3))
         wait(2000)
         print("loading..")
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0])
+        self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         self.has_load = True
         print("ready to go")
 
     def _do_unload_(self):
 
-        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         if tile != self.unload_tile and self._distance(tile, self.unload_tile) > 1:
             print(f'{tile} is too far away from unload_tile {self.load_tile}')
             return
@@ -782,7 +781,7 @@ class RunODVMotors(MotorHelper):
         print("unloading..")
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * 4))
         wait(2000)
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0])
+        self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         self.has_load = False
         print("ready to go")
@@ -795,7 +794,7 @@ class RunODVMotors(MotorHelper):
         :return: ODVAnglePosition
         """
         tile_angle_x = tile[0] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID
-        tile_angle_y = (tile[1] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID) + _GEAR_RATIO_TO_GRID
+        tile_angle_y = (tile[1] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID)
         return tile_angle_x, tile_angle_y
 
     def _navigate_to_grid_tile(self, tile: tuple[int, int], stop=Stop.HOLD) -> tuple[int, int]:
@@ -831,7 +830,7 @@ class RunODVMotors(MotorHelper):
         if not self.mh_is_homed:
             return
         print('getting path to home')
-        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.home_tile)
         self._navigate_grid_tile_path(path)
         print('homed')
@@ -840,7 +839,7 @@ class RunODVMotors(MotorHelper):
         if not self.mh_is_homed:
             return
         print('getting path to load')
-        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.load_tile)
         self._navigate_grid_tile_path(path)
         self._do_load_()
@@ -849,16 +848,16 @@ class RunODVMotors(MotorHelper):
         if not self.mh_is_homed:
             return
         print('getting path to unload')
-        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
         self._navigate_grid_tile_path(path)
         self._do_unload_()
 
     @staticmethod
-    def _distance(start_tile: tuple[int, int], end_tile: tuple[int, int])->int:
+    def _distance(start_tile: tuple[int, int], end_tile: tuple[int, int]) -> int:
         return floor(sqrt(pow(start_tile[0] - end_tile[0], 2) + pow(start_tile[1] - end_tile[1], 2)))
 
-    def print_tile_pos(self,tile_name:str, tile: tuple[int, int]):
+    def print_tile_pos(self, tile_name: str, tile: tuple[int, int]):
         print(f"tile {tile_name} at {tile}, {self._tile_to_angle(tile)}")
 
     def _bfs_path_to_grid_tile(self, start_tile: tuple[int, int], end_tile: tuple[int, int]) -> list[
@@ -871,7 +870,7 @@ class RunODVMotors(MotorHelper):
         self.print_tile_pos("--home_tile", self.home_tile)
         self.print_tile_pos("--load_tile", self.load_tile)
         self.print_tile_pos("--unload_tile", self.unload_tile)
-        mem_info()
+        # mem_info()
         queue: Queue = Queue()
         queue.put([(start_tile, -1)])  # Enqueue the start position
 
@@ -880,7 +879,7 @@ class RunODVMotors(MotorHelper):
         while not queue.empty():
             path = queue.get()  # Dequeue the path
             current_path = path[-1]  # Current position is the last element of the path
-            print(path)
+            # print(path)
             if current_path[0] == end_tile:
                 break
 
@@ -895,7 +894,8 @@ class RunODVMotors(MotorHelper):
                     queue.put(new_path)  # Enqueue the new path
         if len(path) == 0:
             print("no path found")
-        mem_info()
+        # mem_info()
+        print(path)
         print("---bfs_path_to_grid_tile---")
         return path
 
