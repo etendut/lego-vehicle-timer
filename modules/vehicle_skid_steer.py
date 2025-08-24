@@ -2,7 +2,7 @@ from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
 
 error_flash_code = ErrorFlashCodes()
 from micropython import const
-from pybricks.parameters import Side, Button
+from pybricks.parameters import Button
 from pybricks.pupdevices import Remote
 from pybricks.hubs import TechnicHub
 
@@ -10,7 +10,7 @@ hub: TechnicHub | None = None
 remote: Remote | None = None
 
 # IMPORTS_START
-from pybricks.parameters import Port, Direction
+from pybricks.parameters import Port, Side, Direction
 from pybricks.pupdevices import DCMotor
 from uerrno import ENODEV
 
@@ -105,6 +105,8 @@ class RunSkidSteerMotors(MotorHelper):
         """
             handle remote button clicks
         """
+        if self.mh__remote_disabled:
+            return
         # Check which remote_buttons are pressed.
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
@@ -136,4 +138,5 @@ class RunSkidSteerMotors(MotorHelper):
 # MODULE_END
 # DRIVE_SETUP_START
 drive_motors = RunSkidSteerMotors(error_flash_code, SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES,
-                                  SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)  # DRIVE_SETUP_END
+                                  SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)
+# DRIVE_SETUP_END

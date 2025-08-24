@@ -93,6 +93,8 @@ class RunTrainMotor(MotorHelper):
         """
             handle remote button clicks
         """
+        if self.mh__remote_disabled:
+            return
         # Check which remote_buttons are pressed.
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
@@ -154,4 +156,5 @@ class RunTrainMotor(MotorHelper):
 # MODULE_END
 # DRIVE_SETUP_START
 drive_motors = RunTrainMotor(error_flash_code, TRAIN_MOTOR_MIN_SPEED, TRAIN_MOTOR_MAX_SPEED, TRAIN_MOTOR_SPEED_STEP,
-                             TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)  # DRIVE_SETUP_END
+                             TRAIN_REVERSE_MOTOR_1, TRAIN_REVERSE_MOTOR_2)
+# DRIVE_SETUP_END

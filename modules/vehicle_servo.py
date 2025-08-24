@@ -78,6 +78,8 @@ class RunServoSteerMotors(MotorHelper):
         """
             handle remote button clicks
         """
+        if self.mh__remote_disabled:
+            return
         # Check which remote_buttons are pressed.
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
@@ -110,4 +112,5 @@ class RunServoSteerMotors(MotorHelper):
 # MODULE_END
 # DRIVE_SETUP_START
 drive_motors = RunServoSteerMotors(error_flash_code, SERVO_STEER_SPEED, SERVO_STEER_TURN_ANGLE,
-                                   SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)  # DRIVE_SETUP_END
+                                   SERVO_STEER_REVERSE_DRIVE_MOTOR, SERVO_STEER_REVERSE_TURN_MOTOR)
+# DRIVE_SETUP_END

@@ -1,20 +1,27 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
 # licence MIT
-
-from micropython import const
-from pybricks.parameters import Color, Side, Button
+from micropython import const, mem_info
+from pybricks.parameters import Color, Button
 from pybricks.pupdevices import Remote
 from pybricks.tools import wait, StopWatch
 
-from micropython import mem_info
+try:
+    from typing import TYPE_CHECKING
+except ImportError:
+    TYPE_CHECKING = False
+
+if TYPE_CHECKING:
+    # noinspection PyUnusedImports
+    from modules.mock_types import MockHub, MockRemote
+
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Direction, Stop
 from uerrno import ENODEV
-from umath import floor
+from umath import floor, sqrt
 
 
-print('Version 1.4.0')
+print('Version 2.1.0')
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -25,14 +32,18 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
+#How many seconds to wait before doing a load/unload automatically. 0 = disabled
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(10)
+
+# for debugging or ODV full auto
+REMOTE_DISABLED=True
+
 
 # odv settings
-ODV_SPEED: int = const(50)  # set between 50 and 80
-# X= obstacle, L = Load, U = Unload, # = grid tile
-# ODV_GRID = ["###X#XX",
-#             "LX###XU",
-#             "###X###"]
-ODV_GRID = ["###X", "LX#U", "###X"]
+ODV_SPEED: int = const(45)  # set between 40 and 70
+# X= obstacle, H= Home, L = Load, U = Unload, # = grid tile
+# ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
+ODV_GRID = ["XL##XU", "H#X###"]
 
 
 ##################################################################################
@@ -72,8 +83,11 @@ class ErrorFlashCodes:
 class MotorHelper:
 
     def __init__(self, supports_flip: bool, supports_homing: bool):
-        self.supports_flip = supports_flip
-        self.supports_homing = supports_homing
+        self.mh_supports_flip = supports_flip
+        self.mh_supports_homing = supports_homing
+        self.mh__remote_disabled = False
+        self.mh_auto_drive = False
+        self.mh_is_homed = False
 
     def handle_flip(self):
         """Tracked racer only"""
@@ -99,6 +113,34 @@ class MotorHelper:
         """ODV only"""
         pass
 
+    def enable_auto_drive(self):
+        """enable mh_auto_drive, ODV only"""
+        if self.mh_auto_drive:
+            return
+        print("Enable Auto-Drive")
+        self.mh_auto_drive = True
+
+    def disable_auto_drive(self):
+        """Disables mh_auto_drive, ODV only"""
+        if not self.mh_auto_drive:
+            return
+        print("Disable Auto-Drive")
+        self.mh_auto_drive = False
+
+    def set_is_homed(self):
+        """Set mh_is_homed, ODV only"""
+        if self.mh_is_homed:
+            return
+        print("Set IsHomed")
+        self.mh_is_homed = True
+
+    def reset_is_homed(self):
+        """Reset mh_is_homed, ODV only"""
+        if not self.mh_is_homed:
+            return
+        print("Reset IsHomed")
+        self.mh_is_homed = False
+
     def handle_remote_press(self):
         """All vehicles"""
         pass
@@ -113,6 +155,8 @@ class MotorHelper:
 ##################################################################################
 
 def wait_for_no_pressed_buttons():
+    if REMOTE_DISABLED:
+        return
     remote_buttons_pressed = remote.buttons.pressed()
     while remote_buttons_pressed:
         remote_buttons_pressed = remote.buttons.pressed()
@@ -132,11 +176,12 @@ def convert_millis_hours_minutes_seconds(millis: int):
     return hours, minutes, seconds
 
 
-READY: int = const(0)
-ACTIVE: int = const(10)
-FINAL_MINUTE: int = const(20)
-FINAL_20_SECS: int = const(30)
-ENDED: int = const(40)
+_READY: int = const(0)
+_ACTIVE: int = const(10)
+_FINAL_MINUTE: int = const(20)
+_FINAL_20_SECS: int = const(30)
+_ENDED: int = const(40)
+_UNKNOWN: int = const(99)
 
 
 class CountdownTimer:
@@ -146,25 +191,35 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
-        self.last_countdown_message = None
-        self.countdown_status = None
-        self.last_countdown_status = None
+        self.last_countdown_message:str = ''
+        self.countdown_status:int = _UNKNOWN
 
         # Start a timer.
-        self.countdown_stopwatch = StopWatch()
-        self.led_flash_stopwatch = StopWatch()
+        self.stopwatch = StopWatch()
+        self.led_flash_sw_time = 0
         self.end_time = 0
+        # remote timing
+        self.remote_buttons_time_out_ms = 0
+        self.reset_time_since_last_remote_press()
+
+
+
+    def reset_time_since_last_remote_press(self):
+        self.remote_buttons_time_out_ms = self.stopwatch.time() + (ODV_AUTO_DRIVE_TIMEOUT_SECS*1000)
+
+    def remote_button_press_timed_out(self)->bool:
+        return self.stopwatch.time() > self.remote_buttons_time_out_ms
 
     def has_time_remaining(self):
         """
             Checks if countdown has time remaining
         :return:
         """
-        if self.countdown_status == ENDED or self.countdown_status == READY:
+        if self.countdown_status == _ENDED or self.countdown_status == _READY:
             return False
 
         # calculate remaining_time time
-        remaining_time = self.end_time - self.countdown_stopwatch.time()
+        remaining_time = self.end_time - self.stopwatch.time()
 
         # print a friendly console message
         con_hour, con_min, con_sec = convert_millis_hours_minutes_seconds(int(remaining_time))
@@ -175,17 +230,17 @@ class CountdownTimer:
                 self.last_countdown_message = countdown_message
                 print(self.last_countdown_message)  # when time has run out end countdown
         if remaining_time <= 0:
-            self.countdown_status = ENDED
+            self.countdown_status = _ENDED
             self.show_status()
             return False
         # in last 25s slow flash a warning
         if remaining_time < (1000 * 20):
-            self.countdown_status = FINAL_20_SECS
+            self.countdown_status = _FINAL_20_SECS
             self.show_status()
 
             # in last minute slow flash a warning
         if remaining_time < (1000 * 60):
-            self.countdown_status = FINAL_MINUTE
+            self.countdown_status = _FINAL_MINUTE
             self.show_status()
 
         return True
@@ -195,25 +250,32 @@ class CountdownTimer:
             start the countdown sequence by resetting timers and status
         """
         print('start countdown')
-        self.countdown_status = ACTIVE
+        self.countdown_status = _ACTIVE
         self.show_status()
-        self.countdown_stopwatch.reset()
-        self.end_time = self.countdown_stopwatch.time() + (COUNTDOWN_LIMIT_MINUTES * 60 * 1000)
+        self.end_time = self.stopwatch.time() + (COUNTDOWN_LIMIT_MINUTES * 60 * 1000)
 
     def reset(self):
-        print('countdown time reset, press Remote CENTER to restart countdown')
-        self.countdown_status = READY
-        self.last_countdown_status = None
+        if REMOTE_DISABLED:
+            print('countdown time reset')
+        else:
+            print('countdown time reset, press Remote CENTER to restart countdown')
+        self.countdown_status = _READY
+        self.reset_time_since_last_remote_press()
 
     def check_remote_buttons(self):
         """
             check countdown time buttons
         """
+        if REMOTE_DISABLED:
+            return
+
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0:
             return
 
-        if self.countdown_status == READY and Button.CENTER in remote_buttons_pressed:
+        self.reset_time_since_last_remote_press()
+
+        if self.countdown_status == _READY and Button.CENTER in remote_buttons_pressed:
             self.__start_countdown__()
             wait_for_no_pressed_buttons()
 
@@ -223,38 +285,24 @@ class CountdownTimer:
             self.reset()
             wait_for_no_pressed_buttons()
 
-    def check_reset_code_pressed(self):
-        """
-           Check if reset code was pressed
-        """
-        remote_buttons_pressed = remote.buttons.pressed()
-        if len(remote_buttons_pressed) == 0:
-            return
-        # if reset sequence pressed at other times, end countdown
-        if self.countdown_status != READY and all(
-                i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_PRESSED) and not any(
-            i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
-            print('reset code pressed')
-            self.reset()
-            wait_for_no_pressed_buttons()
-
     def show_status(self):
         global hub
-        if self.countdown_status == self.last_countdown_status:
-            return
-        if self.countdown_status == READY:
+        global remote
+        if self.countdown_status == _READY:
             self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
-        elif self.countdown_status == ACTIVE:
+        elif self.countdown_status == _ACTIVE:
             hub.light.on(Color.GREEN)
-            remote.light.on(Color.GREEN)
-        elif self.countdown_status == FINAL_20_SECS:
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.GREEN)
+        elif self.countdown_status == _FINAL_20_SECS:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
-        elif self.countdown_status == FINAL_MINUTE:
+        elif self.countdown_status == _FINAL_MINUTE:
             self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
-        elif self.countdown_status == ENDED:
+        elif self.countdown_status == _ENDED:
             hub.light.on(Color.ORANGE)
-            remote.light.on(Color.ORANGE)
-        self.last_countdown_status = self.countdown_status
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.ORANGE)
+
 
     def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
         """
@@ -266,12 +314,14 @@ class CountdownTimer:
         """
         global hub
         # we use a timer to make it a non-blocking call
-        if self.led_flash_stopwatch.time() > (on_msec + off_msec):
-            self.led_flash_stopwatch.reset()
-            remote.light.on(off_color)
+        if self.stopwatch.time() > (on_msec + off_msec + self.led_flash_sw_time):
+            self.led_flash_sw_time = self.stopwatch.time()
+            if not REMOTE_DISABLED:
+                remote.light.on(off_color)
             hub.light.on(off_color)
-        elif self.led_flash_stopwatch.time() > off_msec:
-            remote.light.on(on_color)
+        elif self.stopwatch.time() > (off_msec + self.led_flash_sw_time):
+            if not REMOTE_DISABLED:
+                remote.light.on(on_color)
             hub.light.on(on_color)
 
 
@@ -325,33 +375,11 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 ##################################################################################
 # Main program
 ##################################################################################
-class MockLight:
-    """For typing only, this will be replaced by CityHub or TechnicHub"""
-
-    def blink(self, col, seq):
-        pass
-
-    def on(self, color):
-        pass
 
 
-class MockIMU:
-    """For typing only, this will be replaced by TechnicHub"""
 
-    def up(self) -> Side:
-        pass
-
-
-class MockHub:
-    """For typing only, this will be replaced by CityHub or TechnicHub"""
-
-    def __init__(self):
-        self.imu = MockIMU()
-        self.light = MockLight()
-
-
-hub: MockHub = MockHub()
-
+hub: "MockHub"
+remote: "MockRemote"
 
 def setup_hub():
     global hub
@@ -375,7 +403,7 @@ def setup_hub():
             raise Exception('This program only support Lego City hub and Lego Technic hub')
 
 
-remote: Remote | None = None
+
 LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
 
 
@@ -393,7 +421,7 @@ def setup_remote(error_flash_code_helper, retry=5):
         # noinspection PyBroadException
         try:
             print("--looking for remote try " + str(remote_retry_count))
-            # Connect to the remote.
+            # Connect to the remote
             remote = Remote()
             print("--remote connected.")
             break
@@ -408,94 +436,73 @@ def setup_remote(error_flash_code_helper, retry=5):
 ##################################################################################
 # ODV helper
 ##################################################################################
-NORTH_WEST = 'NW'
-NORTH = 'N'
-NORTH_EAST = 'NE'
-EAST = 'E'
-SOUTH_EAST = 'SE'
-SOUTH = 'S'
-SOUTH_WEST = 'SW'
-WEST = 'W'
+_NORTH_WEST = const(0)
+_NORTH = const(1)
+_NORTH_EAST = const(2)
+_EAST = const(3)
+_SOUTH_EAST = const(4)
+_SOUTH = const(5)
+_SOUTH_WEST = const(6)
+_WEST = const(7)
 
-DIRECTIONS = [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]
-
-ROBOT = "R"
 WALL = 'X'
 TRACK = '#'
+HOME = 'H'
 LOAD = 'L'
 UNLOAD = 'U'
 OK_MOVES = [TRACK, LOAD, UNLOAD]
 
-DEFAULT_GRID = ["###X#XX", "LX###XU", "###X###"]
-FINE_GRID_SIZE = const(10)
-ODV_SIZE = const(8)
+_FINE_GRID_SIZE = const(10)
+_ODV_SIZE = const(8)
 
-GEAR_RATIO_TO_GRID: int = const(80)  # Motor rotation angle per grid pitch (deg/pitch)
-MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
-HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
-HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
+_GEAR_RATIO_TO_GRID: int = const(80)  # Motor rotation angle per grid pitch (deg/pitch)
+_MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
+_HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
+_HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
 
-class ODVPosition:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.direction = None
+def position_from_direction(position: tuple[int, int], direction: int) -> tuple[int, int]:
+    if direction == _NORTH:
+        return position[0], position[1] - 1
+    if direction == _NORTH_EAST:
+        return position[0] + 1, position[1] - 1
+    if direction == _EAST:
+        return position[0] + 1, position[1]
+    if direction == _SOUTH_EAST:
+        return position[0] + 1, position[1] + 1
+    if direction == _SOUTH:
+        return position[0], position[1] + 1
+    if direction == _SOUTH_WEST:
+        return position[0] - 1, position[1] + 1
+    if direction == _WEST:
+        return position[0] - 1, position[1]
+    if direction == _NORTH_WEST:
+        return position[0] - 1, position[1] - 1
 
-    def position_from_direction(self, direction):
-        if direction == NORTH:
-            return ODVPosition(self.x, self.y - 1)
-        if direction == NORTH_EAST:
-            return ODVPosition(self.x + 1, self.y - 1)
-        if direction == EAST:
-            return ODVPosition(self.x + 1, self.y)
-        if direction == SOUTH_EAST:
-            return ODVPosition(self.x + 1, self.y + 1)
-        if direction == SOUTH:
-            return ODVPosition(self.x, self.y + 1)
-        if direction == SOUTH_WEST:
-            return ODVPosition(self.x - 1, self.y + 1)
-        if direction == WEST:
-            return ODVPosition(self.x - 1, self.y)
-        if direction == NORTH_WEST:
-            return ODVPosition(self.x - 1, self.y - 1)
-
-        return ODVPosition(self.x, self.y)
-
-    def value(self):
-        return self.x, self.y
-
-    def __str__(self):
-        return f"({self.x}, {self.y})"
-
-    def copy(self):
-        return ODVPosition(self.x, self.y)
-
-    def __eq__(self, other):
-        return self.value() == other.value()
+    return position[0], position[1]
 
 
 class ODVBox:
-    def __init__(self, top_left: ODVPosition, width: int, height: int):
+    def __init__(self, top_left: tuple[int, int], width: int, height: int):
         self.width = 0
         self.height = 0
-        self.top_left: ODVPosition
-        self.top_right: ODVPosition
-        self.bottom_right: ODVPosition
-        self.bottom_left: ODVPosition
-        self.upper_left: ODVPosition
+        self.top_left: tuple[int, int]
+        self.top_right: tuple[int, int]
+        self.bottom_right: tuple[int, int]
+        self.bottom_left: tuple[int, int]
+        self.upper_left: tuple[int, int]
         self._update_dimensions_(top_left, width, height)
 
-    def _update_dimensions_(self, top_left: ODVPosition, width: int, height: int):
+    def _update_dimensions_(self, top_left: tuple[int, int], width: int, height: int):
         self.width = width
         self.height = height
         self.top_left = top_left
-        self.top_right = ODVPosition(self.top_left.x + self.width, self.top_left.y)
-        self.bottom_right = ODVPosition(self.top_right.x, self.top_left.y + self.height)
-        self.bottom_left = ODVPosition(self.top_left.x, self.bottom_right.y)
+        self.top_right = (self.top_left[0] + self.width, self.top_left[1])
+        self.bottom_right = (self.top_right[0], self.top_left[1] + self.height)
+        self.bottom_left = (self.top_left[0], self.bottom_right[1])
 
     def buffer(self, buffer: int):
-        new_tl = ODVPosition(self.top_left.x - buffer, self.top_left.y - buffer)
+        new_tl = (self.top_left[0] - buffer, self.top_left[1] - buffer)
         self._update_dimensions_(new_tl, self.width + (buffer * 2), self.height + (buffer * 2))
 
     def __str__(self):
@@ -506,15 +513,15 @@ class Queue:
     """ No Queue in micropython :("""
 
     def __init__(self) -> None:
-        self._queue: list[list[ODVPosition]] = []
+        self._queue: list[list[tuple[tuple[int, int], int]]] = []
 
-    def put(self, item: list[ODVPosition]):
+    def put(self, item: list[tuple[tuple[int, int], int]]):
         self._queue.append(item)
 
     def empty(self):
         return len(self._queue) == 0
 
-    def get(self) -> list[ODVPosition]:
+    def get(self) -> list[tuple[tuple[int, int], int]]:
         first = self._queue[0]
         del self._queue[0]
         return first
@@ -530,11 +537,12 @@ class RunODVMotors(MotorHelper):
         super().__init__(False, True)
         # grid setup
         self.motors_running = None
-        self.unload_tile: ODVPosition
-        self.load_tile: ODVPosition
-        self.last_fine_grid_position = ODVPosition(0, 0)
+        self.home_tile: tuple[int, int] = (0, 0)
+        self.unload_tile: tuple[int, int] = (0, 0)
+        self.load_tile: tuple[int, int] = (0, 0)
+        self.last_fine_grid_position: tuple[int, int] = (0, 0)
         """current position"""
-        self.coarse_grid = {}
+        self.grid_tracks = []
         self.coarse_grid_width = 0
         self.coarse_grid_height = 0
         self._load_grid_(grid_layout)
@@ -543,24 +551,23 @@ class RunODVMotors(MotorHelper):
         # motor setup
         self.error_flash_code = error_flash_code_helper
 
-        self.x_motor_port = Port.A
-        self.y_motor_port = Port.C
+        self.motor_x_port = Port.A
+        self.motor_y_port = Port.C
 
         self.drive_speed = drive_speed
-        self.is_homed = False
 
         try:
-            self.x_motor = Motor(self.x_motor_port, Direction.COUNTERCLOCKWISE)
+            self.motor_x = Motor(self.motor_x_port, Direction.COUNTERCLOCKWISE)
         except OSError as ex:
             if ex.errno == ENODEV:
-                print('Motor needs to be connected to ' + str(self.x_motor_port))
+                print('Motor needs to be connected to ' + str(self.motor_x_port))
                 self.error_flash_code.set_error_no_motor_on_a()
             raise
         try:
-            self.y_motor = Motor(self.y_motor_port, Direction.CLOCKWISE)
+            self.motor_y = Motor(self.motor_y_port, Direction.CLOCKWISE)
         except OSError as ex:
             if ex.errno == ENODEV:
-                print('Motor needs to be connected to ' + str(self.y_motor_port))
+                print('Motor needs to be connected to ' + str(self.motor_y_port))
                 self.error_flash_code.set_error_no_motor_on_b()
             raise
 
@@ -573,80 +580,117 @@ class RunODVMotors(MotorHelper):
         mem_info()
         for y, line in enumerate(lines):
             print(f"line {y + 1}/{len(lines)}")
-            self.coarse_grid_width = len(line.rstrip())
+            self.coarse_grid_width = const(len(line.rstrip()))
             line = line.rstrip()
             for x, character in enumerate(line):
-                print(f"line {y + 1} |col {x + 1}/{len(line)}")
-                self.coarse_grid[x, y] = character
+                print(f"line {y + 1} |col {x + 1}/{len(line)}|{character}")
+
+                if character in OK_MOVES:
+                    self.grid_tracks.append((x, y))
                 # set load/unload points
+                if character == HOME:
+                    # print('----home_tile----')
+                    # mem_info()
+                    self.home_tile = const((x, y))  # mem_info()  # print('----home_tile----')
                 if character == LOAD:
-                    self.load_tile = ODVPosition(x, y)
+                    # print('----load_tile----')
+                    # mem_info()
+                    self.load_tile = const((x, y))  # mem_info()  # print('----load_tile----')
                 if character == UNLOAD:
-                    self.unload_tile = ODVPosition(x, y)
+                    # print('----unload_tile----')
+                    # mem_info()
+                    self.unload_tile = const((x, y))  # mem_info()  # print('----unload_tile----')
 
             y += 1
-        self.coarse_grid_height = y
+        self.coarse_grid_height = const(y)
         mem_info()
         print('Grid Loaded')
+        print(f"--home tile is {self.home_tile}")
+        print(f"--loads tile is {self.load_tile}")
+        print(f"--unload tile is {self.unload_tile}")
+        self._display_grid_()
 
-    def _display_grid_(self, position: tuple[int, int], robot_symbol: str):
+    def _display_grid_(self, position_x_y: tuple = None):
         # Display the maze:
         for y in range(self.coarse_grid_height):
             for x in range(self.coarse_grid_width):
-                if (x, y) == position:
-                    print(robot_symbol, end='')
-                elif (x, y) == self.load_tile.value():
+                if position_x_y is not None and (x, y) == position_x_y:
+                    print("R", end='')
+                elif (x, y) == self.home_tile:
+                    print(HOME, end='')
+                elif (x, y) == self.load_tile:
                     print(LOAD, end='')
-                elif (x, y) == self.unload_tile.value():
+                elif (x, y) == self.unload_tile:
                     print(UNLOAD, end='')
-                elif self.coarse_grid[(x, y)] == WALL:
-                    print(WALL, end='')
+                elif (x, y) in self.grid_tracks:
+                    print(TRACK, end='')
                 else:
-                    print(self.coarse_grid[(x, y)], end='')
+                    print(WALL, end='')
             print()  # Print a newline after printing the row.
 
     def reset_homing(self) -> None:
-        self.is_homed = False
+        self.reset_is_homed()
 
     def do_homing(self):
         # Slowly move until the motor stalls (hits a physical stop),
         # then move forward by an offset distance and set that as the zero origin.
-        if self.is_homed:
+        if self.mh_is_homed:
             return
         # Homing axis Y
-        self.y_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
+        self.motor_y.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
         wait(200)
-        self.y_motor.reset_angle(0)
-        self.y_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO_TO_GRID)
+        home_tile_angle = self._tile_to_angle(self.home_tile)
+        self.motor_y.reset_angle(home_tile_angle[1])
+        self.motor_y.run_angle(_MAX_MOTOR_ROT_SPEED, _GEAR_RATIO_TO_GRID)
         wait(200)
 
         # Homing axis X
-        self.x_motor.run_until_stalled(-HOMING_MOTOR_ROT_SPEED, duty_limit=HOMING_DUTY)
+        self.motor_x.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
         wait(200)
-        self.x_motor.reset_angle(0)
-        self.x_motor.run_angle(MAX_MOTOR_ROT_SPEED, GEAR_RATIO_TO_GRID)
+        self.motor_x.reset_angle(home_tile_angle[0])
+        self.motor_x.run_angle(_MAX_MOTOR_ROT_SPEED, _GEAR_RATIO_TO_GRID)
         wait(200)
 
-        self.is_homed = True
-        self._display_grid_((0, 0), ROBOT)
+        self.set_is_homed()
+        self._display_grid_(self.home_tile)
 
-    def _can_move_in_direction_(self, direction: str) -> tuple[bool, bool, bool]:
-        if direction not in DIRECTIONS:
+    def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
+        if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             return False, False, False
 
         # work out cart dimensions
-        cart = ODVBox(self.last_fine_grid_position, ODV_SIZE, ODV_SIZE)
+        cart = ODVBox(self.last_fine_grid_position, _ODV_SIZE, _ODV_SIZE)
         # shrink the cart to make moving smoother
         cart.buffer(-1)
 
         # print("Cart", cart)
 
-        _, tl = self._get_grid_tile_from_fine_xy_(cart.top_left.position_from_direction(direction))
-        _, tr = self._get_grid_tile_from_fine_xy_(cart.top_right.position_from_direction(direction))
-        _, br = self._get_grid_tile_from_fine_xy_(cart.bottom_right.position_from_direction(direction))
-        _, bl = self._get_grid_tile_from_fine_xy_(cart.bottom_left.position_from_direction(direction))
+        tl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_left, direction), False)
+        tr = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_right, direction), False)
+        br = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_right, direction), False)
+        bl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction), False)
 
-        can_move = tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES
+        # most tiles support universal movement
+        # TRACK - any direction
+        # LOAD - only on left
+        # UNLOAD - only on right
+        # HOME - can only be moved into from bottom or right
+
+        can_move = (tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES)
+        # handle home tile only supporting 2 directions
+        if not can_move and HOME in [tl, tr, bl, br]:
+            # cart in home tile
+            if tl == tr == br == bl == HOME:
+                can_move = True
+            # moving NW into tile
+            elif tl == HOME and tr == br == bl == TRACK:
+                can_move = True
+            # moving N or S
+            elif tl == tr == HOME and br == bl == TRACK:
+                can_move = True
+            # moving E or W
+            elif tl == bl == HOME and tr == br == TRACK:
+                can_move = True
 
         can_load = tl == tr == br == bl == LOAD
         can_unload = tl == tr == br == bl == UNLOAD
@@ -654,42 +698,54 @@ class RunODVMotors(MotorHelper):
         # print("Cart", direction, can_move)
         return can_move, can_load, can_unload
 
-    def _get_fine_grid_position_(self) -> ODVPosition:
+    def _get_fine_grid_position_(self) -> tuple[int, int]:
 
-        x_grid = int(self.x_motor.angle() / GEAR_RATIO_TO_GRID)
-        y_grid = int(self.y_motor.angle() / GEAR_RATIO_TO_GRID)
-        return ODVPosition(x_grid, y_grid)
+        x_grid = int(self.motor_x.angle() / _GEAR_RATIO_TO_GRID)
+        y_grid = int(self.motor_y.angle() / _GEAR_RATIO_TO_GRID)
+        fine_grid_position = (x_grid, y_grid)
+        print("fine_grid_position", fine_grid_position)
+        return fine_grid_position
 
-    def _get_grid_tile_from_fine_xy_(self, fine_position: ODVPosition) -> tuple[ODVPosition, str]:
+    def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> str:
+        tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position, use_fuzzy)
+        return tile_type
 
-        x_grid = floor(fine_position.x / FINE_GRID_SIZE)
-        y_grid = floor(fine_position.y / FINE_GRID_SIZE)
-        # print("Coarse", x_grid, y_grid)
-        tile = ODVPosition(x_grid, y_grid)
-        if fine_position.x < 1 or fine_position.y < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
+    def _get_grid_tile_position_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> tuple[int, int]:
+        tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position, use_fuzzy)
+        return tile_position
+
+    def _get_grid_tile_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> tuple[tuple[int, int], str]:
+
+        # move to center of cart
+        fuzzy = floor(_ODV_SIZE / 2) if use_fuzzy else 0
+        x_grid = floor((fine_position[0] + fuzzy) / _FINE_GRID_SIZE)
+        y_grid = floor((fine_position[1] + fuzzy) / _FINE_GRID_SIZE)
+        print("Fine", fine_position)
+        print("Coarse", (x_grid, y_grid))
+        tile = (x_grid, y_grid)
+        if fine_position[0] < 1 or fine_position[
+            1] < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
             return tile, WALL
-        if (x_grid, y_grid) in self.coarse_grid:
-            return tile, self.coarse_grid[(x_grid, y_grid)]
+        if (x_grid, y_grid) in self.grid_tracks:
+            return tile, TRACK
 
         return tile, WALL
 
-    def _move_in_direction_(self, direction: str) -> bool:
+    def _move_in_direction_(self, direction: int) -> bool:
 
-        if direction not in DIRECTIONS:
+        if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             print('Invalid direction')
             return False
 
-        if direction in [NORTH, NORTH_EAST, NORTH_WEST]:
-            self.y_motor.dc(-self.drive_speed)
-        if direction in [SOUTH, SOUTH_EAST, SOUTH_WEST]:
-            # self.y_motor.run_target(self.drive_speed, -90)
-            self.y_motor.dc(self.drive_speed)
+        if direction in [_NORTH, _NORTH_EAST, _NORTH_WEST]:
+            self.motor_y.dc(-self.drive_speed)
+        if direction in [_SOUTH, _SOUTH_EAST, _SOUTH_WEST]:
+            self.motor_y.dc(self.drive_speed)
 
-        if direction in [EAST, NORTH_EAST, SOUTH_EAST]:
-            # self.x_motor.run_target(self.drive_speed, 90)
-            self.x_motor.dc(self.drive_speed)
-        if direction in [WEST, NORTH_WEST, SOUTH_WEST]:
-            self.x_motor.dc(-self.drive_speed)
+        if direction in [_EAST, _NORTH_EAST, _SOUTH_EAST]:
+            self.motor_x.dc(self.drive_speed)
+        if direction in [_WEST, _NORTH_WEST, _SOUTH_WEST]:
+            self.motor_x.dc(-self.drive_speed)
 
         self.motors_running = True
         return True
@@ -698,94 +754,157 @@ class RunODVMotors(MotorHelper):
         if self.has_load:
             print('Already loaded')
             return
-
-        self._navigate_to_grid_tile(self.load_tile)
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
+        if tile != self.load_tile and self._distance(tile, self.load_tile) > 1:
+            print(f'{tile} is too far away from load_tile {self.load_tile}')
+            return
+        tile_angle = self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         # do load
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, (GEAR_RATIO_TO_GRID * -3))
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] - (_GEAR_RATIO_TO_GRID * 3))
         wait(2000)
         print("loading..")
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, 0)
+        self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         self.has_load = True
         print("ready to go")
 
     def _do_unload_(self):
-        tile_angle_x, _ = self._navigate_to_grid_tile(self.unload_tile)
+
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
+        if tile != self.unload_tile and self._distance(tile, self.unload_tile) > 1:
+            print(f'{tile} is too far away from unload_tile {self.load_tile}')
+            return
+
+        tile_angle = self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         print("unloading..")
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x + (GEAR_RATIO_TO_GRID * 4))
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * 4))
         wait(2000)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x)
+        self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         self.has_load = False
         print("ready to go")
 
-    def _navigate_to_grid_tile(self, tile: ODVPosition, stop=Stop.HOLD):
-        print(f"navigating to tile {tile}")
-        tile_angle_x = tile.x * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID
-        tile_angle_y = (tile.y * FINE_GRID_SIZE * GEAR_RATIO_TO_GRID) + GEAR_RATIO_TO_GRID
-        self.y_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
-        self.x_motor.run_target(MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
+    @staticmethod
+    def _tile_to_angle(tile: tuple[int, int]) -> tuple[int, int]:
+        """
+        Convert grid tile to angle
+        :param tile: tuple[int,int]
+        :return: ODVAnglePosition
+        """
+        tile_angle_x = tile[0] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID
+        tile_angle_y = (tile[1] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID)
         return tile_angle_x, tile_angle_y
 
-    def _navigate_grid_tile_path(self, grid_tile_path: list[ODVPosition]):
+    def _navigate_to_grid_tile(self, tile: tuple[int, int], stop=Stop.HOLD) -> tuple[int, int]:
+        print(f"navigating to tile {tile}")
+        tile_angle_x = tile[0] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID
+        tile_angle_y = (tile[1] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID) + _GEAR_RATIO_TO_GRID
+        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
+        return tile_angle_x, tile_angle_y
 
-        for i, p in enumerate(grid_tile_path):
-            if p.direction is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1].direction is not None and grid_tile_path[i + 1].direction == p.direction:
-                self._navigate_to_grid_tile(p, Stop.NONE)
+    def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[tuple[int, int], int]]) -> bool:
+        """
+        Navigates robot through list of tuple[int,int]
+        :param grid_tile_path:
+        :return: succeeded
+        """
+        for i, path in enumerate(grid_tile_path):
+            # if user takes over break
+            if self.mh_auto_drive and not self.mh__remote_disabled and len(remote.buttons.pressed()) > 0:
+                self.disable_auto_drive()
+                self.stop_motors()
+                return False
+
+            if path[1] is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1][1] is not None and \
+                    grid_tile_path[i + 1][1] == path[1]:
+                self._navigate_to_grid_tile(path[0], Stop.NONE)
             else:
-                self._navigate_to_grid_tile(p, Stop.COAST)
+                self._navigate_to_grid_tile(path[0])
+
+        return True
 
     def auto_home(self):
-        if not self.is_homed:
+        if not self.mh_is_homed:
             return
         print('getting path to home')
-        path = self._bfs_path_to_position(ODVPosition(0, 0))
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
+        path = self._bfs_path_to_grid_tile(tile, self.home_tile)
         self._navigate_grid_tile_path(path)
         print('homed')
 
     def auto_load(self):
-        if not self.is_homed:
+        if not self.mh_is_homed:
             return
         print('getting path to load')
-        path = self._bfs_path_to_position(self.load_tile)
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
+        path = self._bfs_path_to_grid_tile(tile, self.load_tile)
         self._navigate_grid_tile_path(path)
         self._do_load_()
 
     def auto_unload(self):
-        if not self.is_homed:
+        if not self.mh_is_homed:
             return
         print('getting path to unload')
-        path = self._bfs_path_to_position(self.unload_tile)
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
+        path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
         self._navigate_grid_tile_path(path)
         self._do_unload_()
 
-    def _bfs_path_to_position(self, end: ODVPosition):
-        queue: Queue = Queue()
-        tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
-        queue.put([tile])  # Enqueue the start position
+    @staticmethod
+    def _distance(start_tile: tuple[int, int], end_tile: tuple[int, int]) -> int:
+        return floor(sqrt(pow(start_tile[0] - end_tile[0], 2) + pow(start_tile[1] - end_tile[1], 2)))
 
+    def print_tile_pos(self, tile_name: str, tile: tuple[int, int]):
+        print(f"tile {tile_name} at {tile}, {self._tile_to_angle(tile)}")
+
+    def _bfs_path_to_grid_tile(self, start_tile: tuple[int, int], end_tile: tuple[int, int]) -> list[
+        tuple[tuple[int, int], int]]:
+        print("---bfs_path_to_grid_tile---")
+        self._display_grid_()
+        self.print_tile_pos("--start", start_tile)
+        self.print_tile_pos("--end", end_tile)
+        print("--grid_tracks", self.grid_tracks)
+        self.print_tile_pos("--home_tile", self.home_tile)
+        self.print_tile_pos("--load_tile", self.load_tile)
+        self.print_tile_pos("--unload_tile", self.unload_tile)
+        # mem_info()
+        queue: Queue = Queue()
+        queue.put([(start_tile, -1)])  # Enqueue the start position
+
+        path = []
+        visited = [start_tile]
         while not queue.empty():
             path = queue.get()  # Dequeue the path
-            current_pos = path[-1]  # Current position is the last element of the path
+            current_path = path[-1]  # Current position is the last element of the path
+            # print(path)
+            if current_path[0] == end_tile:
+                break
 
-            if current_pos == end:
-                return path  # Return the path if end is reached
-
-            for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
-                new_pos = current_pos.position_from_direction(direction)
-                if new_pos.value() in self.coarse_grid and self.coarse_grid[new_pos.value()] in OK_MOVES:
+            for direction in [_EAST, _NORTH, _WEST, _SOUTH]:  # Possible movements
+                new_pos = position_from_direction(current_path[0], direction)
+                if new_pos in visited:
+                    continue
+                if new_pos in self.grid_tracks or new_pos == self.home_tile:
+                    visited.append(new_pos)
                     new_path = list(path)
-                    new_pos.direction = direction
-                    new_path.append(new_pos)
+                    new_path.append((new_pos, direction))
                     queue.put(new_path)  # Enqueue the new path
-        return []
+        if len(path) == 0:
+            print("no path found")
+        # mem_info()
+        print(path)
+        print("---bfs_path_to_grid_tile---")
+        return path
 
     def handle_remote_press(self):
         """
             handle remote button clicks
         """
+        if self.mh__remote_disabled:
+            return
         # Check which remote_buttons are pressed.
         remote_buttons_pressed = remote.buttons.pressed()
         #  handle button press
@@ -798,40 +917,40 @@ class RunODVMotors(MotorHelper):
 
         fine_grid_pos = self._get_fine_grid_position_()
         if fine_grid_pos != self.last_fine_grid_position:
-            self.last_fine_grid_position = fine_grid_pos.copy()
+            self.last_fine_grid_position = fine_grid_pos
         elif self.motors_running:
             return
 
         direction = None
         if Button.LEFT_PLUS in remote_buttons_pressed and Button.RIGHT_PLUS in remote_buttons_pressed:
-            direction = NORTH_EAST
+            direction = _NORTH_EAST
         elif Button.LEFT_PLUS in remote_buttons_pressed and Button.RIGHT_MINUS in remote_buttons_pressed:
-            direction = NORTH_WEST
+            direction = _NORTH_WEST
         elif Button.LEFT_MINUS in remote_buttons_pressed and Button.RIGHT_PLUS in remote_buttons_pressed:
-            direction = SOUTH_EAST
+            direction = _SOUTH_EAST
         elif Button.LEFT_MINUS in remote_buttons_pressed and Button.RIGHT_MINUS in remote_buttons_pressed:
-            direction = SOUTH_WEST
+            direction = _SOUTH_WEST
         elif Button.LEFT_PLUS in remote_buttons_pressed:
-            direction = NORTH
+            direction = _NORTH
         elif Button.LEFT_MINUS in remote_buttons_pressed:
-            direction = SOUTH
+            direction = _SOUTH
         elif Button.RIGHT_PLUS in remote_buttons_pressed:
-            direction = EAST
+            direction = _EAST
         elif Button.RIGHT_MINUS in remote_buttons_pressed:
-            direction = WEST
+            direction = _WEST
 
         self.stop_motors()
 
-        if direction not in DIRECTIONS:
+        if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             print('Invalid direction')
             return
 
         # print(direction)
         can_move, can_load, can_unload = self._can_move_in_direction_(direction)
-        if can_load and direction == WEST:
+        if can_load and direction == _WEST:
             self._do_load_()
             return
-        if can_unload and direction == EAST:
+        if can_unload and direction == _EAST:
             self._do_unload_()
             return
 
@@ -842,8 +961,8 @@ class RunODVMotors(MotorHelper):
 
     # stop all motors
     def stop_motors(self):
-        self.x_motor.stop()
-        self.y_motor.stop()
+        self.motor_x.stop()
+        self.motor_y.stop()
         self.motors_running = False
 
 
@@ -853,15 +972,22 @@ def main():
     error_flash_code = ErrorFlashCodes()
     print('SETUP')
     print('--setup hub')
+    setup_hub()
     try:
         print("--setup countdown")
         countdown_timer = CountdownTimer()
         print("--setup motors")
-        drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)  # DRIVE_SETUP_END
+        drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)
+
+        drive_motors.mh__remote_disabled = REMOTE_DISABLED
 
 
-        print('--setup remote')
-        setup_remote(error_flash_code)
+        if REMOTE_DISABLED:
+            print('--no remote')
+        else:
+            print('--setup remote')
+            setup_remote(error_flash_code)
+
 
         # give everything a chance to warm up
         wait(500)
@@ -869,17 +995,28 @@ def main():
         print('SETUP complete')
 
         countdown_timer.reset()
+        mem_info()
         while True:
-            countdown_timer.check_remote_buttons()
-            if countdown_timer.has_time_remaining():
-                if drive_motors.supports_homing:
+            if not REMOTE_DISABLED:
+                countdown_timer.check_remote_buttons()
+
+            if ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
+                    drive_motors.enable_auto_drive()
+
+            if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
+                drive_motors.auto_unload()
+                drive_motors.auto_load()
+            # if there is no remote, then there is no point in a countdown
+            elif countdown_timer.has_time_remaining() or REMOTE_DISABLED:
+                if drive_motors.mh_supports_homing:
                     drive_motors.do_homing()
-                if drive_motors.supports_flip:
+                if drive_motors.mh_supports_flip:
                     drive_motors.handle_flip()
-                drive_motors.handle_remote_press()
+                if not REMOTE_DISABLED:
+                    drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
-                if drive_motors.supports_homing:
+                if drive_motors.mh_supports_homing:
                     drive_motors.auto_unload()
                     drive_motors.auto_home()
                     drive_motors.reset_homing()
@@ -887,6 +1024,11 @@ def main():
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
             wait(10)
+
+            if REMOTE_DISABLED and ODV_AUTO_DRIVE_TIMEOUT_SECS == 0:
+                print("No remote or auto drive exiting")
+                raise SystemExit
+
     except Exception as e:
         print(e)
         while True:
