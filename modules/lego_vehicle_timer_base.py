@@ -29,7 +29,7 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
 # How many seconds to wait before doing a load/unload automatically. 0 = disabled
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30)
 
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
@@ -450,12 +450,14 @@ def main():
             if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
 
-            if not drive_motors.mh_auto_drive and ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
-                drive_motors.enable_auto_drive()
+            if drive_motors.mh_supports_homing:
+                if not drive_motors.mh_auto_drive and ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
+                    drive_motors.enable_auto_drive()
 
-            if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
-                drive_motors.auto_unload()
-                drive_motors.auto_load()
+                if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
+                    drive_motors.auto_unload()
+                    drive_motors.auto_load()
+
             # if there is no remote, then there is no point in a countdown
             elif countdown_timer.has_time_remaining() or REMOTE_DISABLED:
                 if drive_motors.mh_supports_homing:

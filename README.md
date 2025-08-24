@@ -91,6 +91,7 @@ tested :).<br>
 c = center button, + = + button, - = - button<br>
 COUNTDOWN_RESET_CODE = 'c,c,c' # left center button, center button, right center button<br>
 
+REMOTE_DISABLED = False # for debugging or ODV full auto
 ### Train
 
 Configuration should be done in [lego_vehicle_timer_train](lego_vehicle_timer_train.py) before installing
@@ -135,6 +136,8 @@ with [PyBricks](https://code.pybricks.com/)
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
 ODV_SPEED: int = const(50) # set between 50 and 80<br>
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30) # set to 0 to disable. Module will start automatic load and unload cycles if no user interaction.
+
 ODV_GRID = [] grid tiles specified in a list
 
 X= obstacle, L = Load, U = Unload, # = grid tile
