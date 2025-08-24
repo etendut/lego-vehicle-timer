@@ -25,7 +25,7 @@ from pybricks.parameters import Button
 ODV_SPEED: int = const(45)  # set between 40 and 70
 # X= obstacle, H= Home, L = Load, U = Unload, # = grid tile
 # ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
-ODV_GRID = ["XL##XU", "H#X#X#", "XXX###"]
+ODV_GRID = ["XL##XU", "H#X###"]
 # VARS_END
 # MODULE_START
 ##################################################################################
@@ -489,7 +489,7 @@ class RunODVMotors(MotorHelper):
             print("no path found")
         mem_info()
         print("---bfs_path_to_grid_tile---")
-        return path[1:]
+        return path
 
     def handle_remote_press(self):
         """
