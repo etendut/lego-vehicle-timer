@@ -354,13 +354,13 @@ class RunODVMotors(MotorHelper):
         if tile != self.load_tile and self._distance(tile, self.load_tile) > 1:
             print(f'{tile} is too far away from load_tile {self.load_tile}')
             return
-        self._navigate_to_grid_tile(self.load_tile)
+        tile_angle = self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         # do load
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, (_GEAR_RATIO_TO_GRID * -3))
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * -3))
         wait(2000)
         print("loading..")
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, 0)
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0])
         wait(200)
         self.has_load = True
         print("ready to go")
