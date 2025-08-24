@@ -12,6 +12,7 @@ except ImportError:
     TYPE_CHECKING = False
 
 if TYPE_CHECKING:
+    # noinspection PyUnusedImports
     from modules.mock_types import MockHub, MockRemote
 
 from pybricks.parameters import Port, Side, Direction
@@ -85,6 +86,7 @@ class MotorHelper:
     def __init__(self, supports_flip: bool, supports_homing: bool):
         self.mh_supports_flip = supports_flip
         self.mh_supports_homing = supports_homing
+        self.mh__remote_disabled = False
         self.mh_auto_drive = False
         self.mh_is_homed = False
 
@@ -512,6 +514,8 @@ class RunSkidSteerMotors(MotorHelper):
         """
             handle remote button clicks
         """
+        if self.mh__remote_disabled:
+            return
         # Check which remote_buttons are pressed.
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
@@ -554,6 +558,7 @@ def main():
         drive_motors = RunSkidSteerMotors(error_flash_code, SKID_STEER_SPEED, SKID_STEER_SWAP_MOTOR_SIDES,
                                   SKID_STEER_REVERSE_LEFT_MOTOR, SKID_STEER_REVERSE_RIGHT_MOTOR)  # DRIVE_SETUP_END
 
+        drive_motors.mh__remote_disabled = REMOTE_DISABLED
 
 
         if REMOTE_DISABLED:

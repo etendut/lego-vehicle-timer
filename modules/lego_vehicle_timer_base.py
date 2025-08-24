@@ -12,6 +12,7 @@ except ImportError:
     TYPE_CHECKING = False
 
 if TYPE_CHECKING:
+    # noinspection PyUnusedImports
     from modules.mock_types import MockHub, MockRemote
 
 # IMPORT_SECTION
@@ -74,6 +75,7 @@ class MotorHelper:
     def __init__(self, supports_flip: bool, supports_homing: bool):
         self.mh_supports_flip = supports_flip
         self.mh_supports_homing = supports_homing
+        self.mh__remote_disabled = False
         self.mh_auto_drive = False
         self.mh_is_homed = False
 
@@ -433,6 +435,7 @@ def main():
         countdown_timer = CountdownTimer()
         print("--setup motors")
         drive_motors = MotorHelper(False, False)
+        drive_motors.mh__remote_disabled = REMOTE_DISABLED
 
 
         if REMOTE_DISABLED:
