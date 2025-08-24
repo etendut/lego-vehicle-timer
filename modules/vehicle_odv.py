@@ -25,7 +25,7 @@ from pybricks.parameters import Button
 ODV_SPEED: int = const(45)  # set between 40 and 70
 # X= obstacle, H= Home, L = Load, U = Unload, # = grid tile
 # ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
-ODV_GRID = ["L###XU", "H#X#X#", "XXX###"]
+ODV_GRID = ["XL##XU", "H#X#X#", "XXX###"]
 # VARS_END
 # MODULE_START
 ##################################################################################
@@ -55,7 +55,7 @@ _MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
 _HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
 _HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
-def position_from_direction(position: tuple[int, int], direction: int):
+def position_from_direction(position: tuple[int, int], direction: int)->tuple[int, int]:
     if direction == _NORTH:
         return position[0], position[1] - 1
     if direction == _NORTH_EAST:
@@ -107,15 +107,15 @@ class Queue:
     """ No Queue in micropython :("""
 
     def __init__(self) -> None:
-        self._queue: list[list[tuple[tuple[int, int], int]]] = []
+        self._queue: list[list[tuple[int, int]]] = []
 
-    def put(self, item: list[tuple[tuple[int, int], int]]):
+    def put(self, item: list[tuple[int, int]]):
         self._queue.append(item)
 
     def empty(self):
         return len(self._queue) == 0
 
-    def get(self) -> list[tuple[tuple[int, int], int]]:
+    def get(self) -> list[tuple[int, int]]:
         first = self._queue[0]
         del self._queue[0]
         return first
@@ -349,7 +349,10 @@ class RunODVMotors(MotorHelper):
         if self.has_load:
             print('Already loaded')
             return
-
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
+        if tile != self.load_tile:
+            print(f'Not on load_tile')
+            return
         self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         # do load
@@ -362,6 +365,12 @@ class RunODVMotors(MotorHelper):
         print("ready to go")
 
     def _do_unload_(self):
+
+        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
+        if tile != self.unload_tile:
+            print('Not on unload_tile')
+            return
+
         tile_angle = self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         print("unloading..")
@@ -391,26 +400,24 @@ class RunODVMotors(MotorHelper):
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
         return tile_angle_x, tile_angle_y
 
-    # noinspection PyGlobalUndefined
-    def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[tuple[int, int], int]]) -> bool:
+    def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[int, int]]) -> bool:
         """
         Navigates robot through list of tuple[int,int]
         :param grid_tile_path:
         :return: succeeded
         """
-        global REMOTE_DISABLED
         for i, path in enumerate(grid_tile_path):
             # if user takes over break
-            if self.mh_auto_drive and REMOTE_DISABLED or len(remote.buttons.pressed()) > 0:
+            if self.mh_auto_drive and not self.mh__remote_disabled and len(remote.buttons.pressed()) > 0:
                 self.disable_auto_drive()
                 self.stop_motors()
                 return False
-
-            if path[1] is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1][1] is not None and \
-                    grid_tile_path[i + 1][1] == path[1]:
-                self._navigate_to_grid_tile(path[0], Stop.NONE)
-            else:
-                self._navigate_to_grid_tile(path[0])
+            #
+            # if path[1] is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1][1] is not None and \
+            #         grid_tile_path[i + 1][1] == path[1]:
+            #     self._navigate_to_grid_tile(path, Stop.NONE)
+            # else:
+            self._navigate_to_grid_tile(path)
 
         return True
 
@@ -429,8 +436,8 @@ class RunODVMotors(MotorHelper):
         print('getting path to load')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_())
         path = self._bfs_path_to_grid_tile(tile, self.load_tile)
-        if self._navigate_grid_tile_path(path):
-            self._do_load_()
+        self._navigate_grid_tile_path(path)
+        self._do_load_()
 
     def auto_unload(self):
         if not self.mh_is_homed:
@@ -438,41 +445,53 @@ class RunODVMotors(MotorHelper):
         print('getting path to unload')
         tile, _ = self._get_grid_tile_from_fine_xy_(self._get_fine_grid_position_())
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
-        if self._navigate_grid_tile_path(path):
-            self._do_unload_()
+        self._navigate_grid_tile_path(path)
+        self._do_unload_()
 
     def _bfs_path_to_grid_tile(self, start_tile: tuple[int, int], end_tile: tuple[int, int]) -> list[
-        tuple[tuple[int, int], int]]:
+        tuple[int, int]]:
         print("---bfs_path_to_grid_tile---")
+        self._display_grid_()
+        print("--start",start_tile)
+        print("--end",end_tile)
+        print("--grid_tracks",self.grid_tracks)
+        print("--home_tile",self.home_tile)
+        print("--load_tile",self.load_tile)
+        print("--unload_tile",self.unload_tile)
         mem_info()
         queue: Queue = Queue()
-        queue.put([(start_tile, 0)])  # Enqueue the start position
+        queue.put([start_tile])  # Enqueue the start position
 
-        final_path = []
+        path = []
+        visited = [start_tile]
         while not queue.empty():
             path = queue.get()  # Dequeue the path
             current_path = path[-1]  # Current position is the last element of the path
-
+            print(path)
             if current_path[0] == end_tile:
-                final_path = path
                 break
 
             for direction in [_EAST, _NORTH, _WEST, _SOUTH]:  # Possible movements
-                new_pos = position_from_direction(current_path[0], direction)
-                if new_pos in self.grid_tracks:
+                new_pos = position_from_direction(current_path, direction)
+                if new_pos in visited:
+                    continue
+                if  new_pos in self.grid_tracks or new_pos == self.home_tile:
+                    visited.append(new_pos)
                     new_path = list(path)
-                    new_path.append((new_pos, direction))
+                    new_path.append(new_pos)
                     queue.put(new_path)  # Enqueue the new path
-        if len(final_path) == 0:
+        if len(path) == 0:
             print("no path found")
         mem_info()
         print("---bfs_path_to_grid_tile---")
-        return final_path
+        return path[1:]
 
     def handle_remote_press(self):
         """
             handle remote button clicks
         """
+        if self.mh__remote_disabled:
+            return
         # Check which remote_buttons are pressed.
         remote_buttons_pressed = remote.buttons.pressed()
         #  handle button press
