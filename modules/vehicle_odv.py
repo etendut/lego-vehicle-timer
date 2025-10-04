@@ -42,6 +42,8 @@ _WEST = const(7)
 
 WALL = 'X'
 TRACK = '#'
+ONEWAY_TRACK_LEFT = '<'
+ONEWAY_TRACK_RIGHT = '>'
 HOME = 'H'
 LOAD = 'L'
 UNLOAD = 'U'
@@ -138,6 +140,8 @@ class RunODVMotors(MotorHelper):
         self.last_fine_grid_position: tuple[int, int] = (0, 0)
         """current position"""
         self.grid_tracks = []
+        self.gt_one_way_right = []
+        self.gt_one_way_left = []
         self.coarse_grid_width = 0
         self.coarse_grid_height = 0
         self._load_grid_(grid_layout)
@@ -182,6 +186,10 @@ class RunODVMotors(MotorHelper):
 
                 if character in OK_MOVES:
                     self.grid_tracks.append((x, y))
+                if character == ONEWAY_TRACK_LEFT:
+                    self.gt_one_way_left.append((x, y))
+                if character == ONEWAY_TRACK_RIGHT:
+                    self.gt_one_way_right.append((x, y))
                 # set load/unload points
                 if character == HOME:
                     # print('----home_tile----')
@@ -219,6 +227,10 @@ class RunODVMotors(MotorHelper):
                     print(UNLOAD, end='')
                 elif (x, y) in self.grid_tracks:
                     print(TRACK, end='')
+                elif (x, y) in self.gt_one_way_right:
+                    print(ONEWAY_TRACK_RIGHT, end='')
+                elif (x, y) in self.gt_one_way_left:
+                    print(ONEWAY_TRACK_LEFT, end='')
                 else:
                     print(WALL, end='')
             print()  # Print a newline after printing the row.
@@ -272,20 +284,31 @@ class RunODVMotors(MotorHelper):
         # HOME - can only be moved into from bottom or right
 
         can_move = (tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES)
-        # handle home tile only supporting 2 directions
-        if not can_move and HOME in [tl, tr, bl, br]:
-            # cart in home tile
-            if tl == tr == br == bl == HOME:
+
+        # handle home tile only supporting 2 directions and one-way tiles
+        if not can_move and (ONEWAY_TRACK_LEFT in [tl, tr, bl, br] or ONEWAY_TRACK_RIGHT in [tl, tr, bl, br] or HOME in [tl, tr, bl, br]):
+            # cart in tile
+            if tl == tr == br == bl == ONEWAY_TRACK_LEFT or tl == tr == br == bl == ONEWAY_TRACK_RIGHT or tl == tr == br == bl == HOME:
                 can_move = True
-            # moving NW into tile
-            elif tl == HOME and tr == br == bl == TRACK:
+            # cut corner NW
+            elif (tl == ONEWAY_TRACK_LEFT or tl == HOME) and tr == br == bl == TRACK:
                 can_move = True
-            # moving N or S
-            elif tl == tr == HOME and br == bl == TRACK:
+            # cut corner NE
+            elif (tr == ONEWAY_TRACK_RIGHT) and tl == br == bl == TRACK:
                 can_move = True
-            # moving E or W
-            elif tl == bl == HOME and tr == br == TRACK:
+            # moving S
+            elif (tl == tr == ONEWAY_TRACK_LEFT or tl == tr == ONEWAY_TRACK_RIGHT or tl == tr == HOME) and br == bl == TRACK:
                 can_move = True
+            # moving N
+            elif (tl == tr == ONEWAY_TRACK_LEFT or tl == tr == ONEWAY_TRACK_RIGHT) and tr == tl == TRACK:
+                can_move = True
+            # moving E
+            elif (tl == bl == ONEWAY_TRACK_LEFT or tl == bl == HOME)  and tr == br == TRACK:
+                can_move = True
+            # moving W
+            elif (tr == br == ONEWAY_TRACK_RIGHT or tr == br == HOME)  and tl == bl == TRACK:
+                can_move = True
+
 
         can_load = tl == tr == br == bl == LOAD
         can_unload = tl == tr == br == bl == UNLOAD
@@ -323,6 +346,10 @@ class RunODVMotors(MotorHelper):
             return tile, WALL
         if (x_grid, y_grid) in self.grid_tracks:
             return tile, TRACK
+        if (x_grid, y_grid) in self.gt_one_way_right:
+            return tile, ONEWAY_TRACK_RIGHT
+        if (x_grid, y_grid) in self.gt_one_way_left:
+            return tile, ONEWAY_TRACK_LEFT
 
         return tile, WALL
 
@@ -462,6 +489,8 @@ class RunODVMotors(MotorHelper):
         self.print_tile_pos("--start", start_tile)
         self.print_tile_pos("--end", end_tile)
         print("--grid_tracks", self.grid_tracks)
+        print("--gt_one_way_left", self.gt_one_way_left)
+        print("--gt_one_way_right", self.gt_one_way_right)
         self.print_tile_pos("--home_tile", self.home_tile)
         self.print_tile_pos("--load_tile", self.load_tile)
         self.print_tile_pos("--unload_tile", self.unload_tile)
@@ -482,7 +511,7 @@ class RunODVMotors(MotorHelper):
                 new_pos = position_from_direction(current_path[0], direction)
                 if new_pos in visited:
                     continue
-                if new_pos in self.grid_tracks or new_pos == self.home_tile:
+                if (new_pos in self.grid_tracks or new_pos in self.gt_one_way_right or new_pos in self.gt_one_way_left) or new_pos == self.home_tile:
                     visited.append(new_pos)
                     new_path = list(path)
                     new_path.append((new_pos, direction))
