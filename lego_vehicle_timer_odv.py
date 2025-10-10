@@ -461,8 +461,8 @@ _WEST = const(7)
 
 WALL = 'X'
 TRACK = '#'
-ONEWAY_TRACK_LEFT = '<'
-ONEWAY_TRACK_RIGHT = '>'
+WEST_ONLY_TRACK = '<'
+EAST_ONLY_TRACK = '>'
 HOME = 'H'
 LOAD = 'L'
 UNLOAD = 'U'
@@ -605,9 +605,9 @@ class RunODVMotors(MotorHelper):
 
                 if character in OK_MOVES:
                     self.grid_tracks.append((x, y))
-                if character == ONEWAY_TRACK_LEFT:
+                if character == WEST_ONLY_TRACK:
                     self.gt_one_way_left.append((x, y))
-                if character == ONEWAY_TRACK_RIGHT:
+                if character == EAST_ONLY_TRACK:
                     self.gt_one_way_right.append((x, y))
                 # set load/unload points
                 if character == HOME:
@@ -647,9 +647,9 @@ class RunODVMotors(MotorHelper):
                 elif (x, y) in self.grid_tracks:
                     print(TRACK, end='')
                 elif (x, y) in self.gt_one_way_right:
-                    print(ONEWAY_TRACK_RIGHT, end='')
+                    print(EAST_ONLY_TRACK, end='')
                 elif (x, y) in self.gt_one_way_left:
-                    print(ONEWAY_TRACK_LEFT, end='')
+                    print(WEST_ONLY_TRACK, end='')
                 else:
                     print(WALL, end='')
             print()  # Print a newline after printing the row.
@@ -706,28 +706,35 @@ class RunODVMotors(MotorHelper):
         can_move = (tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES)
 
         # handle home tile only supporting 2 directions and one-way tiles
-        if not can_move and (ONEWAY_TRACK_LEFT in [tl, tr, bl, br] or ONEWAY_TRACK_RIGHT in [tl, tr, bl, br] or HOME in [tl, tr, bl, br]):
+        if not can_move and (WEST_ONLY_TRACK in [tl, tr, bl, br] or EAST_ONLY_TRACK in [tl, tr, bl, br] or HOME in [tl, tr, bl, br]):
             # cart in tile
-            if tl == tr == br == bl == ONEWAY_TRACK_LEFT or tl == tr == br == bl == ONEWAY_TRACK_RIGHT or tl == tr == br == bl == HOME:
+            if tl == tr == br == bl == WEST_ONLY_TRACK or tl == tr == br == bl == EAST_ONLY_TRACK or tl == tr == br == bl == HOME:
                 can_move = True
             # cut corner NW
-            elif (tl == ONEWAY_TRACK_LEFT or tl == HOME) and tr == br == bl == TRACK:
+            elif (tl == WEST_ONLY_TRACK or tl == HOME) and tr == br == bl == TRACK:
                 can_move = True
             # cut corner NE
-            elif (tr == ONEWAY_TRACK_RIGHT) and tl == br == bl == TRACK:
+            elif (tr == EAST_ONLY_TRACK) and tl == br == bl == TRACK:
                 can_move = True
             # moving S
-            elif (tl == tr == ONEWAY_TRACK_LEFT or tl == tr == ONEWAY_TRACK_RIGHT or tl == tr == HOME) and br == bl == TRACK:
+            elif (tl == tr == WEST_ONLY_TRACK or tl == tr == EAST_ONLY_TRACK or tl == tr == HOME) and br == bl == TRACK:
                 can_move = True
             # moving N
-            elif (tl == tr == ONEWAY_TRACK_LEFT or tl == tr == ONEWAY_TRACK_RIGHT) and tr == tl == TRACK:
-                can_move = True
-            # moving E
-            elif (tl == bl == ONEWAY_TRACK_LEFT or tl == bl == HOME)  and tr == br == TRACK:
+            elif (tl == tr == WEST_ONLY_TRACK or tl == tr == EAST_ONLY_TRACK) and tr == tl == TRACK:
                 can_move = True
             # moving W
-            elif (tr == br == ONEWAY_TRACK_RIGHT or tr == br == HOME)  and tl == bl == TRACK:
+            elif (tl == bl == WEST_ONLY_TRACK or tl == bl == HOME)  and tr == br == TRACK:
                 can_move = True
+            #  oneway tile west
+            elif tr == br == WEST_ONLY_TRACK   and tl == bl == TRACK and direction == _WEST:
+                can_move = True
+            # moving E
+            elif (tr == br == EAST_ONLY_TRACK or tr == br == HOME)  and tl == bl == TRACK :
+                can_move = True
+            #  oneway tile east
+            elif tr == br == EAST_ONLY_TRACK and tl == bl == TRACK and direction == _EAST:
+                can_move = True
+            #
 
 
         can_load = tl == tr == br == bl == LOAD
@@ -773,9 +780,9 @@ class RunODVMotors(MotorHelper):
         if (x_grid, y_grid) == self.unload_tile:
             return tile, UNLOAD
         if (x_grid, y_grid) in self.gt_one_way_right:
-            return tile, ONEWAY_TRACK_RIGHT
+            return tile, EAST_ONLY_TRACK
         if (x_grid, y_grid) in self.gt_one_way_left:
-            return tile, ONEWAY_TRACK_LEFT
+            return tile, WEST_ONLY_TRACK
 
         return tile, WALL
 
