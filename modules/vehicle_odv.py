@@ -31,7 +31,7 @@ ODV_GRID_YE2 = ["H###", "LXXU","##<#"]
 ODV_GRID_GR3 = ["L##<U", "X#XH#","X###X"]
 ODV_GRID_BL4 = ["H###X", "#XX#X","L#<#U"]
 
-ODV_GRID = ODV_GRID_YE2
+ODV_GRID = ODV_GRID_GR3
 
 # VARS_END
 # MODULE_START
@@ -284,6 +284,7 @@ class RunODVMotors(MotorHelper):
         br = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_right, direction), False)
         bl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction), False)
 
+        print(direction,tl,tr,br,bl)
         # most tiles support universal movement
         # TRACK - any direction
         # LOAD - only on left
@@ -353,6 +354,12 @@ class RunODVMotors(MotorHelper):
             return tile, WALL
         if (x_grid, y_grid) in self.grid_tracks:
             return tile, TRACK
+        if (x_grid, y_grid) == self.home_tile:
+            return tile, HOME
+        if (x_grid, y_grid) == self.load_tile:
+            return tile, LOAD
+        if (x_grid, y_grid) == self.unload_tile:
+            return tile, UNLOAD
         if (x_grid, y_grid) in self.gt_one_way_right:
             return tile, ONEWAY_TRACK_RIGHT
         if (x_grid, y_grid) in self.gt_one_way_left:
