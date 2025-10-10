@@ -161,8 +161,8 @@ def wait_for_no_pressed_buttons():
         return
     remote_buttons_pressed = remote.buttons.pressed()
     while remote_buttons_pressed:
-        remote_buttons_pressed = remote.buttons.pressed()
         wait(100)
+        remote_buttons_pressed = remote.buttons.pressed()
 
 
 def convert_millis_hours_minutes_seconds(millis: int):
@@ -193,6 +193,7 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
+        self.last_remote_color = None
         self.last_countdown_message: str = ''
         self.countdown_status: int = _UNKNOWN
 
@@ -287,23 +288,37 @@ class CountdownTimer:
 
     def show_status(self):
         global hub
-        global remote
         if self.countdown_status == _READY:
-            self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
+            self.set_remote_light(Color.GREEN)
+            self.flash_hub_light(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == _ACTIVE:
             hub.light.on(Color.GREEN)
-            if not REMOTE_DISABLED:
-                remote.light.on(Color.GREEN)
+            self.set_remote_light(Color.GREEN)
         elif self.countdown_status == _FINAL_20_SECS:
-            self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
+            self.flash_hub_light(Color.ORANGE, 200, Color.NONE, 100)
         elif self.countdown_status == _FINAL_MINUTE:
-            self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
+            self.flash_hub_light(Color.ORANGE, 500, Color.NONE, 250)
         elif self.countdown_status == _ENDED:
             hub.light.on(Color.ORANGE)
-            if not REMOTE_DISABLED:
-                remote.light.on(Color.ORANGE)
+            self.set_remote_light(Color.ORANGE)
 
-    def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
+    def set_remote_light(self, on_color:Color):
+        """
+        Set remote light color if changed
+        :param on_color:
+        :return:
+        """
+        global remote
+        # skip if no remote
+        if REMOTE_DISABLED:
+                return
+        # only set color if it's changed
+        if on_color == self.last_remote_color:
+            return
+        self.last_remote_color = on_color
+        remote.light.on(on_color)
+
+    def flash_hub_light(self, on_color:Color, on_msec: int, off_color, off_msec: int):
         """
             this flashes the remote led
         :param on_color:
@@ -315,12 +330,8 @@ class CountdownTimer:
         # we use a timer to make it a non-blocking call
         if self.stopwatch.time() > (on_msec + off_msec + self.led_flash_sw_time):
             self.led_flash_sw_time = self.stopwatch.time()
-            if not REMOTE_DISABLED:
-                remote.light.on(off_color)
             hub.light.on(off_color)
         elif self.stopwatch.time() > (off_msec + self.led_flash_sw_time):
-            if not REMOTE_DISABLED:
-                remote.light.on(on_color)
             hub.light.on(on_color)
 
 
