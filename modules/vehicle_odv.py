@@ -408,7 +408,7 @@ class RunODVMotors(MotorHelper):
         tile_angle = self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         print("unloading..")
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * 4))
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * 5))
         wait(2000)
         self._navigate_to_grid_tile(self.unload_tile)
         wait(200)

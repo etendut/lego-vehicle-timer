@@ -470,7 +470,7 @@ def main():
                     drive_motors.auto_load()
 
             # if there is no remote, then there is no point in a countdown
-            elif countdown_timer.has_time_remaining() or REMOTE_DISABLED:
+            if countdown_timer.has_time_remaining() or REMOTE_DISABLED:
                 if drive_motors.mh_supports_homing:
                     drive_motors.do_homing()
                 if drive_motors.mh_supports_flip:
