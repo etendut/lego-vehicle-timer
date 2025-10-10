@@ -27,9 +27,9 @@ ODV_SPEED: int = const(45)  # set between 40 and 70
 # ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
 # ODV_GRID = ["XL##XU", "H#X###"]
 
-ODV_GRID_YE2 = ["H###", "LXXU","##<#"]
-ODV_GRID_GR3 = ["L##<U", "X#XH#","X###X"]
-ODV_GRID_BL4 = ["H###X", "#XX#X","L#<#U"]
+ODV_GRID_YE2 = ["H###", "LXXU", "##<#"]
+ODV_GRID_GR3 = ["L##<U", "X#XH#", "X###X"]
+ODV_GRID_BL4 = ["H###X", "#XX#X", "L#<#U"]
 
 ODV_GRID = ODV_GRID_GR3
 
@@ -279,54 +279,77 @@ class RunODVMotors(MotorHelper):
 
         # print("Cart", cart)
 
-        tl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_left, direction), False)
-        tr = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_right, direction), False)
-        br = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_right, direction), False)
-        bl = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction), False)
+        tl_type = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_left, direction), False)
+        tr_type = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.top_right, direction), False)
+        br_type = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_right, direction), False)
+        bl_type = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction), False)
 
-        print(direction,tl,tr,br,bl)
+        return self._can_move_in_direction_by_type(direction, tl_type, tr_type, br_type, bl_type)
+
+    def _can_move_in_direction_from_tile_(self, coarse_position: tuple[int, int], direction: int) -> tuple[
+        bool, bool, bool]:
+        ex_type = self._get_grid_tile_type_from_coarse_xy_(coarse_position)
+        new_type = self._get_grid_tile_type_from_coarse_xy_(position_from_direction(coarse_position, direction))
+        if direction == _NORTH:
+            return self._can_move_in_direction_by_type(direction, new_type, new_type, ex_type, ex_type)
+        if direction == _EAST:
+            return self._can_move_in_direction_by_type(direction, ex_type, new_type, new_type, ex_type)
+        if direction == _SOUTH:
+            return self._can_move_in_direction_by_type(direction, ex_type, ex_type, new_type, new_type)
+        if direction == _WEST:
+            return self._can_move_in_direction_by_type(direction, new_type, ex_type, ex_type, new_type)
+        return False, False, False
+
+    @staticmethod
+    def _can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br_type: str, bl_type: str) -> tuple[
+        bool, bool, bool]:
+        print(direction, tl_type, tr_type, br_type, bl_type)
         # most tiles support universal movement
         # TRACK - any direction
         # LOAD - only on left
         # UNLOAD - only on right
         # HOME - can only be moved into from bottom or right
 
-        can_move = (tl in OK_MOVES and tr in OK_MOVES and br in OK_MOVES and bl in OK_MOVES)
+        can_move = (tl_type in OK_MOVES and tr_type in OK_MOVES and br_type in OK_MOVES and bl_type in OK_MOVES)
 
         # handle home tile only supporting 2 directions and one-way tiles
-        if not can_move and (WEST_ONLY_TRACK in [tl, tr, bl, br] or EAST_ONLY_TRACK in [tl, tr, bl, br] or HOME in [tl, tr, bl, br]):
+        if not can_move and (
+                WEST_ONLY_TRACK in [tl_type, tr_type, bl_type, br_type] or EAST_ONLY_TRACK in [tl_type, tr_type,
+                                                                                               bl_type,
+                                                                                               br_type] or HOME in [
+                    tl_type, tr_type, bl_type, br_type]):
             # cart in tile
-            if tl == tr == br == bl == WEST_ONLY_TRACK or tl == tr == br == bl == EAST_ONLY_TRACK or tl == tr == br == bl == HOME:
+            if tl_type == tr_type == br_type == bl_type == WEST_ONLY_TRACK or tl_type == tr_type == br_type == bl_type == EAST_ONLY_TRACK or tl_type == tr_type == br_type == bl_type == HOME:
                 can_move = True
             # cut corner NW
-            elif (tl == WEST_ONLY_TRACK or tl == HOME) and tr == br == bl == TRACK:
+            elif (tl_type == WEST_ONLY_TRACK or tl_type == HOME) and tr_type == br_type == bl_type == TRACK:
                 can_move = True
             # cut corner NE
-            elif (tr == EAST_ONLY_TRACK) and tl == br == bl == TRACK:
+            elif (tr_type == EAST_ONLY_TRACK) and tl_type == br_type == bl_type == TRACK:
                 can_move = True
             # moving S
-            elif (tl == tr == WEST_ONLY_TRACK or tl == tr == EAST_ONLY_TRACK or tl == tr == HOME) and br == bl == TRACK:
+            elif (
+                    tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK or tl_type == tr_type == HOME) and br_type == bl_type == TRACK:
                 can_move = True
             # moving N
-            elif (tl == tr == WEST_ONLY_TRACK or tl == tr == EAST_ONLY_TRACK) and tr == tl == TRACK:
+            elif (
+                    tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK) and tr_type == tl_type == TRACK:
                 can_move = True
             # moving W
-            elif (tl == bl == WEST_ONLY_TRACK or tl == bl == HOME)  and tr == br == TRACK:
+            elif (tl_type == bl_type == WEST_ONLY_TRACK or tl_type == bl_type == HOME) and tr_type == br_type == TRACK:
                 can_move = True
             #  oneway tile west
-            elif tr == br == WEST_ONLY_TRACK   and tl == bl == TRACK and direction == _WEST:
+            elif tr_type == br_type == WEST_ONLY_TRACK and tl_type == bl_type == TRACK and direction == _WEST:
                 can_move = True
             # moving E
-            elif (tr == br == EAST_ONLY_TRACK or tr == br == HOME)  and tl == bl == TRACK :
+            elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type == bl_type == TRACK:
                 can_move = True
             #  oneway tile east
-            elif tr == br == EAST_ONLY_TRACK and tl == bl == TRACK and direction == _EAST:
-                can_move = True
-            #
+            elif tr_type == br_type == EAST_ONLY_TRACK and tl_type == bl_type == TRACK and direction == _EAST:
+                can_move = True  #
 
-
-        can_load = tl == tr == br == bl == LOAD
-        can_unload = tl == tr == br == bl == UNLOAD
+        can_load = tl_type == tr_type == br_type == bl_type == LOAD
+        can_unload = tl_type == tr_type == br_type == bl_type == UNLOAD
 
         # print("Cart", direction, can_move)
         return can_move, can_load, can_unload
@@ -339,40 +362,55 @@ class RunODVMotors(MotorHelper):
         print("fine_grid_position", fine_grid_position)
         return fine_grid_position
 
-    def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> str:
+    def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy: bool) -> str:
         tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position, use_fuzzy)
         return tile_type
 
-    def _get_grid_tile_position_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> tuple[int, int]:
+    def _get_grid_tile_position_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy: bool) -> tuple[int, int]:
         tile_position, tile_type = self._get_grid_tile_from_fine_xy_(fine_position, use_fuzzy)
         return tile_position
 
-    def _get_grid_tile_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy:bool) -> tuple[tuple[int, int], str]:
+    def _get_grid_tile_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy: bool) -> tuple[
+        tuple[int, int], str]:
 
         # move to center of cart
         fuzzy = floor(_ODV_SIZE / 2) if use_fuzzy else 0
         x_grid = floor((fine_position[0] + fuzzy) / _FINE_GRID_SIZE)
         y_grid = floor((fine_position[1] + fuzzy) / _FINE_GRID_SIZE)
         print("Fine", fine_position)
-        print("Coarse", (x_grid, y_grid))
         tile = (x_grid, y_grid)
-        if fine_position[0] < 1 or fine_position[
-            1] < 1 or x_grid < 0 or y_grid < 0 or x_grid > self.coarse_grid_width or y_grid > self.coarse_grid_height:
+        if fine_position[0] < 1 or fine_position[1] < 1:
             return tile, WALL
-        if (x_grid, y_grid) in self.grid_tracks:
-            return tile, TRACK
-        if (x_grid, y_grid) == self.home_tile:
-            return tile, HOME
-        if (x_grid, y_grid) == self.load_tile:
-            return tile, LOAD
-        if (x_grid, y_grid) == self.unload_tile:
-            return tile, UNLOAD
-        if (x_grid, y_grid) in self.gt_one_way_right:
-            return tile, EAST_ONLY_TRACK
-        if (x_grid, y_grid) in self.gt_one_way_left:
-            return tile, WEST_ONLY_TRACK
+        return self._get_grid_tile_from_coarse_xy_(tile)
 
-        return tile, WALL
+    def _get_grid_tile_type_from_coarse_xy_(self, coarse_position: tuple[int, int]) -> str:
+        tile_position, tile_type = self._get_grid_tile_from_coarse_xy_(coarse_position)
+        return tile_type
+
+    def _get_grid_tile_position_from_coarse_xy_(self, coarse_position: tuple[int, int]) -> tuple[int, int]:
+        tile_position, tile_type = self._get_grid_tile_from_coarse_xy_(coarse_position)
+        return tile_position
+
+    def _get_grid_tile_from_coarse_xy_(self, coarse_position: tuple[int, int]) -> tuple[tuple[int, int], str]:
+
+        print("Coarse", coarse_position)
+        if coarse_position[0] < 0 or coarse_position[1] < 0 or coarse_position[0] > self.coarse_grid_width or \
+                coarse_position[1] > self.coarse_grid_height:
+            return coarse_position, WALL
+
+        if coarse_position in self.grid_tracks:
+            return coarse_position, TRACK
+        if coarse_position == self.home_tile:
+            return coarse_position, HOME
+        if coarse_position == self.load_tile:
+            return coarse_position, LOAD
+        if coarse_position == self.unload_tile:
+            return coarse_position, UNLOAD
+        if coarse_position in self.gt_one_way_right:
+            return coarse_position, EAST_ONLY_TRACK
+        if coarse_position in self.gt_one_way_left:
+            return coarse_position, WEST_ONLY_TRACK
+        return coarse_position, WALL
 
     def _move_in_direction_(self, direction: int) -> bool:
 
@@ -530,9 +568,12 @@ class RunODVMotors(MotorHelper):
 
             for direction in [_EAST, _NORTH, _WEST, _SOUTH]:  # Possible movements
                 new_pos = position_from_direction(current_path[0], direction)
+
                 if new_pos in visited:
                     continue
-                if (new_pos in self.grid_tracks or new_pos in self.gt_one_way_right or new_pos in self.gt_one_way_left) or new_pos == self.home_tile:
+                can_move, can_load, can_unload = self._can_move_in_direction_from_tile_(current_path[0], direction)
+
+                if can_move or can_load or can_unload:
                     visited.append(new_pos)
                     new_path = list(path)
                     new_path.append((new_pos, direction))
@@ -613,5 +654,4 @@ class RunODVMotors(MotorHelper):
 
 # MODULE_END
 # DRIVE_SETUP_START
-drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)
-# DRIVE_SETUP_END
+drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)  # DRIVE_SETUP_END
