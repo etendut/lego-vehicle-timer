@@ -33,7 +33,7 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
 # How many seconds to wait before doing a load/unload automatically. 0 = disabled
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30)
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
@@ -806,10 +806,6 @@ class RunODVMotors(MotorHelper):
     def _get_grid_tile_from_coarse_xy_(self, coarse_position: tuple[int, int]) -> tuple[tuple[int, int], str]:
 
         print("Coarse", coarse_position)
-        if coarse_position[0] < 0 or coarse_position[1] < 0 or coarse_position[0] > self.coarse_grid_width or \
-                coarse_position[1] > self.coarse_grid_height:
-            return coarse_position, WALL
-
         if coarse_position in self.grid_tracks:
             return coarse_position, TRACK
         if coarse_position == self.home_tile:

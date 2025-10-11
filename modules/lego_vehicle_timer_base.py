@@ -29,7 +29,7 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
 # How many seconds to wait before doing a load/unload automatically. 0 = disabled
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30)
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
