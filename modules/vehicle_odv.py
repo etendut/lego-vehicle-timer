@@ -96,6 +96,59 @@ def position_from_direction(position: tuple[int, int], direction: int) -> tuple[
     return position[0], position[1]
 
 
+def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br_type: str, bl_type: str) -> tuple[
+    bool, bool, bool]:
+    print(direction, tl_type, tr_type, br_type, bl_type)
+    # most tiles support universal movement
+    # TRACK - any direction
+    # LOAD - only on left
+    # UNLOAD - only on right
+    # HOME - can only be moved into from bottom or right
+
+    can_move = (tl_type in OK_MOVES and tr_type in OK_MOVES and br_type in OK_MOVES and bl_type in OK_MOVES)
+
+    # handle home tile only supporting 2 directions and one-way tiles
+    if not can_move and (
+            WEST_ONLY_TRACK in [tl_type, tr_type, bl_type, br_type] or EAST_ONLY_TRACK in [tl_type, tr_type,
+                                                                                           bl_type,
+                                                                                           br_type] or HOME in [
+                tl_type, tr_type, bl_type, br_type]):
+        # cart in tile
+        if tl_type == tr_type == br_type == bl_type == WEST_ONLY_TRACK or tl_type == tr_type == br_type == bl_type == EAST_ONLY_TRACK or tl_type == tr_type == br_type == bl_type == HOME:
+            can_move = True
+        # cut corner NW
+        elif (tl_type == WEST_ONLY_TRACK or tl_type == HOME) and tr_type == br_type == bl_type == TRACK:
+            can_move = True
+        # cut corner NE
+        elif (tr_type == EAST_ONLY_TRACK) and tl_type == br_type == bl_type == TRACK:
+            can_move = True
+        # moving S
+        elif (
+                tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK or tl_type == tr_type == HOME) and br_type == bl_type == TRACK:
+            can_move = True
+        # moving N
+        elif (
+                tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK) and tr_type in OK_MOVES and tl_type in OK_MOVES:
+            can_move = True
+        # moving W
+        elif (tl_type == bl_type == WEST_ONLY_TRACK or tl_type == bl_type == HOME) and tr_type in OK_MOVES and br_type in OK_MOVES:
+            can_move = True
+        #  oneway tile west
+        elif tr_type == br_type == WEST_ONLY_TRACK and tl_type in OK_MOVES and bl_type in OK_MOVES and direction == WEST:
+            can_move = True
+        # moving E
+        elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type in OK_MOVES and bl_type in OK_MOVES:
+            can_move = True
+        #  oneway tile east
+        elif tr_type == br_type == EAST_ONLY_TRACK and tl_type in OK_MOVES and  bl_type in OK_MOVES and direction == EAST:
+            can_move = True  #
+
+    can_load = tl_type == tr_type == br_type == bl_type == LOAD
+    can_unload = tl_type == tr_type == br_type == bl_type == UNLOAD
+
+    # print("Cart", direction, can_move)
+    return can_move, can_load, can_unload
+
 class ODVBox:
     def __init__(self, top_left: tuple[int, int], width: int, height: int):
         self.width = 0
@@ -295,75 +348,21 @@ class RunODVMotors(MotorHelper):
         br_type = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_right, direction), False)
         bl_type = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction), False)
 
-        return self._can_move_in_direction_by_type(direction, tl_type, tr_type, br_type, bl_type)
+        return can_move_in_direction_by_type(direction, tl_type, tr_type, br_type, bl_type)
 
     def _can_move_in_direction_from_tile_(self, coarse_position: tuple[int, int], direction: int) -> tuple[
         bool, bool, bool]:
         ex_type = self._get_grid_tile_type_from_coarse_xy_(coarse_position)
         new_type = self._get_grid_tile_type_from_coarse_xy_(position_from_direction(coarse_position, direction))
         if direction == NORTH:
-            return self._can_move_in_direction_by_type(direction, new_type, new_type, ex_type, ex_type)
+            return can_move_in_direction_by_type(direction, new_type, new_type, ex_type, ex_type)
         if direction == EAST:
-            return self._can_move_in_direction_by_type(direction, ex_type, new_type, new_type, ex_type)
+            return can_move_in_direction_by_type(direction, ex_type, new_type, new_type, ex_type)
         if direction == SOUTH:
-            return self._can_move_in_direction_by_type(direction, ex_type, ex_type, new_type, new_type)
+            return can_move_in_direction_by_type(direction, ex_type, ex_type, new_type, new_type)
         if direction == WEST:
-            return self._can_move_in_direction_by_type(direction, new_type, ex_type, ex_type, new_type)
+            return can_move_in_direction_by_type(direction, new_type, ex_type, ex_type, new_type)
         return False, False, False
-
-    @staticmethod
-    def _can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br_type: str, bl_type: str) -> tuple[
-        bool, bool, bool]:
-        print(direction, tl_type, tr_type, br_type, bl_type)
-        # most tiles support universal movement
-        # TRACK - any direction
-        # LOAD - only on left
-        # UNLOAD - only on right
-        # HOME - can only be moved into from bottom or right
-
-        can_move = (tl_type in OK_MOVES and tr_type in OK_MOVES and br_type in OK_MOVES and bl_type in OK_MOVES)
-
-        # handle home tile only supporting 2 directions and one-way tiles
-        if not can_move and (
-                WEST_ONLY_TRACK in [tl_type, tr_type, bl_type, br_type] or EAST_ONLY_TRACK in [tl_type, tr_type,
-                                                                                               bl_type,
-                                                                                               br_type] or HOME in [
-                    tl_type, tr_type, bl_type, br_type]):
-            # cart in tile
-            if tl_type == tr_type == br_type == bl_type == WEST_ONLY_TRACK or tl_type == tr_type == br_type == bl_type == EAST_ONLY_TRACK or tl_type == tr_type == br_type == bl_type == HOME:
-                can_move = True
-            # cut corner NW
-            elif (tl_type == WEST_ONLY_TRACK or tl_type == HOME) and tr_type == br_type == bl_type == TRACK:
-                can_move = True
-            # cut corner NE
-            elif (tr_type == EAST_ONLY_TRACK) and tl_type == br_type == bl_type == TRACK:
-                can_move = True
-            # moving S
-            elif (
-                    tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK or tl_type == tr_type == HOME) and br_type == bl_type == TRACK:
-                can_move = True
-            # moving N
-            elif (
-                    tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK) and tr_type in OK_MOVES and tl_type in OK_MOVES:
-                can_move = True
-            # moving W
-            elif (tl_type == bl_type == WEST_ONLY_TRACK or tl_type == bl_type == HOME) and tr_type in OK_MOVES and br_type in OK_MOVES:
-                can_move = True
-            #  oneway tile west
-            elif tr_type == br_type == WEST_ONLY_TRACK and tl_type in OK_MOVES and bl_type in OK_MOVES and direction == WEST:
-                can_move = True
-            # moving E
-            elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type in OK_MOVES and bl_type in OK_MOVES:
-                can_move = True
-            #  oneway tile east
-            elif tr_type == br_type == EAST_ONLY_TRACK and tl_type in OK_MOVES and  bl_type in OK_MOVES and direction == EAST:
-                can_move = True  #
-
-        can_load = tl_type == tr_type == br_type == bl_type == LOAD
-        can_unload = tl_type == tr_type == br_type == bl_type == UNLOAD
-
-        # print("Cart", direction, can_move)
-        return can_move, can_load, can_unload
 
     def _get_fine_grid_position_(self) -> tuple[int, int]:
 
@@ -661,6 +660,7 @@ class RunODVMotors(MotorHelper):
         self.motor_x.stop()
         self.motor_y.stop()
         self.motors_running = False
+
 
 
 # MODULE_END
