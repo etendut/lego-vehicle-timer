@@ -1,14 +1,24 @@
 # IMPORTS_START
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Direction, Stop
-from uerrno import ENODEV
-from umath import floor, sqrt
+try:
+    from uerrno import ENODEV
+except ImportError:
+    ENODEV = -99
+try:
+    from umath import floor, sqrt
+except ImportError:
+    from math import floor, sqrt
 # IMPORTS_END
 
 # local var only
-from micropython import mem_info
+from micropython import mem_info, const
+def mock_const(val):
+    return val
+# for testing
+if const(12) is None:
+    const = mock_const
 from pybricks.tools import wait
-from micropython import const
 from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
 
 error_flash_code = ErrorFlashCodes()
