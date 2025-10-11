@@ -1,4 +1,5 @@
 import pytest
+# noinspection PyProtectedMember
 from pytest_check import check
 
 
