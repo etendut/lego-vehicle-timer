@@ -36,8 +36,11 @@ can_move_in_direction_by_type_tests = [
     pytest.param(SOUTH_WEST, "#","#","#","#",True,False,False, id="SOUTH_WEST-#,#,#,#"),
     pytest.param( WEST, "#","#","#","#",True,False,False, id="WEST-#,#,#,#"),
     pytest.param( NORTH_WEST, "#","#","#","#",True,False,False, id="NORTH_WEST-#,#,#,#"),
-
-]
+    pytest.param( EAST, "<","#","#","<",True,False,False, id="EAST-<,#,#,<"),
+    pytest.param( EAST, "#","<","<","#",False,False,False, id="EAST-<,#,#,<"),
+    pytest.param( WEST, ">","#","#",">",False,False,False, id="EAST-<,#,#,<"),
+    pytest.param( WEST, "#",">",">","#",True,False,False, id="EAST-<,#,#,<"),
+    ]
 @pytest.mark.parametrize("direction,tl_type, tr_type,br_type,bl_type,can_move,can_load,can_unload", can_move_in_direction_by_type_tests)
 def test_can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br_type: str, bl_type: str, can_move: bool, can_load: bool, can_unload: bool):
     # setup
