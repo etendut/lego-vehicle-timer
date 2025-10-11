@@ -333,19 +333,19 @@ class RunODVMotors(MotorHelper):
                 can_move = True
             # moving N
             elif (
-                    tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK) and tr_type == tl_type == TRACK:
+                    tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK) and tr_type in OK_MOVES and tl_type in OK_MOVES:
                 can_move = True
             # moving W
-            elif (tl_type == bl_type == WEST_ONLY_TRACK or tl_type == bl_type == HOME) and tr_type == br_type == TRACK:
+            elif (tl_type == bl_type == WEST_ONLY_TRACK or tl_type == bl_type == HOME) and tr_type in OK_MOVES and br_type in OK_MOVES:
                 can_move = True
             #  oneway tile west
-            elif tr_type == br_type == WEST_ONLY_TRACK and tl_type == bl_type == TRACK and direction == _WEST:
+            elif tr_type == br_type == WEST_ONLY_TRACK and tl_type in OK_MOVES and bl_type in OK_MOVES and direction == _WEST:
                 can_move = True
             # moving E
-            elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type == bl_type == TRACK:
+            elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type in OK_MOVES and bl_type in OK_MOVES:
                 can_move = True
             #  oneway tile east
-            elif tr_type == br_type == EAST_ONLY_TRACK and tl_type == bl_type == TRACK and direction == _EAST:
+            elif tr_type == br_type == EAST_ONLY_TRACK and tl_type in OK_MOVES and  bl_type in OK_MOVES and direction == _EAST:
                 can_move = True  #
 
         can_load = tl_type == tr_type == br_type == bl_type == LOAD
