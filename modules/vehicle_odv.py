@@ -48,14 +48,14 @@ ODV_GRID = ODV_GRID_GR3
 ##################################################################################
 # ODV helper
 ##################################################################################
-_NORTH_WEST = const(0)
-_NORTH = const(1)
-_NORTH_EAST = const(2)
-_EAST = const(3)
-_SOUTH_EAST = const(4)
-_SOUTH = const(5)
-_SOUTH_WEST = const(6)
-_WEST = const(7)
+NORTH_WEST = const(0)
+NORTH = const(1)
+NORTH_EAST = const(2)
+EAST = const(3)
+SOUTH_EAST = const(4)
+SOUTH = const(5)
+SOUTH_WEST = const(6)
+WEST = const(7)
 
 WALL = 'X'
 TRACK = '#'
@@ -76,21 +76,21 @@ _HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
 
 def position_from_direction(position: tuple[int, int], direction: int) -> tuple[int, int]:
-    if direction == _NORTH:
+    if direction == NORTH:
         return position[0], position[1] - 1
-    if direction == _NORTH_EAST:
+    if direction == NORTH_EAST:
         return position[0] + 1, position[1] - 1
-    if direction == _EAST:
+    if direction == EAST:
         return position[0] + 1, position[1]
-    if direction == _SOUTH_EAST:
+    if direction == SOUTH_EAST:
         return position[0] + 1, position[1] + 1
-    if direction == _SOUTH:
+    if direction == SOUTH:
         return position[0], position[1] + 1
-    if direction == _SOUTH_WEST:
+    if direction == SOUTH_WEST:
         return position[0] - 1, position[1] + 1
-    if direction == _WEST:
+    if direction == WEST:
         return position[0] - 1, position[1]
-    if direction == _NORTH_WEST:
+    if direction == NORTH_WEST:
         return position[0] - 1, position[1] - 1
 
     return position[0], position[1]
@@ -279,7 +279,7 @@ class RunODVMotors(MotorHelper):
         self._display_grid_(self.home_tile)
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
-        if direction not in [_NORTH, _EAST, _SOUTH, _WEST]:
+        if direction not in [NORTH, EAST, SOUTH, WEST]:
         # if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             return False, False, False
 
@@ -301,13 +301,13 @@ class RunODVMotors(MotorHelper):
         bool, bool, bool]:
         ex_type = self._get_grid_tile_type_from_coarse_xy_(coarse_position)
         new_type = self._get_grid_tile_type_from_coarse_xy_(position_from_direction(coarse_position, direction))
-        if direction == _NORTH:
+        if direction == NORTH:
             return self._can_move_in_direction_by_type(direction, new_type, new_type, ex_type, ex_type)
-        if direction == _EAST:
+        if direction == EAST:
             return self._can_move_in_direction_by_type(direction, ex_type, new_type, new_type, ex_type)
-        if direction == _SOUTH:
+        if direction == SOUTH:
             return self._can_move_in_direction_by_type(direction, ex_type, ex_type, new_type, new_type)
-        if direction == _WEST:
+        if direction == WEST:
             return self._can_move_in_direction_by_type(direction, new_type, ex_type, ex_type, new_type)
         return False, False, False
 
@@ -350,13 +350,13 @@ class RunODVMotors(MotorHelper):
             elif (tl_type == bl_type == WEST_ONLY_TRACK or tl_type == bl_type == HOME) and tr_type in OK_MOVES and br_type in OK_MOVES:
                 can_move = True
             #  oneway tile west
-            elif tr_type == br_type == WEST_ONLY_TRACK and tl_type in OK_MOVES and bl_type in OK_MOVES and direction == _WEST:
+            elif tr_type == br_type == WEST_ONLY_TRACK and tl_type in OK_MOVES and bl_type in OK_MOVES and direction == WEST:
                 can_move = True
             # moving E
             elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type in OK_MOVES and bl_type in OK_MOVES:
                 can_move = True
             #  oneway tile east
-            elif tr_type == br_type == EAST_ONLY_TRACK and tl_type in OK_MOVES and  bl_type in OK_MOVES and direction == _EAST:
+            elif tr_type == br_type == EAST_ONLY_TRACK and tl_type in OK_MOVES and  bl_type in OK_MOVES and direction == EAST:
                 can_move = True  #
 
         can_load = tl_type == tr_type == br_type == bl_type == LOAD
@@ -421,18 +421,18 @@ class RunODVMotors(MotorHelper):
 
     def _move_in_direction_(self, direction: int) -> bool:
 
-        if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
+        if direction not in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
             print('Invalid direction')
             return False
 
-        if direction in [_NORTH, _NORTH_EAST, _NORTH_WEST]:
+        if direction in [NORTH, NORTH_EAST, NORTH_WEST]:
             self.motor_y.dc(-self.drive_speed)
-        if direction in [_SOUTH, _SOUTH_EAST, _SOUTH_WEST]:
+        if direction in [SOUTH, SOUTH_EAST, SOUTH_WEST]:
             self.motor_y.dc(self.drive_speed)
 
-        if direction in [_EAST, _NORTH_EAST, _SOUTH_EAST]:
+        if direction in [EAST, NORTH_EAST, SOUTH_EAST]:
             self.motor_x.dc(self.drive_speed)
-        if direction in [_WEST, _NORTH_WEST, _SOUTH_WEST]:
+        if direction in [WEST, NORTH_WEST, SOUTH_WEST]:
             self.motor_x.dc(-self.drive_speed)
 
         self.motors_running = True
@@ -573,7 +573,7 @@ class RunODVMotors(MotorHelper):
             if current_path[0] == end_tile:
                 break
 
-            for direction in [_EAST, _NORTH, _WEST, _SOUTH]:  # Possible movements
+            for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
                 new_pos = position_from_direction(current_path[0], direction)
 
                 if new_pos in visited:
@@ -616,36 +616,36 @@ class RunODVMotors(MotorHelper):
 
         direction = None
         if Button.LEFT_PLUS in remote_buttons_pressed and Button.RIGHT_PLUS in remote_buttons_pressed:
-            direction = _NORTH_EAST
+            direction = NORTH_EAST
         elif Button.LEFT_PLUS in remote_buttons_pressed and Button.RIGHT_MINUS in remote_buttons_pressed:
-            direction = _NORTH_WEST
+            direction = NORTH_WEST
         elif Button.LEFT_MINUS in remote_buttons_pressed and Button.RIGHT_PLUS in remote_buttons_pressed:
-            direction = _SOUTH_EAST
+            direction = SOUTH_EAST
         elif Button.LEFT_MINUS in remote_buttons_pressed and Button.RIGHT_MINUS in remote_buttons_pressed:
-            direction = _SOUTH_WEST
+            direction = SOUTH_WEST
         elif Button.LEFT_PLUS in remote_buttons_pressed:
-            direction = _NORTH
+            direction = NORTH
         elif Button.LEFT_MINUS in remote_buttons_pressed:
-            direction = _SOUTH
+            direction = SOUTH
         elif Button.RIGHT_PLUS in remote_buttons_pressed:
-            direction = _EAST
+            direction = EAST
         elif Button.RIGHT_MINUS in remote_buttons_pressed:
-            direction = _WEST
+            direction = WEST
 
 
 
-        if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
+        if direction not in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
             self.stop_motors()
             print('Invalid direction')
             return
 
         # print(direction)
         can_move, can_load, can_unload = self._can_move_in_direction_(direction)
-        if can_load and direction == _WEST:
+        if can_load and direction == WEST:
             self.stop_motors()
             self._do_load_()
             return
-        if can_unload and direction == _EAST:
+        if can_unload and direction == EAST:
             self.stop_motors()
             self._do_unload_()
             return
