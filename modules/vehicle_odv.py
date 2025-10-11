@@ -29,7 +29,7 @@ ODV_SPEED: int = const(45)  # set between 40 and 70
 
 ODV_GRID_YE2 = ["H###", "LXXU", "##<#"]
 ODV_GRID_GR3 = ["L##<U", "X#XH#", "X###X"]
-ODV_GRID_BL4 = ["H###X", "#XX#X", "L#<#U"]
+ODV_GRID_BL4 = ["H###X", "X#X#X", "L#<#U"]
 
 ODV_GRID = ODV_GRID_GR3
 
@@ -394,8 +394,6 @@ class RunODVMotors(MotorHelper):
     def _get_grid_tile_from_coarse_xy_(self, coarse_position: tuple[int, int]) -> tuple[tuple[int, int], str]:
 
         print("Coarse", coarse_position)
-        if coarse_position in self.grid_tracks:
-            return coarse_position, TRACK
         if coarse_position == self.home_tile:
             return coarse_position, HOME
         if coarse_position == self.load_tile:
@@ -406,6 +404,8 @@ class RunODVMotors(MotorHelper):
             return coarse_position, EAST_ONLY_TRACK
         if coarse_position in self.gt_one_way_left:
             return coarse_position, WEST_ONLY_TRACK
+        if coarse_position in self.grid_tracks:
+            return coarse_position, TRACK
         return coarse_position, WALL
 
     def _move_in_direction_(self, direction: int) -> bool:
