@@ -46,7 +46,7 @@ ODV_SPEED: int = const(45)  # set between 40 and 70
 # ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
 # ODV_GRID = ["XL##XU", "H#X###"]
 
-ODV_GRID_YE2 = ["XH<U", "X#X#", "L###"]
+ODV_GRID_YE2 = ["XH#U", "X#X#", "L#<#"]
 ODV_GRID_GR3 = ["L##<U", "H#X#X", "X###X"]
 ODV_GRID_BL4 = ["X###X", "#X#X", "L#<#U"]
 
