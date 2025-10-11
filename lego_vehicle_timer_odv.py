@@ -1037,22 +1037,26 @@ class RunODVMotors(MotorHelper):
         elif Button.RIGHT_MINUS in remote_buttons_pressed:
             direction = _WEST
 
-        self.stop_motors()
+
 
         if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
+            self.stop_motors()
             print('Invalid direction')
             return
 
         # print(direction)
         can_move, can_load, can_unload = self._can_move_in_direction_(direction)
         if can_load and direction == _WEST:
+            self.stop_motors()
             self._do_load_()
             return
         if can_unload and direction == _EAST:
+            self.stop_motors()
             self._do_unload_()
             return
 
         if not can_move:
+            self.stop_motors()
             return
 
         self._move_in_direction_(direction)
