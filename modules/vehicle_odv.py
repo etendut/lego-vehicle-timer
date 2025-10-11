@@ -107,7 +107,7 @@ class ODVBox:
 
     def buffer(self, buffer: int):
         new_tl = (self.top_left[0] - buffer, self.top_left[1] - buffer)
-        self._update_dimensions_(new_tl, self.width + (buffer * 2), self.height + (buffer * 2))
+        self._update_dimensions_(new_tl, (self.width + buffer), (self.height + buffer))
 
     def __str__(self):
         return f"[{self.top_left}, {self.top_right}]\n[{self.bottom_left}, {self.bottom_right}]"

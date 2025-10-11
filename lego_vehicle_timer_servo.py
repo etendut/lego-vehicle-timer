@@ -578,10 +578,10 @@ def main():
                     drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
-                # if drive_motors.mh_supports_homing:
+                if drive_motors.mh_supports_homing:
                 #     drive_motors.auto_unload()
                 #     drive_motors.auto_home()
-                #     drive_motors.reset_homing()
+                    drive_motors.reset_homing()
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur

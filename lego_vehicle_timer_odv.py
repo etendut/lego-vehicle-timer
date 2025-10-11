@@ -519,7 +519,7 @@ class ODVBox:
 
     def buffer(self, buffer: int):
         new_tl = (self.top_left[0] - buffer, self.top_left[1] - buffer)
-        self._update_dimensions_(new_tl, self.width + (buffer * 2), self.height + (buffer * 2))
+        self._update_dimensions_(new_tl, (self.width + buffer), (self.height + buffer))
 
     def __str__(self):
         return f"[{self.top_left}, {self.top_right}]\n[{self.bottom_left}, {self.bottom_right}]"
@@ -1115,10 +1115,10 @@ def main():
                     drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
-                # if drive_motors.mh_supports_homing:
+                if drive_motors.mh_supports_homing:
                 #     drive_motors.auto_unload()
                 #     drive_motors.auto_home()
-                #     drive_motors.reset_homing()
+                    drive_motors.reset_homing()
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
