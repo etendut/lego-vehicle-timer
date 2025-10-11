@@ -681,7 +681,8 @@ class RunODVMotors(MotorHelper):
         self._display_grid_(self.home_tile)
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
-        if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
+        if direction not in [_NORTH, _EAST, _SOUTH, _WEST]:
+        # if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             return False, False, False
 
         # work out cart dimensions
@@ -1114,10 +1115,10 @@ def main():
                     drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
-                if drive_motors.mh_supports_homing:
-                    drive_motors.auto_unload()
-                    drive_motors.auto_home()
-                    drive_motors.reset_homing()
+                # if drive_motors.mh_supports_homing:
+                #     drive_motors.auto_unload()
+                #     drive_motors.auto_home()
+                #     drive_motors.reset_homing()
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur

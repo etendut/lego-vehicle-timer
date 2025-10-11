@@ -269,7 +269,8 @@ class RunODVMotors(MotorHelper):
         self._display_grid_(self.home_tile)
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
-        if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
+        if direction not in [_NORTH, _EAST, _SOUTH, _WEST]:
+        # if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             return False, False, False
 
         # work out cart dimensions
