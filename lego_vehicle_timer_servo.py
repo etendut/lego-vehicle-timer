@@ -289,7 +289,7 @@ class CountdownTimer:
     def show_status(self):
         global hub
         if self.countdown_status == _READY:
-            self.set_remote_light(Color.GREEN)
+            self.set_remote_light(Color.BLUE)
             self.flash_hub_light(Color.GREEN, 500, Color.NONE, 500)
         elif self.countdown_status == _ACTIVE:
             hub.light.on(Color.GREEN)
