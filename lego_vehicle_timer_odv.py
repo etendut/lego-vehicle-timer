@@ -558,16 +558,21 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
                 tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK) and tr_type in OK_MOVES and tl_type in OK_MOVES:
             can_move = True
         # moving W
-        elif (tl_type == bl_type == WEST_ONLY_TRACK) and tr_type in OK_MOVES and br_type in OK_MOVES:
-            can_move = True
+        # elif (tl_type == bl_type == WEST_ONLY_TRACK) and tr_type in OK_MOVES and br_type in OK_MOVES:
+        #     can_move = True
         # moving W
         elif tl_type == bl_type == HOME and (tr_type in OK_MOVES and br_type in OK_MOVES or tl_type==bl_type == HOME):
+            can_move = True
+        #  oneway tile west
+        elif tl_type == bl_type == WEST_ONLY_TRACK and tr_type in OK_MOVES and br_type in OK_MOVES and direction == WEST:
             can_move = True
         #  oneway tile west
         elif tr_type == br_type == WEST_ONLY_TRACK and tl_type in OK_MOVES and bl_type in OK_MOVES and direction == WEST:
             can_move = True
         # moving E
-        elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type in OK_MOVES and bl_type in OK_MOVES:
+        elif tr_type == br_type == EAST_ONLY_TRACK  and tl_type in OK_MOVES and bl_type in OK_MOVES:
+            can_move = True
+        elif tr_type == br_type == HOME and tl_type in OK_MOVES and bl_type in OK_MOVES:
             can_move = True
         #  oneway tile east
         elif tl_type == bl_type == EAST_ONLY_TRACK and tr_type in OK_MOVES and  br_type in OK_MOVES and direction == EAST:
