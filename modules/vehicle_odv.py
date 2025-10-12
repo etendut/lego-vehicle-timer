@@ -140,7 +140,7 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
         elif (tr_type == br_type == EAST_ONLY_TRACK or tr_type == br_type == HOME) and tl_type in OK_MOVES and bl_type in OK_MOVES:
             can_move = True
         #  oneway tile east
-        elif tr_type == br_type == EAST_ONLY_TRACK and tl_type in OK_MOVES and  bl_type in OK_MOVES and direction == EAST:
+        elif tl_type == bl_type == EAST_ONLY_TRACK and tr_type in OK_MOVES and  br_type in OK_MOVES and direction == EAST:
             can_move = True  #
 
     can_load = tl_type == tr_type == br_type == bl_type == LOAD
@@ -354,15 +354,16 @@ class RunODVMotors(MotorHelper):
         bool, bool, bool]:
         ex_type = self._get_grid_tile_type_from_coarse_xy_(coarse_position)
         new_type = self._get_grid_tile_type_from_coarse_xy_(position_from_direction(coarse_position, direction))
+        can_move, can_load, can_unload =False, False, False
         if direction == NORTH:
-            return can_move_in_direction_by_type(direction, new_type, new_type, ex_type, ex_type)
+            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, new_type, new_type, ex_type, ex_type)
         if direction == EAST:
-            return can_move_in_direction_by_type(direction, ex_type, new_type, new_type, ex_type)
+            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, ex_type, new_type, new_type, ex_type)
         if direction == SOUTH:
-            return can_move_in_direction_by_type(direction, ex_type, ex_type, new_type, new_type)
+            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, ex_type, ex_type, new_type, new_type)
         if direction == WEST:
-            return can_move_in_direction_by_type(direction, new_type, ex_type, ex_type, new_type)
-        return False, False, False
+            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, new_type, ex_type, ex_type, new_type)
+        return can_move, can_load, can_unload
 
     def _get_fine_grid_position_(self) -> tuple[int, int]:
 
@@ -403,7 +404,7 @@ class RunODVMotors(MotorHelper):
 
     def _get_grid_tile_from_coarse_xy_(self, coarse_position: tuple[int, int]) -> tuple[tuple[int, int], str]:
 
-        print("Coarse", coarse_position)
+        print("-Coarse", coarse_position)
         if coarse_position == self.home_tile:
             return coarse_position, HOME
         if coarse_position == self.load_tile:

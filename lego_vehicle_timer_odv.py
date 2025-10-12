@@ -559,8 +559,8 @@ class RunODVMotors(MotorHelper):
         self.last_fine_grid_position: tuple[int, int] = (0, 0)
         """current position"""
         self.grid_tracks = []
-        self.gt_one_way_right = []
-        self.gt_one_way_left = []
+        self.gt_one_way_east = []
+        self.gt_one_way_west = []
         self.coarse_grid_width = 0
         self.coarse_grid_height = 0
         self._load_grid_(grid_layout)
@@ -606,9 +606,9 @@ class RunODVMotors(MotorHelper):
                 if character in OK_MOVES:
                     self.grid_tracks.append((x, y))
                 if character == WEST_ONLY_TRACK:
-                    self.gt_one_way_left.append((x, y))
+                    self.gt_one_way_west.append((x, y))
                 if character == EAST_ONLY_TRACK:
-                    self.gt_one_way_right.append((x, y))
+                    self.gt_one_way_east.append((x, y))
                 # set load/unload points
                 if character == HOME:
                     # print('----home_tile----')
@@ -646,9 +646,9 @@ class RunODVMotors(MotorHelper):
                     print(UNLOAD, end='')
                 elif (x, y) in self.grid_tracks:
                     print(TRACK, end='')
-                elif (x, y) in self.gt_one_way_right:
+                elif (x, y) in self.gt_one_way_east:
                     print(EAST_ONLY_TRACK, end='')
-                elif (x, y) in self.gt_one_way_left:
+                elif (x, y) in self.gt_one_way_west:
                     print(WEST_ONLY_TRACK, end='')
                 else:
                     print(WALL, end='')
@@ -813,9 +813,9 @@ class RunODVMotors(MotorHelper):
             return coarse_position, LOAD
         if coarse_position == self.unload_tile:
             return coarse_position, UNLOAD
-        if coarse_position in self.gt_one_way_right:
+        if coarse_position in self.gt_one_way_east:
             return coarse_position, EAST_ONLY_TRACK
-        if coarse_position in self.gt_one_way_left:
+        if coarse_position in self.gt_one_way_west:
             return coarse_position, WEST_ONLY_TRACK
         if coarse_position in self.grid_tracks:
             return coarse_position, TRACK
@@ -957,8 +957,8 @@ class RunODVMotors(MotorHelper):
         self.print_tile_pos("--start", start_tile)
         self.print_tile_pos("--end", end_tile)
         print("--grid_tracks", self.grid_tracks)
-        print("--gt_one_way_left", self.gt_one_way_left)
-        print("--gt_one_way_right", self.gt_one_way_right)
+        print("--gt_one_way_left", self.gt_one_way_west)
+        print("--gt_one_way_right", self.gt_one_way_east)
         self.print_tile_pos("--home_tile", self.home_tile)
         self.print_tile_pos("--load_tile", self.load_tile)
         self.print_tile_pos("--unload_tile", self.unload_tile)
