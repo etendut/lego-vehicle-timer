@@ -482,6 +482,24 @@ _MAX_MOTOR_ROT_SPEED: int = const(1400)  # Max motor speed (deg/s) ~1500
 _HOMING_MOTOR_ROT_SPEED: int = const(200)  # Homing speed (deg/s)
 _HOMING_DUTY: int = const(45)  # Homing motor duty (%) (adjustment required)
 
+def dir_to_str(direction:int)->str:
+    if direction == NORTH:
+        return "NORTH"
+    if direction == NORTH_EAST:
+        return "NORTH_EAST"
+    if direction == EAST:
+        return "EAST"
+    if direction == SOUTH_EAST:
+        return "SOUTH_EAST"
+    if direction == SOUTH:
+        return "SOUTH"
+    if direction == SOUTH_WEST:
+        return "SOUTH_WEST"
+    if direction == WEST:
+        return "WEST"
+    if direction == NORTH_WEST:
+        return "NORTH_WEST"
+    return "UNKNOWN"
 
 def position_from_direction(position: tuple[int, int], direction: int) -> tuple[int, int]:
     if direction == NORTH:
@@ -506,7 +524,8 @@ def position_from_direction(position: tuple[int, int], direction: int) -> tuple[
 
 def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br_type: str, bl_type: str) -> tuple[
     bool, bool, bool]:
-    print(direction, tl_type, tr_type, br_type, bl_type)
+    print("--")
+    print(dir_to_str(direction), tl_type, tr_type, br_type, bl_type)
     # most tiles support universal movement
     # TRACK - any direction
     # LOAD - only on left
@@ -539,7 +558,10 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
                 tl_type == tr_type == WEST_ONLY_TRACK or tl_type == tr_type == EAST_ONLY_TRACK) and tr_type in OK_MOVES and tl_type in OK_MOVES:
             can_move = True
         # moving W
-        elif (tl_type == bl_type == WEST_ONLY_TRACK or tl_type == bl_type == HOME) and tr_type in OK_MOVES and br_type in OK_MOVES:
+        elif (tl_type == bl_type == WEST_ONLY_TRACK) and tr_type in OK_MOVES and br_type in OK_MOVES:
+            can_move = True
+        # moving W
+        elif tl_type == bl_type == HOME and (tr_type in OK_MOVES and br_type in OK_MOVES or tl_type==bl_type == HOME):
             can_move = True
         #  oneway tile west
         elif tr_type == br_type == WEST_ONLY_TRACK and tl_type in OK_MOVES and bl_type in OK_MOVES and direction == WEST:
@@ -554,7 +576,7 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
     can_load = tl_type == tr_type == br_type == bl_type == LOAD
     can_unload = tl_type == tr_type == br_type == bl_type == UNLOAD
 
-    # print("Cart", direction, can_move)
+    print("can_move, can_load, can_unload", can_move, can_load, can_unload)
     return can_move, can_load, can_unload
 
 class ODVBox:

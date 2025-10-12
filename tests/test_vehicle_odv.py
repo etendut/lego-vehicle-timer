@@ -55,7 +55,7 @@ def test_can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: st
 
 bfs_test = [
     pytest.param((0,2),(3,0),[((0, 2), -1), ((1, 2), EAST), ((2, 2), EAST), ((3, 2), EAST), ((3, 1), NORTH), ((3, 0), NORTH)] ,id="start-to-finish"),
-    pytest.param((3,0),(0,2),[],id="finish-to-start"),
+    pytest.param((3,0),(0,2),[((3, 0), -1), ((2, 0), WEST), ((1, 0), WEST), ((1, 1), SOUTH), ((1, 2), SOUTH), ((0, 2), WEST)],id="finish-to-start"),
 ]
 @pytest.mark.parametrize("start_tile,end_tile,expected_route", bfs_test)
 def test_bfs(start_tile: tuple[int, int], end_tile: tuple[int, int],expected_route):
