@@ -18,10 +18,19 @@ class MockIMU:
         pass
 
 
+class MockBattery:
+    """For typing only, this will be replaced by TechnicHub"""
+
+    def voltage(self) -> int:
+        """For typing only, this will be replaced by TechnicHub"""
+        return 0
+
+
 class MockHub:
     """For typing only, this will be replaced by CityHub or TechnicHub"""
 
     def __init__(self):
+        self.battery = MockBattery()
         self.imu = MockIMU()
         self.light = MockLight()
 

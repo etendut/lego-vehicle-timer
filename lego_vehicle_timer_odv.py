@@ -44,6 +44,8 @@ ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
 
+# low voltage protection in millivolts e.g. 7.2V = 7200mV
+MILLIVOLT_CRITICAL_LEVEL = const(1.2 * 6 * 1000)
 
 
 # odv settings
@@ -70,13 +72,20 @@ class ErrorFlashCodes:
         self.flash_count = 1  # Other errors
 
     def set_error_no_motor_on_a(self):
+        print('ERROR: NO MOTOR ON A')
         self.flash_count = 2
 
     def set_error_no_motor_on_b(self):
+        print('ERROR: NO MOTOR ON B')
         self.flash_count = 3
 
     def set_error_no_remote(self):
+        print('ERROR: NO REMOTE')
         self.flash_count = 4
+
+    def set_error_low_battery(self):
+        print('ERROR: LOW BATTERY')
+        self.flash_count = 5
 
     def flash_error_code(self):
         """
@@ -423,6 +432,10 @@ def setup_hub():
             print(ex2)
             raise Exception('This program only support Lego City hub and Lego Technic hub')
 
+def hub_battery_ok()->bool:
+    global hub
+    mv_voltage = hub.battery.voltage()
+    return mv_voltage > MILLIVOLT_CRITICAL_LEVEL
 
 LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
 
@@ -1128,6 +1141,10 @@ def main():
         countdown_timer.reset()
         mem_info()
         while True:
+            if not hub_battery_ok():
+                error_flash_code.set_error_low_battery()
+                break
+
             if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
 
