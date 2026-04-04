@@ -1,47 +1,30 @@
-from pybricks.parameters import Side
+from typing import Protocol
+from pybricks.parameters import Side, Color
 
 
-class MockLight:
-    """For typing only, this will be replaced by CityHub or TechnicHub"""
-
-    def blink(self, col, seq):
-        pass
-
-    def on(self, color):
-        pass
+class MockLight(Protocol):
+    def blink(self, col: list, seq: list) -> None: ...
+    def on(self, color: Color) -> None: ...
 
 
-class MockIMU:
-    """For typing only, this will be replaced by TechnicHub"""
-
-    def up(self) -> Side:
-        pass
+class MockIMU(Protocol):
+    def up(self) -> Side: ...
 
 
-class MockBattery:
-    """For typing only, this will be replaced by TechnicHub"""
-
-    def voltage(self) -> int:
-        """For typing only, this will be replaced by TechnicHub"""
-        return 0
+class MockBattery(Protocol):
+    def voltage(self) -> int: ...
 
 
-class MockHub:
-    """For typing only, this will be replaced by CityHub or TechnicHub"""
+class MockHub(Protocol):
+    battery: MockBattery
+    imu: MockIMU
+    light: MockLight
 
-    def __init__(self):
-        self.battery = MockBattery()
-        self.imu = MockIMU()
-        self.light = MockLight()
 
-class MockRemoteButtons:
-    """For typing only, this will be replaced by RemoteButtons"""
-    def pressed(self)->list:
-        print(self.__class__.__name__)
-        return []
+class MockRemoteButtons(Protocol):
+    def pressed(self) -> list: ...
 
-class MockRemote:
-    """For typing only, this will be replaced by RemoteButtons"""
-    def __init__(self):
-        self.buttons = MockRemoteButtons()
-        self.light = MockLight()
+
+class MockRemote(Protocol):
+    buttons: MockRemoteButtons
+    light: MockLight
