@@ -13,7 +13,8 @@ except ImportError:
 
 if TYPE_CHECKING:
     # noinspection PyUnusedImports
-    from modules.mock_types import MockHub, MockRemote
+    from pybricks.hubs import CityHub, TechnicHub
+    from pybricks.pupdevices import Remote
 
 from pybricks.parameters import Port, Direction
 from pybricks.pupdevices import DCMotor, Motor
@@ -395,8 +396,8 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 ##################################################################################
 
 
-hub: "MockHub"
-remote: "MockRemote"
+hub: "CityHub | TechnicHub"
+remote: "Remote"
 
 
 def setup_hub():
