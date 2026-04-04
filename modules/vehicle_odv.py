@@ -181,23 +181,6 @@ class ODVBox:
         return f"[{self.top_left}, {self.top_right}]\n[{self.bottom_left}, {self.bottom_right}]"
 
 
-class Queue:
-    """ No Queue in micropython :("""
-
-    def __init__(self) -> None:
-        self._queue: list[list[tuple[tuple[int, int], int]]] = []
-
-    def put(self, item: list[tuple[tuple[int, int], int]]):
-        self._queue.append(item)
-
-    def empty(self):
-        return len(self._queue) == 0
-
-    def get(self) -> list[tuple[tuple[int, int], int]]:
-        first = self._queue[0]
-        del self._queue[0]
-        return first
-
 
 class RunODVMotors(MotorHelper):
     """
@@ -591,36 +574,45 @@ class RunODVMotors(MotorHelper):
             self.print_tile_pos("--home_tile", self.home_tile)
             self.print_tile_pos("--load_tile", self.load_tile)
             self.print_tile_pos("--unload_tile", self.unload_tile)
-        # mem_info()
-        queue: Queue = Queue()
-        queue.put([(start_tile, -1)])  # Enqueue the start position
+        # parent[tile] = (parent_tile, direction_taken_to_reach_tile)
+        parent: dict[tuple[int, int], tuple[tuple[int, int] | None, int]] = {start_tile: (None, -1)}
+        queue: list[tuple[int, int]] = [start_tile]
+        head = 0
+        found = False
 
-        path = []
-        visited = [start_tile]
-        while not queue.empty():
-            path = queue.get()  # Dequeue the path
-            current_path = path[-1]  # Current position is the last element of the path
-            # print(path)
-            if current_path[0] == end_tile:
+        while head < len(queue):
+            current = queue[head]
+            head += 1
+
+            if current == end_tile:
+                found = True
                 break
 
-            from_type = self._get_grid_tile_type_from_coarse_xy_(current_path[0])
-            for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
-                new_pos = position_from_direction(current_path[0], direction)
-
-                if new_pos in visited:
+            from_type = self._get_grid_tile_type_from_coarse_xy_(current)
+            for direction in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
+                new_pos = position_from_direction(current, direction)
+                if new_pos in parent:
                     continue
                 to_type = self._get_grid_tile_type_from_coarse_xy_(new_pos)
-
                 if _can_traverse_coarse(from_type, to_type, direction):
-                    visited.append(new_pos)
-                    new_path = list(path)
-                    new_path.append((new_pos, direction))
-                    queue.put(new_path)  # Enqueue the new path
-        if DEBUG:
-            if len(path) == 0:
+                    parent[new_pos] = (current, direction)
+                    queue.append(new_pos)
+
+        if not found:
+            if DEBUG:
                 print("no path found")
-            # mem_info()
+            return []
+
+        # Reconstruct path by walking back through parent map
+        path: list[tuple[tuple[int, int], int]] = []
+        tile: tuple[int, int] | None = end_tile
+        while tile is not None:
+            parent_tile, direction = parent[tile]
+            path.append((tile, direction))
+            tile = parent_tile
+        path.reverse()
+
+        if DEBUG:
             print(path)
             print("---bfs_path_to_grid_tile---")
         return path

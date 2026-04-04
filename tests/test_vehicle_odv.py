@@ -1,8 +1,10 @@
 import pytest
 from pytest_check import check
 
+from unittest.mock import MagicMock
+
 from modules.vehicle_odv import (
-    can_move_in_direction_by_type, _can_traverse_coarse,
+    can_move_in_direction_by_type, _can_traverse_coarse, RunODVMotors,
     NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST,
 )
 
@@ -126,3 +128,45 @@ coarse_tests = [
 @pytest.mark.parametrize("from_type,to_type,direction,expected", coarse_tests)
 def test_can_traverse_coarse(from_type, to_type, direction, expected):
     check.equal(_can_traverse_coarse(from_type, to_type, direction), expected)
+
+
+# ---------------------------------------------------------------------------
+# BFS tests
+# Grid: ["XH<U", "X#X#", "L#>#"]
+#   (0,0)=X  (1,0)=H  (2,0)=<  (3,0)=U
+#   (0,1)=X  (1,1)=#  (2,1)=X  (3,1)=#
+#   (0,2)=L  (1,2)=#  (2,2)=>  (3,2)=#
+# ---------------------------------------------------------------------------
+
+TEST_GRID = ["XH<U", "X#X#", "L#>#"]
+
+bfs_tests = [
+    pytest.param(
+        (0, 2), (3, 0),
+        [((0,2),-1), ((1,2),EAST), ((2,2),EAST), ((3,2),EAST), ((3,1),NORTH), ((3,0),NORTH)],
+        id="load-to-unload",
+    ),
+    pytest.param(
+        (3, 0), (0, 2),
+        # diagonal SW from (1,1) reaches (0,2) directly
+        [((3,0),-1), ((2,0),WEST), ((1,0),WEST), ((1,1),SOUTH), ((0,2),SOUTH_WEST)],
+        id="unload-to-load",
+    ),
+    pytest.param(
+        (1, 0), (3, 0),
+        [((1,0),-1), ((1,1),SOUTH), ((1,2),SOUTH), ((2,2),EAST), ((3,2),EAST), ((3,1),NORTH), ((3,0),NORTH)],
+        id="home-to-unload",
+    ),
+    pytest.param(
+        (3, 0), (1, 0),
+        [((3,0),-1), ((2,0),WEST), ((1,0),WEST)],
+        id="unload-to-home",
+    ),
+]
+
+
+@pytest.mark.parametrize("start_tile,end_tile,expected_path", bfs_tests)
+def test_bfs(start_tile, end_tile, expected_path):
+    helper = RunODVMotors(MagicMock(), 80, TEST_GRID)
+    result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
+    check.equal(result, expected_path)

@@ -57,7 +57,7 @@ Replace `_can_move_in_direction_from_tile_` usage in BFS with this function.
 ---
 
 ### Task 4 — Rewrite BFS with parent-pointer map and 8-directional search
-**Status**: pending (blocked by Task 3)  
+**Status**: done  
 **Files**: `modules/vehicle_odv.py`, `tests/test_vehicle_odv.py`  
 **Details**:
 - Replace `new_path = list(path)` pattern (O(N²) memory) with a parent dict `{tile: (parent_tile, direction)}`
