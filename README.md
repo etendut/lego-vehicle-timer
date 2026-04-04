@@ -142,8 +142,14 @@ with [PyBricks](https://code.pybricks.com/)
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
 ODV_SPEED: int = const(50) # set between 50 and 80<br>
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30) # set to 0 to disable. Module will start automatic load and unload cycles
-if no user interaction.
+
+#### ODV Drive Modes
+
+| Mode | `REMOTE_DISABLED` | `ODV_AUTO_DRIVE_TIMEOUT_SECS` | Description |
+|------|-------------------|-------------------------------|-------------|
+| Full manual | `False` | `0` | Remote controls the vehicle only; no automatic movement |
+| Hybrid | `False` | `30` | Remote controls the vehicle; after 30 seconds of no input the vehicle starts automatic load/unload cycles. Any button press hands control back and restarts the 30s timer |
+| Full auto | `True` | `0` | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete |
 
 ODV_GRID = [] grid tiles specified in a list
 

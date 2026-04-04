@@ -491,12 +491,21 @@ def main():
                 countdown_timer.check_remote_buttons()
 
             if drive_motors.mh_supports_homing:
-                if not drive_motors.mh_auto_drive and ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
-                    drive_motors.enable_auto_drive()
+                if not drive_motors.mh_auto_drive:
+                    # Full auto: enable immediately once homed, no remote needed
+                    if REMOTE_DISABLED and drive_motors.mh_is_homed:
+                        drive_motors.enable_auto_drive()
+                    # Hybrid: enable after timeout with no remote activity
+                    elif ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
+                        drive_motors.enable_auto_drive()
 
                 if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
                     drive_motors.auto_unload()
                     drive_motors.auto_load()
+                    # Hybrid: if a button press interrupted auto, reset the idle timer so auto
+                    # doesn't re-enable immediately on the next loop iteration
+                    if not drive_motors.mh_auto_drive:
+                        countdown_timer.reset_time_since_last_remote_press()
 
             # if there is no remote, then there is no point in a countdown
             if countdown_timer.has_time_remaining() or REMOTE_DISABLED:
@@ -516,10 +525,6 @@ def main():
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
             wait(10)
-
-            if REMOTE_DISABLED and ODV_AUTO_DRIVE_TIMEOUT_SECS == 0:
-                print("No remote or auto drive exiting")
-                raise SystemExit
 
     except Exception as e:
         print(e)
