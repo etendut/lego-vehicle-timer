@@ -58,6 +58,8 @@ SOUTH = const(5)
 SOUTH_WEST = const(6)
 WEST = const(7)
 
+_ALL_DIRECTIONS = (NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST)
+
 WALL = 'X'
 TRACK = '#'
 WEST_ONLY_TRACK = '<'
@@ -121,21 +123,19 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
         print("--")
         print(dir_to_str(direction), tl_type, tr_type, br_type, bl_type)
 
-    corners = [tl_type, tr_type, br_type, bl_type]
-
-    if WALL in corners:
+    if tl_type == WALL or tr_type == WALL or br_type == WALL or bl_type == WALL:
         can_move = False
-    elif WEST_ONLY_TRACK in corners and direction != WEST:
+    elif (tl_type == WEST_ONLY_TRACK or tr_type == WEST_ONLY_TRACK or br_type == WEST_ONLY_TRACK or bl_type == WEST_ONLY_TRACK) and direction != WEST:
         can_move = False
-    elif EAST_ONLY_TRACK in corners and direction != EAST:
+    elif (tl_type == EAST_ONLY_TRACK or tr_type == EAST_ONLY_TRACK or br_type == EAST_ONLY_TRACK or bl_type == EAST_ONLY_TRACK) and direction != EAST:
         can_move = False
-    elif HOME in corners and direction not in [NORTH, WEST, NORTH_WEST]:
+    elif (tl_type == HOME or tr_type == HOME or br_type == HOME or bl_type == HOME) and direction != NORTH and direction != WEST and direction != NORTH_WEST:
         can_move = False
     else:
         can_move = True
 
-    can_load = corners.count(LOAD) == 4
-    can_unload = corners.count(UNLOAD) == 4
+    can_load = tl_type == LOAD and tr_type == LOAD and br_type == LOAD and bl_type == LOAD
+    can_unload = tl_type == UNLOAD and tr_type == UNLOAD and br_type == UNLOAD and bl_type == UNLOAD
 
     if DEBUG:
         print("can_move, can_load, can_unload", can_move, can_load, can_unload)
@@ -149,7 +149,7 @@ def _can_traverse_coarse(from_type: str, to_type: str, direction: int) -> bool:
         return False
     if (from_type == EAST_ONLY_TRACK or to_type == EAST_ONLY_TRACK) and direction != EAST:
         return False
-    if to_type == HOME and direction not in [NORTH, WEST, NORTH_WEST]:
+    if to_type == HOME and direction != NORTH and direction != WEST and direction != NORTH_WEST:
         return False
     return True
 
@@ -328,7 +328,7 @@ class RunODVMotors(MotorHelper):
         self._display_grid_(self.home_tile)
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
-        if direction not in [NORTH, EAST, SOUTH, WEST]:
+        if direction != NORTH and direction != EAST and direction != SOUTH and direction != WEST:
         # if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             return False, False, False
 
@@ -420,19 +420,19 @@ class RunODVMotors(MotorHelper):
 
     def _move_in_direction_(self, direction: int) -> bool:
 
-        if direction not in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
+        if direction not in _ALL_DIRECTIONS:
             if DEBUG:
                 print('Invalid direction')
             return False
 
-        if direction in [NORTH, NORTH_EAST, NORTH_WEST]:
+        if direction == NORTH or direction == NORTH_EAST or direction == NORTH_WEST:
             self.motor_y.dc(-self.drive_speed)
-        if direction in [SOUTH, SOUTH_EAST, SOUTH_WEST]:
+        if direction == SOUTH or direction == SOUTH_EAST or direction == SOUTH_WEST:
             self.motor_y.dc(self.drive_speed)
 
-        if direction in [EAST, NORTH_EAST, SOUTH_EAST]:
+        if direction == EAST or direction == NORTH_EAST or direction == SOUTH_EAST:
             self.motor_x.dc(self.drive_speed)
-        if direction in [WEST, NORTH_WEST, SOUTH_WEST]:
+        if direction == WEST or direction == NORTH_WEST or direction == SOUTH_WEST:
             self.motor_x.dc(-self.drive_speed)
 
         self.motors_running = True
@@ -589,7 +589,7 @@ class RunODVMotors(MotorHelper):
                 break
 
             from_type = self._get_grid_tile_type_from_coarse_xy_(current)
-            for direction in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
+            for direction in _ALL_DIRECTIONS:
                 new_pos = position_from_direction(current, direction)
                 if new_pos in parent:
                     continue
@@ -660,7 +660,7 @@ class RunODVMotors(MotorHelper):
 
 
 
-        if direction not in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
+        if direction is None:
             self.stop_motors()
             if DEBUG:
                 print('Invalid direction')
