@@ -30,6 +30,7 @@ remote: Remote | None = None
 from pybricks.parameters import Button
 
 # VARS_START
+DEBUG = const(False)
 
 # odv settings
 ODV_SPEED: int = const(45)  # set between 40 and 70
@@ -116,8 +117,9 @@ def position_from_direction(position: tuple[int, int], direction: int) -> tuple[
 
 def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br_type: str, bl_type: str) -> tuple[
     bool, bool, bool]:
-    print("--")
-    print(dir_to_str(direction), tl_type, tr_type, br_type, bl_type)
+    if DEBUG:
+        print("--")
+        print(dir_to_str(direction), tl_type, tr_type, br_type, bl_type)
     # most tiles support universal movement
     # TRACK - any direction
     # LOAD - only on left
@@ -173,7 +175,8 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
     can_load = tl_type == tr_type == br_type == bl_type == LOAD
     can_unload = tl_type == tr_type == br_type == bl_type == UNLOAD
 
-    print("can_move, can_load, can_unload", can_move, can_load, can_unload)
+    if DEBUG:
+        print("can_move, can_load, can_unload", can_move, can_load, can_unload)
     return can_move, can_load, can_unload
 
 class ODVBox:
@@ -256,14 +259,16 @@ class RunODVMotors(MotorHelper):
             self.motor_x = Motor(self.motor_x_port, Direction.COUNTERCLOCKWISE)
         except OSError as ex:
             if ex.errno == ENODEV:
-                print('Motor needs to be connected to ' + str(self.motor_x_port))
+                if DEBUG:
+                    print('Motor needs to be connected to ' + str(self.motor_x_port))
                 self.error_flash_code.set_error_no_motor_on_a()
             raise
         try:
             self.motor_y = Motor(self.motor_y_port, Direction.CLOCKWISE)
         except OSError as ex:
             if ex.errno == ENODEV:
-                print('Motor needs to be connected to ' + str(self.motor_y_port))
+                if DEBUG:
+                    print('Motor needs to be connected to ' + str(self.motor_y_port))
                 self.error_flash_code.set_error_no_motor_on_b()
             raise
 
@@ -272,14 +277,17 @@ class RunODVMotors(MotorHelper):
     def _load_grid_(self, lines: list[str]):
         # loop through grid lines
         y = 0
-        print('Loading grid')
-        mem_info()
+        if DEBUG:
+            print('Loading grid')
+            mem_info()
         for y, line in enumerate(lines):
-            print(f"line {y + 1}/{len(lines)}")
+            if DEBUG:
+                print(f"line {y + 1}/{len(lines)}")
             self.coarse_grid_width = const(len(line.rstrip()))
             line = line.rstrip()
             for x, character in enumerate(line):
-                print(f"line {y + 1} |col {x + 1}/{len(line)}|{character}")
+                if DEBUG:
+                    print(f"line {y + 1} |col {x + 1}/{len(line)}|{character}")
 
                 if character in OK_MOVES:
                     self.grid_tracks.append((x, y))
@@ -303,14 +311,17 @@ class RunODVMotors(MotorHelper):
 
             y += 1
         self.coarse_grid_height = const(y)
-        mem_info()
-        print('Grid Loaded')
-        print(f"--home tile is {self.home_tile}")
-        print(f"--loads tile is {self.load_tile}")
-        print(f"--unload tile is {self.unload_tile}")
-        self._display_grid_()
+        if DEBUG:
+            mem_info()
+            print('Grid Loaded')
+            print(f"--home tile is {self.home_tile}")
+            print(f"--loads tile is {self.load_tile}")
+            print(f"--unload tile is {self.unload_tile}")
+            self._display_grid_()
 
     def _display_grid_(self, position_x_y: tuple | None = None):
+        if not DEBUG:
+            return
         # Display the maze:
         for y in range(self.coarse_grid_height):
             for x in range(self.coarse_grid_width):
@@ -397,7 +408,8 @@ class RunODVMotors(MotorHelper):
         x_grid = int(self.motor_x.angle() / _GEAR_RATIO_TO_GRID)
         y_grid = int(self.motor_y.angle() / _GEAR_RATIO_TO_GRID)
         fine_grid_position = (x_grid, y_grid)
-        print("fine_grid_position", fine_grid_position)
+        if DEBUG:
+            print("fine_grid_position", fine_grid_position)
         return fine_grid_position
 
     def _get_grid_tile_type_from_fine_xy_(self, fine_position: tuple[int, int], use_fuzzy: bool) -> str:
@@ -415,7 +427,8 @@ class RunODVMotors(MotorHelper):
         fuzzy = floor(_ODV_SIZE / 2) if use_fuzzy else 0
         x_grid = floor((fine_position[0] + fuzzy) / _FINE_GRID_SIZE)
         y_grid = floor((fine_position[1] + fuzzy) / _FINE_GRID_SIZE)
-        print("Fine", fine_position)
+        if DEBUG:
+            print("Fine", fine_position)
         tile = (x_grid, y_grid)
         if fine_position[0] < 1 or fine_position[1] < 1:
             return tile, WALL
@@ -431,7 +444,8 @@ class RunODVMotors(MotorHelper):
 
     def _get_grid_tile_from_coarse_xy_(self, coarse_position: tuple[int, int]) -> tuple[tuple[int, int], str]:
 
-        print("-Coarse", coarse_position)
+        if DEBUG:
+            print("-Coarse", coarse_position)
         if coarse_position == self.home_tile:
             return coarse_position, HOME
         if coarse_position == self.load_tile:
@@ -449,7 +463,8 @@ class RunODVMotors(MotorHelper):
     def _move_in_direction_(self, direction: int) -> bool:
 
         if direction not in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
-            print('Invalid direction')
+            if DEBUG:
+                print('Invalid direction')
             return False
 
         if direction in [NORTH, NORTH_EAST, NORTH_WEST]:
@@ -467,39 +482,46 @@ class RunODVMotors(MotorHelper):
 
     def _do_load_(self):
         if self.has_load:
-            print('Already loaded')
+            if DEBUG:
+                print('Already loaded')
             return
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         if tile != self.load_tile and self._distance(tile, self.load_tile) > 1:
-            print(f'{tile} is too far away from load_tile {self.load_tile}')
+            if DEBUG:
+                print(f'{tile} is too far away from load_tile {self.load_tile}')
             return
         tile_angle = self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         # do load
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] - (_GEAR_RATIO_TO_GRID * 3))
         wait(2000)
-        print("loading..")
+        if DEBUG:
+            print("loading..")
         self._navigate_to_grid_tile(self.load_tile)
         wait(200)
         self.has_load = True
-        print("ready to go")
+        if DEBUG:
+            print("ready to go")
 
     def _do_unload_(self):
 
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         if tile != self.unload_tile and self._distance(tile, self.unload_tile) > 1:
-            print(f'{tile} is too far away from unload_tile {self.load_tile}')
+            if DEBUG:
+                print(f'{tile} is too far away from unload_tile {self.load_tile}')
             return
 
         tile_angle = self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
-        print("unloading..")
+        if DEBUG:
+            print("unloading..")
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * 5))
         wait(2000)
         self._navigate_to_grid_tile(self.unload_tile)
         wait(200)
         self.has_load = False
-        print("ready to go")
+        if DEBUG:
+            print("ready to go")
 
     @staticmethod
     def _tile_to_angle(tile: tuple[int, int]) -> tuple[int, int]:
@@ -513,7 +535,8 @@ class RunODVMotors(MotorHelper):
         return tile_angle_x, tile_angle_y
 
     def _navigate_to_grid_tile(self, tile: tuple[int, int], stop=Stop.HOLD) -> tuple[int, int]:
-        print(f"navigating to tile {tile}")
+        if DEBUG:
+            print(f"navigating to tile {tile}")
         tile_angle_x = tile[0] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID
         tile_angle_y = (tile[1] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID) + _GEAR_RATIO_TO_GRID
         self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
@@ -544,16 +567,19 @@ class RunODVMotors(MotorHelper):
     def auto_home(self):
         if not self.mh_is_homed:
             return
-        print('getting path to home')
+        if DEBUG:
+            print('getting path to home')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.home_tile)
         self._navigate_grid_tile_path(path)
-        print('homed')
+        if DEBUG:
+            print('homed')
 
     def auto_load(self):
         if not self.mh_is_homed:
             return
-        print('getting path to load')
+        if DEBUG:
+            print('getting path to load')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.load_tile)
         self._navigate_grid_tile_path(path)
@@ -562,7 +588,8 @@ class RunODVMotors(MotorHelper):
     def auto_unload(self):
         if not self.mh_is_homed:
             return
-        print('getting path to unload')
+        if DEBUG:
+            print('getting path to unload')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
         self._navigate_grid_tile_path(path)
@@ -573,20 +600,22 @@ class RunODVMotors(MotorHelper):
         return floor(sqrt(pow(start_tile[0] - end_tile[0], 2) + pow(start_tile[1] - end_tile[1], 2)))
 
     def print_tile_pos(self, tile_name: str, tile: tuple[int, int]):
-        print(f"tile {tile_name} at {tile}, {self._tile_to_angle(tile)}")
+        if DEBUG:
+            print(f"tile {tile_name} at {tile}, {self._tile_to_angle(tile)}")
 
     def _bfs_path_to_grid_tile(self, start_tile: tuple[int, int], end_tile: tuple[int, int]) -> list[
         tuple[tuple[int, int], int]]:
-        print("---bfs_path_to_grid_tile---")
-        self._display_grid_()
-        self.print_tile_pos("--start", start_tile)
-        self.print_tile_pos("--end", end_tile)
-        print("--grid_tracks", self.grid_tracks)
-        print("--gt_one_way_left", self.gt_one_way_left)
-        print("--gt_one_way_right", self.gt_one_way_right)
-        self.print_tile_pos("--home_tile", self.home_tile)
-        self.print_tile_pos("--load_tile", self.load_tile)
-        self.print_tile_pos("--unload_tile", self.unload_tile)
+        if DEBUG:
+            print("---bfs_path_to_grid_tile---")
+            self._display_grid_()
+            self.print_tile_pos("--start", start_tile)
+            self.print_tile_pos("--end", end_tile)
+            print("--grid_tracks", self.grid_tracks)
+            print("--gt_one_way_left", self.gt_one_way_left)
+            print("--gt_one_way_right", self.gt_one_way_right)
+            self.print_tile_pos("--home_tile", self.home_tile)
+            self.print_tile_pos("--load_tile", self.load_tile)
+            self.print_tile_pos("--unload_tile", self.unload_tile)
         # mem_info()
         queue: Queue = Queue()
         queue.put([(start_tile, -1)])  # Enqueue the start position
@@ -612,11 +641,12 @@ class RunODVMotors(MotorHelper):
                     new_path = list(path)
                     new_path.append((new_pos, direction))
                     queue.put(new_path)  # Enqueue the new path
-        if len(path) == 0:
-            print("no path found")
-        # mem_info()
-        print(path)
-        print("---bfs_path_to_grid_tile---")
+        if DEBUG:
+            if len(path) == 0:
+                print("no path found")
+            # mem_info()
+            print(path)
+            print("---bfs_path_to_grid_tile---")
         return path
 
     def handle_remote_press(self):
@@ -664,7 +694,8 @@ class RunODVMotors(MotorHelper):
 
         if direction not in [NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST]:
             self.stop_motors()
-            print('Invalid direction')
+            if DEBUG:
+                print('Invalid direction')
             return
 
         # print(direction)
