@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -ohP '[A-Z][a-z]+\\(?:[A-Z][a-z]+\\)+|[a-z]+\\(?:[A-Z][a-z]+\\)+' C:/scripts/lego/lego-vehicle-timer/modules/*.py C:/scripts/lego/lego-vehicle-timer/*.py)"
+    ]
+  }
+}
