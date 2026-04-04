@@ -310,7 +310,7 @@ class RunODVMotors(MotorHelper):
         print(f"--unload tile is {self.unload_tile}")
         self._display_grid_()
 
-    def _display_grid_(self, position_x_y: tuple = None):
+    def _display_grid_(self, position_x_y: tuple | None = None):
         # Display the maze:
         for y in range(self.coarse_grid_height):
             for x in range(self.coarse_grid_width):
@@ -528,7 +528,7 @@ class RunODVMotors(MotorHelper):
         """
         for i, path in enumerate(grid_tile_path):
             # if user takes over break
-            if self.mh_auto_drive and not self.mh__remote_disabled and len(remote.buttons.pressed()) > 0:
+            if self.mh_auto_drive and not self.mh__remote_disabled and remote is not None and len(remote.buttons.pressed()) > 0:
                 self.disable_auto_drive()
                 self.stop_motors()
                 return False
@@ -626,6 +626,7 @@ class RunODVMotors(MotorHelper):
         if self.mh__remote_disabled:
             return
         # Check which remote_buttons are pressed.
+        assert remote is not None
         remote_buttons_pressed = remote.buttons.pressed()
         #  handle button press
         # left +      North

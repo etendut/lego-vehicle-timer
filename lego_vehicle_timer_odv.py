@@ -732,7 +732,7 @@ class RunODVMotors(MotorHelper):
         print(f"--unload tile is {self.unload_tile}")
         self._display_grid_()
 
-    def _display_grid_(self, position_x_y: tuple = None):
+    def _display_grid_(self, position_x_y: tuple | None = None):
         # Display the maze:
         for y in range(self.coarse_grid_height):
             for x in range(self.coarse_grid_width):

@@ -81,6 +81,7 @@ class RunServoSteerMotors(MotorHelper):
         if self.mh__remote_disabled:
             return
         # Check which remote_buttons are pressed.
+        assert remote is not None
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
             self.stop_motors()

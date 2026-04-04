@@ -396,7 +396,7 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 ##################################################################################
 
 
-hub: "CityHub | TechnicHub"
+hub: "TechnicHub"
 remote: "Remote"
 
 
@@ -404,22 +404,13 @@ def setup_hub():
     global hub
 
     try:
-        # this import will fail if the city hub is not connected.
-        from pybricks.hubs import CityHub
-        hub = CityHub()
-        print('Lego City Hub found')
-        return False
-    except ImportError as ex1:
-        print(ex1)
-        try:
-            from pybricks.hubs import TechnicHub
-            hub = TechnicHub()
-            print('Lego Technic Hub found')
-            return True
-
-        except ImportError as ex2:
-            print(ex2)
-            raise Exception('This program only support Lego City hub and Lego Technic hub')
+        from pybricks.hubs import TechnicHub
+        hub = TechnicHub()
+        print('Lego Technic Hub found')
+        return True
+    except ImportError as ex:
+        print(ex)
+        raise Exception('Skid steer requires a Lego Technic Hub (IMU required)')
 
 def hub_battery_ok()->bool:
     global hub
