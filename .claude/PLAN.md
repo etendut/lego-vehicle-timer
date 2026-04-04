@@ -27,7 +27,7 @@ Run `python -m modules.compile_pybricks_files` to regenerate the compiled `lego_
 ---
 
 ### Task 2 — Rewrite `can_move_in_direction_by_type` with clean rule-based logic
-**Status**: pending  
+**Status**: done  
 **Files**: `modules/vehicle_odv.py`, `tests/test_vehicle_odv.py`  
 **Details**: Replace the 60-line fragile special-case function with ~12 lines of sequential rules applied to the 4 corner tile types:
 1. Any corner on WALL → block
