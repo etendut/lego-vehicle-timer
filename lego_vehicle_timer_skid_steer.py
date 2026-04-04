@@ -82,11 +82,16 @@ class ErrorFlashCodes:
         """
 
         global hub
+        global remote
 
         for f in range(self.flash_count):
             hub.light.on(Color.RED)
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.RED)
             wait(350)
             hub.light.on(Color.NONE)
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.NONE)
             wait(350)
         if self.flash_count > 1:
             wait(2000)
@@ -203,7 +208,7 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
-        self.last_remote_color = None
+        self.last_hub_remote_color = None
         self.last_countdown_message: str = ''
         self.countdown_status: int = _UNKNOWN
 
@@ -297,52 +302,58 @@ class CountdownTimer:
             wait_for_no_pressed_buttons()
 
     def show_status(self):
-        global hub
         if self.countdown_status == _READY:
-            self.set_remote_light(Color.BLUE)
-            self.flash_hub_light(Color.GREEN, 500, Color.NONE, 500)
+            self.flash_hub_and_remote_light(Color.GREEN, 500, Color.NONE, 500, True)
         elif self.countdown_status == _ACTIVE:
-            hub.light.on(Color.GREEN)
-            self.set_remote_light(Color.GREEN)
+            self.set_hub_and_remote_light(Color.GREEN, True)
         elif self.countdown_status == _FINAL_20_SECS:
-            self.flash_hub_light(Color.ORANGE, 200, Color.NONE, 100)
+            self.flash_hub_and_remote_light(Color.ORANGE, 200, Color.NONE, 100, False)
         elif self.countdown_status == _FINAL_MINUTE:
-            self.flash_hub_light(Color.ORANGE, 500, Color.NONE, 250)
+            self.flash_hub_and_remote_light(Color.ORANGE, 500, Color.NONE, 250, False)
         elif self.countdown_status == _ENDED:
-            hub.light.on(Color.ORANGE)
-            self.set_remote_light(Color.ORANGE)
+            self.set_hub_and_remote_light(Color.ORANGE, True)
 
-    def set_remote_light(self, on_color:Color):
+    def set_hub_and_remote_light(self, on_color:Color, include_remote:bool):
         """
-        Set remote light color if changed
+        Set remote and hub light color if changed
+        :param include_remote:
         :param on_color:
         :return:
         """
+        global hub
         global remote
-        # skip if no remote
-        if REMOTE_DISABLED:
-                return
-        # only set color if it's changed
-        if on_color == self.last_remote_color:
-            return
-        self.last_remote_color = on_color
-        remote.light.on(on_color)
 
-    def flash_hub_light(self, on_color:Color, on_msec: int, off_color, off_msec: int):
+        # only set color if it's changed
+        if on_color == self.last_hub_remote_color:
+            return
+        self.last_hub_remote_color = on_color
+
+        hub.light.on(on_color)
+
+        if include_remote and not REMOTE_DISABLED:
+            remote.light.on(on_color)
+
+    def flash_hub_and_remote_light(self, on_color:Color, on_msec: int, off_color, off_msec: int, include_remote:bool):
         """
             this flashes the remote led
+        :param include_remote:
         :param on_color:
         :param on_msec:
         :param off_color:
         :param off_msec:
         """
         global hub
+        global remote
         # we use a timer to make it a non-blocking call
         if self.stopwatch.time() > (on_msec + off_msec + self.led_flash_sw_time):
             self.led_flash_sw_time = self.stopwatch.time()
             hub.light.on(off_color)
+            if include_remote and not REMOTE_DISABLED:
+                remote.light.on(off_color)
         elif self.stopwatch.time() > (off_msec + self.led_flash_sw_time):
             hub.light.on(on_color)
+            if include_remote and not REMOTE_DISABLED:
+                remote.light.on(on_color)
 
 
 ##################################################################################
@@ -396,7 +407,7 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 ##################################################################################
 
 
-hub: "TechnicHub"
+hub: "CityHub | TechnicHub"
 remote: "Remote"
 
 
@@ -404,13 +415,22 @@ def setup_hub():
     global hub
 
     try:
-        from pybricks.hubs import TechnicHub
-        hub = TechnicHub()
-        print('Lego Technic Hub found')
-        return True
-    except ImportError as ex:
-        print(ex)
-        raise Exception('Skid steer requires a Lego Technic Hub (IMU required)')
+        # this import will fail if the city hub is not connected.
+        from pybricks.hubs import CityHub
+        hub = CityHub()
+        print('Lego City Hub found')
+        return False
+    except ImportError as ex1:
+        print(ex1)
+        try:
+            from pybricks.hubs import TechnicHub
+            hub = TechnicHub()
+            print('Lego Technic Hub found')
+            return True
+
+        except ImportError as ex2:
+            print(ex2)
+            raise Exception('This program only support Lego City hub and Lego Technic hub')
 
 def hub_battery_ok()->bool:
     global hub
@@ -504,6 +524,7 @@ class RunSkidSteerMotors(MotorHelper):
         """
         global hub
         # Check which side of the hub is up.
+        assert hub is not None
         up_side = hub.imu.up()
 
         # if the hub hasn't flipped ignore the rest of the logic
@@ -529,6 +550,7 @@ class RunSkidSteerMotors(MotorHelper):
         if self.mh__remote_disabled:
             return
         # Check which remote_buttons are pressed.
+        assert remote is not None
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
             self.stop_motors()

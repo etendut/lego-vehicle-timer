@@ -5,6 +5,9 @@ The ODV vehicle module (`modules/vehicle_odv.py`) was hitting out-of-memory cras
 Two root causes were identified: fragile/broken movement validation logic and an O(N²) BFS memory pattern.
 This plan addresses both in discrete, independently committable steps.
 
+## After each task
+Run `python -m modules.compile_pybricks_files` to regenerate the compiled `lego_vehicle_timer_*.py` files, then run `python -m pytest tests/`.
+
 ## Agreed Constraints (from planning session)
 - One-way tiles (`<`, `>`) are one-way *streets*: enter from one side, exit the other (e.g. `<` = enter from east, exit to west)
 - HOME tile has physical barriers: can only be entered via direction NORTH, WEST, or NORTH_WEST
