@@ -228,10 +228,13 @@ class CountdownTimer:
         # Start a timer.
         self.stopwatch = StopWatch()
         self.led_flash_sw_time = 0
+        self.last_flash_color = None
         self.end_time = 0
         # remote timing
         self.remote_buttons_time_out_ms = 0
         self.reset_time_since_last_remote_press()
+        # battery check throttle
+        self._battery_check_time = 0
 
     def reset_time_since_last_remote_press(self):
         self.remote_buttons_time_out_ms = self.stopwatch.time() + (ODV_AUTO_DRIVE_TIMEOUT_SECS * 1000)
@@ -314,9 +317,15 @@ class CountdownTimer:
             self.reset()
             wait_for_no_pressed_buttons()
 
+    def should_check_battery(self) -> bool:
+        if self.stopwatch.time() > self._battery_check_time:
+            self._battery_check_time = self.stopwatch.time() + 5000
+            return True
+        return False
+
     def show_status(self):
         if self.countdown_status == _READY:
-            self.flash_hub_and_remote_light(Color.GREEN, 500, Color.NONE, 500, True)
+            self.flash_hub_and_remote_light(Color.GREEN, 500, Color.NONE, 500, False)
         elif self.countdown_status == _ACTIVE:
             self.set_hub_and_remote_light(Color.GREEN, True)
         elif self.countdown_status == _FINAL_20_SECS:
@@ -324,7 +333,7 @@ class CountdownTimer:
         elif self.countdown_status == _FINAL_MINUTE:
             self.flash_hub_and_remote_light(Color.ORANGE, 500, Color.NONE, 250, False)
         elif self.countdown_status == _ENDED:
-            self.set_hub_and_remote_light(Color.ORANGE, True)
+            self.set_hub_and_remote_light(Color.ORANGE, False)
 
     def set_hub_and_remote_light(self, on_color:Color, include_remote:bool):
         """
@@ -348,25 +357,20 @@ class CountdownTimer:
 
     def flash_hub_and_remote_light(self, on_color:Color, on_msec: int, off_color, off_msec: int, include_remote:bool):
         """
-            this flashes the remote led
+            this flashes the hub (and optionally remote) led
         :param include_remote:
         :param on_color:
         :param on_msec:
         :param off_color:
         :param off_msec:
         """
-        global hub
-        global remote
         # we use a timer to make it a non-blocking call
-        if self.stopwatch.time() > (on_msec + off_msec + self.led_flash_sw_time):
-            self.led_flash_sw_time = self.stopwatch.time()
-            hub.light.on(off_color)
-            if include_remote and not REMOTE_DISABLED:
-                remote.light.on(off_color)
-        elif self.stopwatch.time() > (off_msec + self.led_flash_sw_time):
-            hub.light.on(on_color)
-            if include_remote and not REMOTE_DISABLED:
-                remote.light.on(on_color)
+        now = self.stopwatch.time()
+        if now > (on_msec + off_msec + self.led_flash_sw_time):
+            self.led_flash_sw_time = now
+            self.set_hub_and_remote_light(off_color, include_remote)
+        elif now > (off_msec + self.led_flash_sw_time):
+            self.set_hub_and_remote_light(on_color, include_remote)
 
 
 ##################################################################################
@@ -1153,7 +1157,7 @@ def main():
         countdown_timer.reset()
         mem_info()
         while True:
-            if not hub_battery_ok():
+            if countdown_timer.should_check_battery() and not hub_battery_ok():
                 error_flash_code.set_error_low_battery()
                 break
 
