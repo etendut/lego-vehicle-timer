@@ -574,6 +574,19 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
         print("can_move, can_load, can_unload", can_move, can_load, can_unload)
     return can_move, can_load, can_unload
 
+
+def _can_traverse_coarse(from_type: str, to_type: str, direction: int) -> bool:
+    if to_type == WALL:
+        return False
+    if (from_type == WEST_ONLY_TRACK or to_type == WEST_ONLY_TRACK) and direction != WEST:
+        return False
+    if (from_type == EAST_ONLY_TRACK or to_type == EAST_ONLY_TRACK) and direction != EAST:
+        return False
+    if to_type == HOME and direction not in [NORTH, WEST, NORTH_WEST]:
+        return False
+    return True
+
+
 class ODVBox:
     def __init__(self, top_left: tuple[int, int], width: int, height: int):
         self.width = 0
@@ -1024,14 +1037,15 @@ class RunODVMotors(MotorHelper):
             if current_path[0] == end_tile:
                 break
 
+            from_type = self._get_grid_tile_type_from_coarse_xy_(current_path[0])
             for direction in [EAST, NORTH, WEST, SOUTH]:  # Possible movements
                 new_pos = position_from_direction(current_path[0], direction)
 
                 if new_pos in visited:
                     continue
-                can_move, can_load, can_unload = self._can_move_in_direction_from_tile_(current_path[0], direction)
+                to_type = self._get_grid_tile_type_from_coarse_xy_(new_pos)
 
-                if can_move or can_load or can_unload:
+                if _can_traverse_coarse(from_type, to_type, direction):
                     visited.append(new_pos)
                     new_path = list(path)
                     new_path.append((new_pos, direction))

@@ -42,7 +42,7 @@ Update `tests/test_vehicle_odv.py` `can_move_in_direction_by_type_tests` to cove
 ---
 
 ### Task 3 — Add coarse-tile movement check for BFS pathfinding
-**Status**: pending (blocked by Task 2)  
+**Status**: done  
 **File**: `modules/vehicle_odv.py`  
 **Details**: Add a new module-level function `_can_traverse_coarse(from_type, to_type, direction) -> bool` with simple tile-pair rules (no bounding box needed):
 - `to_type == WALL` → False

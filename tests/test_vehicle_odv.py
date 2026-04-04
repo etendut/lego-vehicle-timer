@@ -2,7 +2,7 @@ import pytest
 from pytest_check import check
 
 from modules.vehicle_odv import (
-    can_move_in_direction_by_type,
+    can_move_in_direction_by_type, _can_traverse_coarse,
     NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST,
 )
 
@@ -81,3 +81,48 @@ def test_can_load_unload(direction, tl, tr, br, bl, expected_load, expected_unlo
     _, can_load, can_unload = can_move_in_direction_by_type(direction, tl, tr, br, bl)
     check.equal(can_load, expected_load)
     check.equal(can_unload, expected_unload)
+
+
+# ---------------------------------------------------------------------------
+# _can_traverse_coarse tests
+# ---------------------------------------------------------------------------
+
+coarse_tests = [
+    # WALL destination always blocks
+    pytest.param(T,  W,  NORTH, False, id="to-wall"),
+    pytest.param(H,  W,  EAST,  False, id="to-wall-from-home"),
+
+    # < (WEST_ONLY): either tile blocks if direction != WEST
+    pytest.param(LT, T,  EAST,  False, id="from-lt-east"),
+    pytest.param(T,  LT, NORTH, False, id="to-lt-north"),
+    pytest.param(LT, LT, SOUTH, False, id="both-lt-south"),
+    pytest.param(LT, T,  WEST,  True,  id="from-lt-west-allowed"),
+    pytest.param(T,  LT, WEST,  True,  id="to-lt-west-allowed"),
+
+    # > (EAST_ONLY): either tile blocks if direction != EAST
+    pytest.param(RT, T,  WEST,  False, id="from-rt-west"),
+    pytest.param(T,  RT, NORTH, False, id="to-rt-north"),
+    pytest.param(RT, T,  EAST,  True,  id="from-rt-east-allowed"),
+    pytest.param(T,  RT, EAST,  True,  id="to-rt-east-allowed"),
+
+    # HOME destination: only NORTH, WEST, NORTH_WEST allowed
+    pytest.param(T,  H,  EAST,       False, id="to-home-east"),
+    pytest.param(T,  H,  SOUTH,      False, id="to-home-south"),
+    pytest.param(T,  H,  SOUTH_EAST, False, id="to-home-south-east"),
+    pytest.param(T,  H,  NORTH,      True,  id="to-home-north-allowed"),
+    pytest.param(T,  H,  WEST,       True,  id="to-home-west-allowed"),
+    pytest.param(T,  H,  NORTH_WEST, True,  id="to-home-north-west-allowed"),
+    # HOME as from_type does not restrict direction
+    pytest.param(H,  T,  EAST,       True,  id="from-home-east-allowed"),
+    pytest.param(H,  T,  SOUTH,      True,  id="from-home-south-allowed"),
+
+    # free traversal
+    pytest.param(T, T, NORTH, True, id="track-to-track"),
+    pytest.param(T, L, EAST,  True, id="track-to-load"),
+    pytest.param(T, U, WEST,  True, id="track-to-unload"),
+]
+
+
+@pytest.mark.parametrize("from_type,to_type,direction,expected", coarse_tests)
+def test_can_traverse_coarse(from_type, to_type, direction, expected):
+    check.equal(_can_traverse_coarse(from_type, to_type, direction), expected)
