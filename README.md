@@ -170,7 +170,14 @@ ODV_GRID = `["XL##XU", "H#X###"]`<br>
 
 ## Releases
 
-### Version 2.1.0 (current)
+### Version 2.2.0 (current)
+
+- ODV full auto, hybrid, and manual drive modes working correctly
+- Fix hybrid mode timer reset when user interrupts auto navigation
+- Battery drain improvements: remote LED off during READY and ENDED states, flash calls throttled, battery voltage check reduced to once per 5 seconds
+- MicroPython memory optimisations: replace list literals in hot paths with `or` chains and module-level tuple
+
+### Version 2.1.0
 
 - ODV autodrive fixes
 - reduce memory footprint
