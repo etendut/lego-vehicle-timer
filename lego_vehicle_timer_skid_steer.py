@@ -651,6 +651,10 @@ def main():
             # add a small delay to keep the loop stable and allow for events to occur
             wait(10)
 
+            if REMOTE_DISABLED and not drive_motors.mh_supports_homing:
+                print("No remote exiting")
+                raise SystemExit
+
     except Exception as e:
         print(e)
         while True:

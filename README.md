@@ -17,7 +17,7 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
       the [Omni-Directional Vehicles GBC, by Akiyuki](https://rebrickable.com/mocs/MOC-224417/Planet%20GBC/omni-directional-vehicles-gbc-by-akiyuki/#details)
     - a built ODV vehicle with 2 motors
     - a grid course to run on
-- Lego Remote
+- Lego Remote (not required for ODV full auto mode)
 
 ## How do I get set up?
 
@@ -25,8 +25,8 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
 - select the program based on the vehicle type
     - [lego_vehicle_timer_train](lego_vehicle_timer_train.py)
     - [lego_vehicle_timer_skid_steer](lego_vehicle_timer_skid_steer.py)
-    - [lego_vehicle_timer_servo](lego_vehicle_timer_odv.py)
-    - [lego_vehicle_timer_odv](lego_vehicle_timer_servo.py)
+    - [lego_vehicle_timer_servo](lego_vehicle_timer_servo.py)
+    - [lego_vehicle_timer_odv](lego_vehicle_timer_odv.py)
 - configure the settings as per below [Configuration](#configuration)
 - load the program onto your hub using PyBricks
 
@@ -106,9 +106,10 @@ with [PyBricks](https://code.pybricks.com/)
 Expects a train motor on Port A, and an optional train motor or light on Port B<br>
 
 TRAIN_MOTOR_SPEED_STEP = const(10) # the amount each button press changes the train speed<br>
-TRAIN_MOTOR_MIN_SPEED = const(30) # the lowest speed the train will go set between 0 and 100<br>
-TRAIN_MOTOR_MAX_SPEED = const(80) # set between 0 and 100<br>
-TRAIN_REVERSE_MOTOR = False # set to True if remote + button cause motor to run backwards<br>
+TRAIN_MOTOR_MIN_SPEED = const(30) # the lowest speed the train will go, set between 30 and 100<br>
+TRAIN_MOTOR_MAX_SPEED = const(80) # set between 80 and 100<br>
+TRAIN_REVERSE_MOTOR_1 = False # set to True if remote + button cause motor to run backwards<br>
+TRAIN_REVERSE_MOTOR_2 = True # only used if a second train motor is on Port B<br>
 
 ### Skid Steer
 
@@ -141,7 +142,7 @@ with [PyBricks](https://code.pybricks.com/)
 
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
-ODV_SPEED: int = const(50) # set between 50 and 80<br>
+ODV_SPEED: int = const(45) # set between 40 and 70<br>
 
 #### ODV Drive Modes
 
