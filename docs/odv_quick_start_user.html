@@ -242,7 +242,9 @@
         font-size: 8pt;
         color: #999;
       }
-      footer a { color: #999; }
+      footer a {
+        color: #999;
+      }
 
       /* ── Print: hide browser chrome ─────────────────────────────────── */
       @media print {
@@ -263,12 +265,22 @@
       <div class="body">
         <div class="diagram-row" style="margin-bottom: 6pt">
           <div class="steps-col">
-            <div style="display:flex; gap:6pt; margin-bottom:6pt;">
-              <div style="flex:1; text-align:center;">
-                <img class="diagram" src="../images/ODVSteerRemoteUpDown.jpg" alt="Remote up/down" style="width:100%;" />
+            <div style="display: flex; gap: 6pt; margin-bottom: 6pt">
+              <div style="flex: 1; text-align: center">
+                <img
+                  class="diagram"
+                  src="../images/ODVSteerRemoteUpDown.jpg"
+                  alt="Remote up/down"
+                  style="width: 100%"
+                />
               </div>
-              <div style="flex:1; text-align:center;">
-                <img class="diagram" src="../images/ODVSteerRemoteLeftRight.jpg" alt="Remote left/right" style="width:100%;" />
+              <div style="flex: 1; text-align: center">
+                <img
+                  class="diagram"
+                  src="../images/ODVSteerRemoteLeftRight.jpg"
+                  alt="Remote left/right"
+                  style="width: 100%"
+                />
               </div>
             </div>
             <table class="lights">
@@ -346,12 +358,28 @@
         </div>
       </div>
     </section>
-
     <!-- ── TROUBLESHOOTING ───────────────────────────────────────────── -->
     <section class="trouble">
       <h2>Troubleshooting</h2>
       <div class="body">
         <ul class="trouble">
+          <li>
+            <span class="trouble-icon">&#128260;</span>
+            <span>
+              <strong class="trouble-title"
+                >Controls feel wrong or backwards</strong
+              >
+              Check you have the remote the right way round, or ask for help.
+            </span>
+          </li>
+          <li>
+            <span class="trouble-icon">&#128663;</span>
+            <span>
+              <strong class="trouble-title">Vehicle not responding</strong>
+              If the light is orange unfortunately your time is up, otherwise
+              ask for help.
+            </span>
+          </li>
           <li>
             <span class="trouble-icon">&#128663;</span>
             <span>
@@ -359,20 +387,15 @@
               It happens, please ask for help.
             </span>
           </li>
-          <li>
-            <span class="trouble-icon">&#128260;</span>
-            <span>
-              <strong class="trouble-title"
-                >Vehicle moving in the wrong direction</strong
-              >
-              Check you have the remote the right way round, or ask for help.
-            </span>
-          </li>
         </ul>
       </div>
     </section>
+
     <footer>
-      <a href="https://github.com/etendut/lego-vehicle-timer">github.com/etendut/lego-vehicle-timer</a> &mdash; v2.2.0
+      <a href="https://github.com/etendut/lego-vehicle-timer"
+        >github.com/etendut/lego-vehicle-timer</a
+      >
+      &mdash; v2.2.0
     </footer>
   </body>
 </html>

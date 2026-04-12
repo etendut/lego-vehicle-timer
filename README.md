@@ -34,56 +34,19 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
 
 ### Train
 
-Either button sets control forward and reverse
-<img src="images/TrainRemote.jpg" alt="Train Remote Instructions" style="max-height:200px;" />
+[User Quick Start](docs/train_quick_start_user.html) | [Instructor Quick Start](docs/train_quick_start_instructor.html)
 
 ### Skid Steer
 
-Left buttons left motor, Right buttons right motor
-<img src="images/SkidSteerRemote.jpg" alt="Skid Steer Remote Instructions" style="max-height:200px;" />
+[User Quick Start](docs/skid_steer_quick_start_user.html) | [Instructor Quick Start](docs/skid_steer_quick_start_instructor.html)
 
 ### Servo Steer
 
-Left buttons for drive, Right buttons for steering
-<img src="images/ServoSteerRemote.jpg" alt="Servo Steer Remote Instructions" style="max-height:200px;" />
+[User Quick Start](docs/servo_steer_quick_start_user.html) | [Instructor Quick Start](docs/servo_steer_quick_start_instructor.html)
 
 ### ODV
 
-Left buttons for Y, Right buttons for X
-
-<table><tr>
-<td><img src="images/ODVSteerRemoteUpDown.jpg" alt="ODV Remote Y axis" style="max-height:200px;" /></td>
-<td><img src="images/ODVSteerRemoteLeftRight.jpg" alt="ODV Remote X axis" style="max-height:200px;" /></td>
-</tr></table>
-
-## Light Codes
-
-### Hub Light Codes
-
-Once the program starts certain errors will be flashed on the hub
-
-|                                                                                                                                                                    | Sequence                   | Meaning                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <img src="images/blue_dot_f.png" alt="Blue flashing" />                                                                                                            | BLUE flashing              | CAUTION If the hub continues this sequence despite multiple clicks of the hub button it means the hub has been wiped and needs to be reprogrammed.<br/> So far the only anecdotal cause seems to be when the batteries dip below critical levels |
-| <img src="images/blue_dot.png" alt="Blue" />                                                                                                                       | BLUE On                    | Program started                                                                                                                                                                                                                                  |
-| <img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White flashing" /><img src="images/white_dot_f.png" alt="White flashing" /> | 3 WHITE flashes then pause | Looking for remote                                                                                                                                                                                                                               |
-| <img src="images/green_dot_f.png" alt="Green flashing" />                                                                                                          | GREEN flashing             | Ready for start                                                                                                                                                                                                                                  |
-| <img src="images/green_dot.png" alt="Green" />                                                                                                                     | GREEN On                   | Timer Running                                                                                                                                                                                                                                    |
-| <img src="images/orange_dot_fs.png" alt="Orange flashing" />                                                                                                       | ORANGE slow flashing       | Last 60 secs                                                                                                                                                                                                                                     |
-| <img src="images/orange_dot_f.png" alt="Orange flashing" />                                                                                                        | ORANGE fast flashing       | Last 20 secs                                                                                                                                                                                                                                     |
-| <img src="images/orange_dot.png" alt="Orange flashing" />                                                                                                          | ORANGE On                  | Time complete                                                                                                                                                                                                                                    |
-
-### Error Codes
-
-Once the program starts certain errors will be flashed on the hub
-
-|                                                                                                                                                                                                                                                                           | Sequence                  | Meaning                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------- |
-| <img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                                                                     | Constant RED Flash on/off | Other Error             |
-| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                | 2 RED flashes then pause  | Missing Motor on Port A |
-| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                           | 3 RED flashes then pause  | Missing Motor on Port B |
-| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                      | 4 RED flashes then pause  | Missing Remote          |
-| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /> | 5 RED flashes then pause  | Low Battery             |
+[User Quick Start](docs/odv_quick_start_user.html) | [Instructor Quick Start](docs/odv_quick_start_instructor.html)
 
 ## Configuration
 
@@ -176,6 +139,35 @@ ODV_GRID = `["X###X", "L###U", "X###X"]`<br>
 ODV_GRID = `["X#>#X", "L###U", "X#<#X"]`<br>
 L→U travels top (eastward through `>`), U→L travels bottom (westward through `<`)<br>
 <img src="images/ODV_GRID_EX3.png" alt="Grid example 3" /> <br>
+
+## Light Codes
+
+### Hub Light Codes
+
+Once the program starts certain errors will be flashed on the hub
+
+|                                                                                                                                                                    | Sequence                   | Meaning                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <img src="images/blue_dot_f.png" alt="Blue flashing" />                                                                                                            | BLUE flashing              | CAUTION If the hub continues this sequence despite multiple clicks of the hub button it means the hub has been wiped and needs to be reprogrammed.<br/> So far the only anecdotal cause seems to be when the batteries dip below critical levels |
+| <img src="images/blue_dot.png" alt="Blue" />                                                                                                                       | BLUE On                    | Program started                                                                                                                                                                                                                                  |
+| <img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White flashing" /><img src="images/white_dot_f.png" alt="White flashing" /> | 3 WHITE flashes then pause | Looking for remote                                                                                                                                                                                                                               |
+| <img src="images/green_dot_f.png" alt="Green flashing" />                                                                                                          | GREEN flashing             | Ready for start                                                                                                                                                                                                                                  |
+| <img src="images/green_dot.png" alt="Green" />                                                                                                                     | GREEN On                   | Timer Running                                                                                                                                                                                                                                    |
+| <img src="images/orange_dot_fs.png" alt="Orange flashing" />                                                                                                       | ORANGE slow flashing       | Last 60 secs                                                                                                                                                                                                                                     |
+| <img src="images/orange_dot_f.png" alt="Orange flashing" />                                                                                                        | ORANGE fast flashing       | Last 20 secs                                                                                                                                                                                                                                     |
+| <img src="images/orange_dot.png" alt="Orange flashing" />                                                                                                          | ORANGE On                  | Time complete                                                                                                                                                                                                                                    |
+
+### Error Codes
+
+Once the program starts certain errors will be flashed on the hub
+
+|                                                                                                                                                                                                                                                                           | Sequence                  | Meaning                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------- |
+| <img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                                                                     | Constant RED Flash on/off | Other Error             |
+| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                | 2 RED flashes then pause  | Missing Motor on Port A |
+| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                           | 3 RED flashes then pause  | Missing Motor on Port B |
+| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                      | 4 RED flashes then pause  | Missing Remote          |
+| <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /> | 5 RED flashes then pause  | Low Battery             |
 
 ## Releases
 
