@@ -8,7 +8,7 @@ PyBricks LEGO robot project targeting a **LEGO Technic Hub** (MicroPython/PyBric
 - Implement and commit **each task separately** — stop after each task and wait for the user to commit before moving to the next.
 
 ## After modifying any `modules/vehicle_*.py`
-Run `python -m modules.compile_pybricks_files` to regenerate the compiled `lego_vehicle_timer_*.py` files, then `python -m pytest tests/`.
+Run `python tools/compile_pybricks_files.py` to regenerate the compiled `lego_vehicle_timer_*.py` files, then `python -m pytest tests/`.
 
 ## Project files
 All Claude-related files live under `.claude/`:

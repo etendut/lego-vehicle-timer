@@ -6,7 +6,7 @@ Two root causes were identified: fragile/broken movement validation logic and an
 This plan addresses both in discrete, independently committable steps.
 
 ## After each task
-Run `python -m modules.compile_pybricks_files` to regenerate the compiled `lego_vehicle_timer_*.py` files, then run `python -m pytest tests/`.
+Run `python tools/compile_pybricks_files.py` to regenerate the compiled `lego_vehicle_timer_*.py` files, then run `python -m pytest tests/`.
 
 ## Agreed Constraints (from planning session)
 - One-way tiles (`<`, `>`) are one-way *streets*: enter from one side, exit the other (e.g. `<` = enter from east, exit to west)
