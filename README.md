@@ -2,6 +2,8 @@
 
 A python program to enable a time limited running of a Train, Servo Steer, Skid Steer, or ODV Lego vehicle.
 
+**[Quick Start Guides](https://etendut.github.io/lego-vehicle-timer/)**
+
 ## Requires
 
 - Lego City Hub or Lego Technic Hub using PyBricks firmware
@@ -34,19 +36,19 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
 
 ### Train
 
-[User Quick Start](docs/train_quick_start_user.html) | [Instructor Quick Start](docs/train_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/train_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/train_quick_start_instructor.html)
 
 ### Skid Steer
 
-[User Quick Start](docs/skid_steer_quick_start_user.html) | [Instructor Quick Start](docs/skid_steer_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/skid_steer_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/skid_steer_quick_start_instructor.html)
 
 ### Servo Steer
 
-[User Quick Start](docs/servo_steer_quick_start_user.html) | [Instructor Quick Start](docs/servo_steer_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/servo_steer_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/servo_steer_quick_start_instructor.html)
 
 ### ODV
 
-[User Quick Start](docs/odv_quick_start_user.html) | [Instructor Quick Start](docs/odv_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/odv_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/odv_quick_start_instructor.html)
 
 ## Configuration
 

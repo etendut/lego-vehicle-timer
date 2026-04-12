@@ -1,5 +1,6 @@
 # Timed train and vehicle program for interactive displays
 # Copyright Etendut
+# https://etendut.github.io/lego-vehicle-timer/
 # licence MIT
 from micropython import const, mem_info
 from pybricks.parameters import Color, Button
