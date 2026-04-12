@@ -19,9 +19,10 @@ from PIL import Image, ImageDraw, ImageFont
 from modules.vehicle_odv import ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2, ODV_GRID_EX3
 
 # ── layout ────────────────────────────────────────────────────────────────────
-TILE   = 36   # px per tile (square)
-GAP    = 3    # px gap between tiles
-PAD    = 6    # px outer padding
+TILE        = 36    # px per tile (square)
+TILE_LONG   = round(TILE * 1.15)  # px for Load/Unload tiles (15% longer in X)
+GAP         = 3    # px gap between tiles
+PAD         = 6    # px outer padding
 
 # ── colours ───────────────────────────────────────────────────────────────────
 BG           = (255, 255, 255)
@@ -78,32 +79,54 @@ def _draw_arrow(draw: ImageDraw.ImageDraw, px: int, py: int, char: str) -> None:
     draw.polygon(pts, fill=ARROW_COLOR)
 
 
+def _col_widths(grid: list[str]) -> list[int]:
+    """Return per-column pixel width: TILE_LONG if any row has L or U, else TILE."""
+    cols = max(len(row.rstrip()) for row in grid)
+    widths = []
+    for col_idx in range(cols):
+        wide = any(
+            col_idx < len(row) and row[col_idx] in ('L', 'U')
+            for row in grid
+        )
+        widths.append(TILE_LONG if wide else TILE)
+    return widths
+
+
 def render_grid(grid: list[str]) -> Image.Image:
     rows = len(grid)
-    cols = max(len(row.rstrip()) for row in grid)
+    col_w = _col_widths(grid)
+    cols  = len(col_w)
 
-    img_w = PAD * 2 + cols * TILE + (cols - 1) * GAP
+    img_w = PAD * 2 + sum(col_w) + (cols - 1) * GAP
     img_h = PAD * 2 + rows * TILE + (rows - 1) * GAP
 
     img  = Image.new('RGB', (img_w, img_h), BG)
     draw = ImageDraw.Draw(img)
     font = _load_font(TILE // 2)
 
+    # pre-compute left pixel edge of each column
+    col_x = []
+    x = PAD
+    for w in col_w:
+        col_x.append(x)
+        x += w + GAP
+
     for row_idx, row in enumerate(grid):
         for col_idx, char in enumerate(row.rstrip()):
             if char == 'X':
                 continue   # wall — leave white background
 
-            px = PAD + col_idx * (TILE + GAP)
+            px = col_x[col_idx]
             py = PAD + row_idx * (TILE + GAP)
+            w  = col_w[col_idx]
             x1, y1 = px, py
-            x2, y2 = px + TILE - 1, py + TILE - 1
+            x2, y2 = px + w - 1, py + TILE - 1
 
             fill = TILE_COLORS.get(char, TRACK_FILL)
             draw.rectangle([x1, y1, x2, y2], fill=fill, outline=BORDER, width=1)
 
             if char in ('L', 'U'):
-                cx, cy = px + TILE // 2, py + TILE // 2
+                cx, cy = px + w // 2, py + TILE // 2
                 draw.text((cx, cy), char, fill=LABEL_COLOR, font=font, anchor='mm')
             elif char in ('<', '>'):
                 _draw_arrow(draw, px, py, char)
