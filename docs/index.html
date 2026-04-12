@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lego Vehicle Timer</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 11pt;
+        color: #1a1a1a;
+        background: #f7f7f7;
+      }
+
+      /* ── Hero ───────────────────────────────────────────────────────── */
+      .hero {
+        background: #1a1a1a;
+        color: #fff;
+        padding: 40px 24px 32px;
+        text-align: center;
+      }
+      .hero h1 {
+        font-size: 26pt;
+        font-weight: 900;
+        letter-spacing: -0.5pt;
+        margin-bottom: 10px;
+      }
+      .hero p {
+        font-size: 12pt;
+        color: #ccc;
+        max-width: 560px;
+        margin: 0 auto 20px;
+        line-height: 1.5;
+      }
+      .hero-meta {
+        font-size: 9pt;
+        color: #888;
+      }
+      .hero-meta a {
+        color: #aaa;
+        text-decoration: none;
+      }
+      .hero-meta a:hover {
+        text-decoration: underline;
+      }
+
+      /* ── Layout ─────────────────────────────────────────────────────── */
+      .container {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+
+      /* ── Section heading ─────────────────────────────────────────────── */
+      .section-label {
+        font-size: 8.5pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8pt;
+        color: #888;
+        margin-bottom: 12px;
+      }
+
+      /* ── Intro block ─────────────────────────────────────────────────── */
+      .intro {
+        background: #fff;
+        border: 1.5pt solid #1a1a1a;
+        border-radius: 4pt;
+        padding: 16px 20px;
+        margin-bottom: 32px;
+        line-height: 1.6;
+      }
+      .intro p + p {
+        margin-top: 8px;
+      }
+      .intro a {
+        color: #0066cc;
+        text-decoration: none;
+      }
+      .intro a:hover {
+        text-decoration: underline;
+      }
+
+      /* ── Vehicle grid ───────────────────────────────────────────────── */
+      .vehicles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+      }
+
+      .vehicle-card {
+        background: #fff;
+        border: 1.5pt solid #1a1a1a;
+        border-radius: 4pt;
+        overflow: hidden;
+      }
+
+      .vehicle-card h2 {
+        font-size: 12pt;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.5pt;
+        padding: 8px 14px 7px;
+        border-bottom: 1pt solid #1a1a1a;
+      }
+
+      .vehicle-card.train h2    { background: #e8f4fd; }
+      .vehicle-card.skid h2     { background: #e8f8ec; }
+      .vehicle-card.servo h2    { background: #fff3e0; }
+      .vehicle-card.odv h2      { background: #f3e8fd; }
+
+      .vehicle-card .body {
+        padding: 12px 14px;
+      }
+
+      .vehicle-card p {
+        font-size: 10.5pt;
+        color: #444;
+        line-height: 1.45;
+        margin-bottom: 12px;
+      }
+
+      .card-links {
+        display: flex;
+        gap: 8px;
+      }
+
+      .card-links a {
+        display: inline-block;
+        padding: 5px 12px;
+        border: 1.5pt solid #1a1a1a;
+        border-radius: 3pt;
+        font-size: 9.5pt;
+        font-weight: 700;
+        text-decoration: none;
+        color: #1a1a1a;
+        background: #fff;
+        transition: background 0.15s;
+      }
+      .card-links a:hover {
+        background: #1a1a1a;
+        color: #fff;
+      }
+      .card-links a.instructor {
+        background: #f5f5f5;
+      }
+      .card-links a.instructor:hover {
+        background: #1a1a1a;
+        color: #fff;
+      }
+
+      /* ── Requirements block ──────────────────────────────────────────── */
+      .requirements {
+        background: #fff;
+        border: 1.5pt solid #1a1a1a;
+        border-radius: 4pt;
+        padding: 16px 20px;
+        margin-bottom: 32px;
+      }
+      .requirements h2 {
+        font-size: 12pt;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.5pt;
+        margin-bottom: 10px;
+      }
+      .requirements ul {
+        list-style: none;
+        padding: 0;
+      }
+      .requirements ul li {
+        padding: 4px 0;
+        border-bottom: 0.5pt solid #eee;
+        font-size: 10.5pt;
+        line-height: 1.4;
+      }
+      .requirements ul li:last-child {
+        border-bottom: none;
+      }
+      .requirements ul li::before {
+        content: "— ";
+        color: #aaa;
+      }
+
+      /* ── Footer ─────────────────────────────────────────────────────── */
+      footer {
+        text-align: center;
+        font-size: 8.5pt;
+        color: #999;
+        padding-bottom: 24px;
+      }
+      footer a {
+        color: #999;
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="hero">
+      <h1>Lego Vehicle Timer</h1>
+      <p>A timed vehicle program for LEGO Technic and City Hubs running PyBricks — supports Train, Skid Steer, Servo Steer, and ODV vehicles.</p>
+      <p class="hero-meta">
+        v2.2.0 &mdash;
+        <a href="https://github.com/etendut/lego-vehicle-timer">github.com/etendut/lego-vehicle-timer</a>
+      </p>
+    </div>
+
+    <div class="container">
+
+      <div class="intro">
+        <p>Load this program onto your LEGO hub using <a href="https://code.pybricks.com/">PyBricks</a>, select the file for your vehicle type, and your vehicle will run for a configurable time before automatically stopping. A Lego Remote lets participants drive during their session.</p>
+        <p>Pick your vehicle below to jump to the quick start guide for operators or participants.</p>
+      </div>
+
+      <p class="section-label">Quick Start Guides</p>
+      <div class="vehicles">
+
+        <div class="vehicle-card train">
+          <h2>Train</h2>
+          <div class="body">
+            <p>One or two motors. Either button side of the remote controls forward and reverse. Works with train motors and lights on Port A and Port B.</p>
+            <div class="card-links">
+              <a href="train_quick_start_user.html">User Quick Start</a>
+              <a href="train_quick_start_instructor.html" class="instructor">Instructor Quick Start</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="vehicle-card skid">
+          <h2>Skid Steer</h2>
+          <div class="body">
+            <p>Two DC motors, one per side. Left remote buttons drive the left motor, right remote buttons drive the right motor — steer by varying each side independently.</p>
+            <div class="card-links">
+              <a href="skid_steer_quick_start_user.html">User Quick Start</a>
+              <a href="skid_steer_quick_start_instructor.html" class="instructor">Instructor Quick Start</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="vehicle-card servo">
+          <h2>Servo Steer</h2>
+          <div class="body">
+            <p>One DC drive motor and one servo steering motor. Left remote buttons control speed, right remote buttons control steering angle.</p>
+            <div class="card-links">
+              <a href="servo_steer_quick_start_user.html">User Quick Start</a>
+              <a href="servo_steer_quick_start_instructor.html" class="instructor">Instructor Quick Start</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="vehicle-card odv">
+          <h2>ODV</h2>
+          <div class="body">
+            <p>Omni-Directional Vehicle designed for the <a href="https://rebrickable.com/mocs/MOC-224417/Planet%20GBC/omni-directional-vehicles-gbc-by-akiyuki/#details" style="color:#0066cc">Akiyuki GBC MOC</a>. Supports full manual, hybrid, and full auto drive modes on a configurable grid.</p>
+            <div class="card-links">
+              <a href="odv_quick_start_user.html">User Quick Start</a>
+              <a href="odv_quick_start_instructor.html" class="instructor">Instructor Quick Start</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="section-label">Requirements</p>
+      <div class="requirements">
+        <ul>
+          <li>LEGO City Hub or LEGO Technic Hub with <a href="https://code.pybricks.com/" style="color:#0066cc">PyBricks</a> firmware</li>
+          <li>Lego Remote (not required for ODV full auto mode)</li>
+          <li>Train: 1 or 2 motors on Port A / Port B</li>
+          <li>Skid Steer: 2 DC motors, one on Port A, one on Port B</li>
+          <li>Servo Steer: DC drive motor on Port A, servo motor with rotation sensor on Port B</li>
+          <li>ODV: Servo motor on Port A and Port C</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <footer>
+      <a href="https://github.com/etendut/lego-vehicle-timer">github.com/etendut/lego-vehicle-timer</a>
+      &mdash; Released under the MIT License
+    </footer>
+
+  </body>
+</html>
