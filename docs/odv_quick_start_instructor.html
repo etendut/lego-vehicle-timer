@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ODV Vehicle — Quick Start - Instructor</title>
+    <style>
+      /* ── Page setup ─────────────────────────────────────────────────── */
+      @page {
+        size: A4 portrait;
+        margin: 14mm 16mm;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 11pt;
+        color: #1a1a1a;
+        background: #fff;
+        width: 178mm; /* A4 210mm − 2×16mm margins */
+        margin: 0 auto;
+      }
+
+      /* ── Header ─────────────────────────────────────────────────────── */
+      header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        border-bottom: 2.5pt solid #1a1a1a;
+        padding-bottom: 4pt;
+        margin-bottom: 10pt;
+      }
+      header h1 {
+        font-size: 18pt;
+        font-weight: 900;
+        letter-spacing: -0.5pt;
+      }
+      header p {
+        font-size: 9pt;
+        color: #555;
+      }
+
+      /* ── Sections ───────────────────────────────────────────────────── */
+      section {
+        border: 1.5pt solid #1a1a1a;
+        border-radius: 4pt;
+        margin-bottom: 6pt;
+        page-break-inside: avoid;
+      }
+
+      section h2 {
+        font-size: 11pt;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.5pt;
+        padding: 4pt 8pt 3pt;
+        border-bottom: 1pt solid #1a1a1a;
+      }
+
+      section.setup h2 {
+        background: #e8f4fd;
+      }
+      section.running h2 {
+        background: #e8f8ec;
+      }
+      section.trouble h2 {
+        background: #fff3e0;
+      }
+
+      section .body {
+        padding: 5pt 8pt;
+      }
+
+      /* ── Step list ──────────────────────────────────────────────────── */
+      ol.steps {
+        padding-left: 0;
+        list-style: none;
+      }
+      ol.steps li {
+        display: flex;
+        align-items: flex-start;
+        gap: 8pt;
+        margin-bottom: 4pt;
+        font-size: 10.5pt;
+        line-height: 1.3;
+      }
+      ol.steps li:last-child {
+        margin-bottom: 0;
+      }
+
+      .step-num {
+        flex-shrink: 0;
+        width: 18pt;
+        height: 18pt;
+        border-radius: 50%;
+        background: #1a1a1a;
+        color: #fff;
+        font-size: 9pt;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 0.5pt;
+      }
+
+      /* ── Light table ────────────────────────────────────────────────── */
+      table.lights {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10.5pt;
+      }
+      table.lights th {
+        text-align: left;
+        font-size: 9pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3pt;
+        border-bottom: 1pt solid #ccc;
+        padding: 2pt 6pt 3pt;
+        color: #555;
+      }
+      table.lights td {
+        padding: 3pt 6pt;
+        vertical-align: middle;
+        border-bottom: 0.5pt solid #eee;
+        line-height: 1.3;
+      }
+      table.lights tr:last-child td {
+        border-bottom: none;
+      }
+
+      /* coloured dot */
+      .dot {
+        display: inline-block;
+        width: 13pt;
+        height: 13pt;
+        border-radius: 50%;
+        border: 1pt solid rgba(0, 0, 0, 0.2);
+        vertical-align: middle;
+        margin-right: 4pt;
+      }
+      .dot.blue {
+        background: #2196f3;
+      }
+      .dot.white {
+        background: #e0e0e0;
+      }
+      .dot.green {
+        background: #4caf50;
+      }
+      .dot.orange {
+        background: #ff9800;
+      }
+      .dot.red {
+        background: #f44336;
+      }
+
+      .flash {
+        animation: none;
+      } /* no animation in print */
+      .seq {
+        white-space: nowrap;
+      }
+
+      /* ── Trouble list ───────────────────────────────────────────────── */
+      ul.trouble {
+        list-style: none;
+        padding: 0;
+      }
+      ul.trouble li {
+        padding: 3pt 0;
+        border-bottom: 0.5pt solid #eee;
+        display: flex;
+        gap: 8pt;
+        line-height: 1.3;
+        font-size: 10.5pt;
+      }
+      ul.trouble li:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      .trouble-icon {
+        font-size: 13pt;
+        flex-shrink: 0;
+        width: 16pt;
+        text-align: center;
+      }
+      .trouble-title {
+        font-weight: 700;
+        display: block;
+        margin-bottom: 1pt;
+      }
+
+      /* ── Diagram images ─────────────────────────────────────────────── */
+      .diagram {
+        display: block;
+        margin: 6pt auto 2pt;
+        max-width: 100%;
+        height: auto;
+      }
+      .diagram-caption {
+        text-align: center;
+        font-size: 8.5pt;
+        color: #555;
+        margin-bottom: 4pt;
+      }
+      .diagram-row {
+        display: flex;
+        gap: 10pt;
+        align-items: flex-start;
+        margin-top: 4pt;
+      }
+      .diagram-row .steps-col {
+        flex: 1;
+      }
+      .diagram-row .img-col {
+        flex-shrink: 0;
+        width: 62mm;
+        text-align: center;
+      }
+
+      /* ── Utility ────────────────────────────────────────────────────── */
+      strong {
+        font-weight: 700;
+      }
+      .note {
+        font-size: 9pt;
+        color: #555;
+        margin-top: 5pt;
+        padding: 3pt 6pt;
+        background: #f5f5f5;
+        border-left: 3pt solid #bbb;
+      }
+
+      /* ── Footer ─────────────────────────────────────────────────────── */
+      footer {
+        margin-top: 8pt;
+        text-align: center;
+        font-size: 8pt;
+        color: #999;
+      }
+      footer a { color: #999; }
+
+      /* ── Print: hide browser chrome ─────────────────────────────────── */
+      @media print {
+        body {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ODV Vehicle &mdash; Quick Start</h1>
+    </header>
+
+    <!-- ── SETUP ─────────────────────────────────────────────────────── -->
+    <section class="setup">
+      <h2>Setup</h2>
+      <div class="body">
+        <div class="diagram-row">
+          <div class="steps-col">
+            <ol class="steps">
+              <li>
+                <span class="step-num">1</span>
+                <span
+                  >Layout the <strong>track grid</strong> on a flat surface
+                  following the diagram.</span
+                >
+              </li>
+              <li>
+                <span class="step-num">2</span>
+                <span
+                  >Place the vehicle on the <strong>End tile</strong>(U) Make
+                  sure it is sitting flat and centred.</span
+                >
+              </li>
+              <li>
+                <span class="step-num">3</span>
+                <span
+                  >Check the remote buttons are correct. Left buttons vertical
+                  with + up. Right buttons horizontal with + right.
+                  vehicle.</span
+                >
+              </li>
+              <li>
+                <span class="step-num">4</span>
+                <span
+                  >Press the <strong>hub button</strong> to turn on the the
+                  vehicle.</span
+                >
+              </li>
+              <li>
+                <span class="step-num">5</span>
+                <span
+                  >Press the <strong>hub button</strong> again to start the
+                  program. The hub light will first turn <strong>blue</strong>,
+                  then start flashing <strong>white</strong> — it is looking for
+                  the remote.</span
+                >
+              </li>
+              <li>
+                <span class="step-num">6</span>
+                <span
+                  >Turn on the <strong>remote</strong> by pressing its button.
+                  Once connected the vehicle homes itself (it moves to the
+                  corner of the End tile. Keep hands clear until it stops)</span
+                >
+              </li>
+              <li>
+                <span class="step-num">7</span>
+                <span
+                  >Hub flashes <strong>green</strong> — the vehicle is ready to
+                  start.</span
+                >
+              </li>
+            </ol>
+          </div>
+          <div class="img-col">
+            <img
+              class="diagram"
+              src="../images/ODV_GRID_DEFAULT.png"
+              alt="Grid layout diagram"
+            />
+            <p class="diagram-caption">
+              Example grid layout &mdash; green&nbsp;=&nbsp;Load,
+              orange&nbsp;=&nbsp;End
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── RUNNING ───────────────────────────────────────────────────── -->
+    <section class="running">
+      <h2>Running</h2>
+      <div class="body">
+        <div class="diagram-row">
+          <div class="steps-col">
+            <table class="lights">
+              <thead>
+                <tr>
+                  <th style="width: 26pt">Light</th>
+                  <th style="width: 102pt">What it looks like</th>
+                  <th>What it means</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="dot blue"></span></td>
+                  <td>Blue — steady</td>
+                  <td>Program started, connecting&hellip;</td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="dot white"></span
+                    ><span class="dot white"></span
+                    ><span class="dot white"></span>
+                  </td>
+                  <td>3 white flashes, pause</td>
+                  <td>Looking for remote — wait</td>
+                </tr>
+                <tr>
+                  <td><span class="dot green"></span></td>
+                  <td>Green — flashing</td>
+                  <td>Ready — press buttons to start timer</td>
+                </tr>
+                <tr>
+                  <td><span class="dot green"></span></td>
+                  <td>Green — steady</td>
+                  <td>Timer running, vehicle working</td>
+                </tr>
+                <tr>
+                  <td><span class="dot orange"></span></td>
+                  <td>Orange — steady</td>
+                  <td>Time&rsquo;s up! Vehicle has stopped</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="note" style="margin-top: 5pt;">
+              To reset and run again: press left centre + centre + right centre
+              buttons on the remote.
+            </p>
+          </div>
+          <div class="img-col">
+            <img class="diagram" src="../images/ODVSteerRemoteUpDown.jpg" alt="Remote up/down" style="width:100%;" />
+            <img class="diagram" src="../images/ODVSteerRemoteLeftRight.jpg" alt="Remote left/right" style="width:100%; margin-top:4pt;" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── TROUBLESHOOTING ───────────────────────────────────────────── -->
+    <section class="trouble">
+      <h2>Troubleshooting</h2>
+      <div class="body">
+        <ul class="trouble">
+          <li>
+            <span class="trouble-icon">&#128663;</span>
+            <span>
+              <strong class="trouble-title">Vehicle fell off the track</strong>
+              Press the hub button to stop the program &rarr; place the vehicle
+              back on the <strong>End tile (U)</strong>, sitting flat and
+              centred &rarr; press the hub button again to restart. The vehicle
+              will re-home itself.
+            </span>
+          </li>
+          <li>
+            <span class="trouble-icon">&#128260;</span>
+            <span>
+              <strong class="trouble-title"
+                >Vehicle moving in the wrong direction</strong
+              >
+              Check remote button orientation is correct.
+            </span>
+          </li>
+          <li>
+            <span class="trouble-icon">&#128267;</span>
+            <span>
+              <strong class="trouble-title">Low battery — 5 red flashes</strong>
+              Five red flashes means the battery is too low to run safely. Turn
+              off the vehicle and swap or recharge the batteries before
+              restarting.
+            </span>
+          </li>
+          <li>
+            <span class="trouble-icon">&#128994;</span>
+            <span>
+              <strong class="trouble-title"
+                >Remote not connecting — 4 red flashes</strong
+              >
+              Make sure the remote is turned on and nearby. Turn the vehicle off
+              and back on to try again.
+            </span>
+          </li>
+          <li>
+            <span class="trouble-icon">&#9888;</span>
+            <span>
+              <strong class="trouble-title"
+                >Hub keeps flashing blue and won&rsquo;t respond to button
+                presses</strong
+              >
+              The program has been wiped from the hub (usually caused by very
+              low batteries). The hub needs to be reprogrammed — find the event
+              organiser.
+            </span>
+          </li>
+        </ul>
+      </div>
+    </section>
+    <footer>
+      <a href="https://github.com/etendut/lego-vehicle-timer">github.com/etendut/lego-vehicle-timer</a> &mdash; v2.2.0
+    </footer>
+  </body>
+</html>

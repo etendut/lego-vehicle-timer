@@ -96,6 +96,7 @@ class RunTrainMotor(MotorHelper):
         if self.mh__remote_disabled:
             return
         # Check which remote_buttons are pressed.
+        assert remote is not None
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
             self.stop_motors()
@@ -133,7 +134,8 @@ class RunTrainMotor(MotorHelper):
             if self.current_motor_speed < -self.max_speed:  # max reverse
                 self.current_motor_speed = -self.max_speed
 
-        self.train_motor_port_a.dc(self.current_motor_speed)
+        if self.train_motor_port_a:
+            self.train_motor_port_a.dc(self.current_motor_speed)
         if self.train_motor_port_b:
             self.train_motor_port_b.dc(self.current_motor_speed)
         # turn the lights on
@@ -146,7 +148,8 @@ class RunTrainMotor(MotorHelper):
 
     # stop all motors
     def stop_motors(self):
-        self.train_motor_port_a.dc(0)
+        if self.train_motor_port_a:
+            self.train_motor_port_a.dc(0)
         if self.train_motor_port_b:
             self.train_motor_port_b.dc(0)
         if self.lights is not None:

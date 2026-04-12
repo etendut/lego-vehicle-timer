@@ -13,11 +13,12 @@ except ImportError:
 
 if TYPE_CHECKING:
     # noinspection PyUnusedImports
-    from modules.mock_types import MockHub, MockRemote
+    from pybricks.hubs import CityHub, TechnicHub
+    from pybricks.pupdevices import Remote
 
 # IMPORT_SECTION
 
-print('Version 2.1.0')
+print('Version 2.2.0')
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -29,11 +30,13 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
 # How many seconds to wait before doing a load/unload automatically. 0 = disabled
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30)
+ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
 
+# low voltage protection in millivolts e.g. 7.2V = 7200mV
+MILLIVOLT_CRITICAL_LEVEL = const(1.2 * 6 * 1000)
 
 # VARS_SECTION
 
@@ -47,13 +50,20 @@ class ErrorFlashCodes:
         self.flash_count = 1  # Other errors
 
     def set_error_no_motor_on_a(self):
+        print('ERROR: NO MOTOR ON A')
         self.flash_count = 2
 
     def set_error_no_motor_on_b(self):
+        print('ERROR: NO MOTOR ON B')
         self.flash_count = 3
 
     def set_error_no_remote(self):
+        print('ERROR: NO REMOTE')
         self.flash_count = 4
+
+    def set_error_low_battery(self):
+        print('ERROR: LOW BATTERY')
+        self.flash_count = 5
 
     def flash_error_code(self):
         """
@@ -61,11 +71,16 @@ class ErrorFlashCodes:
         """
 
         global hub
+        global remote
 
         for f in range(self.flash_count):
             hub.light.on(Color.RED)
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.RED)
             wait(350)
             hub.light.on(Color.NONE)
+            if not REMOTE_DISABLED:
+                remote.light.on(Color.NONE)
             wait(350)
         if self.flash_count > 1:
             wait(2000)
@@ -150,8 +165,8 @@ def wait_for_no_pressed_buttons():
         return
     remote_buttons_pressed = remote.buttons.pressed()
     while remote_buttons_pressed:
-        remote_buttons_pressed = remote.buttons.pressed()
         wait(100)
+        remote_buttons_pressed = remote.buttons.pressed()
 
 
 def convert_millis_hours_minutes_seconds(millis: int):
@@ -182,16 +197,20 @@ class CountdownTimer:
 
     def __init__(self):
         # assign external objects to properties of the class
+        self.last_hub_remote_color = None
         self.last_countdown_message: str = ''
         self.countdown_status: int = _UNKNOWN
 
         # Start a timer.
         self.stopwatch = StopWatch()
         self.led_flash_sw_time = 0
+        self.last_flash_color = None
         self.end_time = 0
         # remote timing
         self.remote_buttons_time_out_ms = 0
         self.reset_time_since_last_remote_press()
+        # battery check throttle
+        self._battery_check_time = 0
 
     def reset_time_since_last_remote_press(self):
         self.remote_buttons_time_out_ms = self.stopwatch.time() + (ODV_AUTO_DRIVE_TIMEOUT_SECS * 1000)
@@ -274,43 +293,60 @@ class CountdownTimer:
             self.reset()
             wait_for_no_pressed_buttons()
 
+    def should_check_battery(self) -> bool:
+        if self.stopwatch.time() > self._battery_check_time:
+            self._battery_check_time = self.stopwatch.time() + 5000
+            return True
+        return False
+
     def show_status(self):
+        if self.countdown_status == _READY:
+            self.flash_hub_and_remote_light(Color.GREEN, 500, Color.NONE, 500, False)
+        elif self.countdown_status == _ACTIVE:
+            self.set_hub_and_remote_light(Color.GREEN, True)
+        elif self.countdown_status == _FINAL_20_SECS:
+            self.flash_hub_and_remote_light(Color.ORANGE, 200, Color.NONE, 100, False)
+        elif self.countdown_status == _FINAL_MINUTE:
+            self.flash_hub_and_remote_light(Color.ORANGE, 500, Color.NONE, 250, False)
+        elif self.countdown_status == _ENDED:
+            self.set_hub_and_remote_light(Color.ORANGE, False)
+
+    def set_hub_and_remote_light(self, on_color:Color, include_remote:bool):
+        """
+        Set remote and hub light color if changed
+        :param include_remote:
+        :param on_color:
+        :return:
+        """
         global hub
         global remote
-        if self.countdown_status == _READY:
-            self.__flash_remote_and_hub_light__(Color.GREEN, 500, Color.NONE, 500)
-        elif self.countdown_status == _ACTIVE:
-            hub.light.on(Color.GREEN)
-            if not REMOTE_DISABLED:
-                remote.light.on(Color.GREEN)
-        elif self.countdown_status == _FINAL_20_SECS:
-            self.__flash_remote_and_hub_light__(Color.ORANGE, 200, Color.NONE, 100)
-        elif self.countdown_status == _FINAL_MINUTE:
-            self.__flash_remote_and_hub_light__(Color.ORANGE, 500, Color.NONE, 250)
-        elif self.countdown_status == _ENDED:
-            hub.light.on(Color.ORANGE)
-            if not REMOTE_DISABLED:
-                remote.light.on(Color.ORANGE)
 
-    def __flash_remote_and_hub_light__(self, on_color, on_msec: int, off_color, off_msec: int):
+        # only set color if it's changed
+        if on_color == self.last_hub_remote_color:
+            return
+        self.last_hub_remote_color = on_color
+
+        hub.light.on(on_color)
+
+        if include_remote and not REMOTE_DISABLED:
+            remote.light.on(on_color)
+
+    def flash_hub_and_remote_light(self, on_color:Color, on_msec: int, off_color, off_msec: int, include_remote:bool):
         """
-            this flashes the remote led
+            this flashes the hub (and optionally remote) led
+        :param include_remote:
         :param on_color:
         :param on_msec:
         :param off_color:
         :param off_msec:
         """
-        global hub
         # we use a timer to make it a non-blocking call
-        if self.stopwatch.time() > (on_msec + off_msec + self.led_flash_sw_time):
-            self.led_flash_sw_time = self.stopwatch.time()
-            if not REMOTE_DISABLED:
-                remote.light.on(off_color)
-            hub.light.on(off_color)
-        elif self.stopwatch.time() > (off_msec + self.led_flash_sw_time):
-            if not REMOTE_DISABLED:
-                remote.light.on(on_color)
-            hub.light.on(on_color)
+        now = self.stopwatch.time()
+        if now > (on_msec + off_msec + self.led_flash_sw_time):
+            self.led_flash_sw_time = now
+            self.set_hub_and_remote_light(off_color, include_remote)
+        elif now > (off_msec + self.led_flash_sw_time):
+            self.set_hub_and_remote_light(on_color, include_remote)
 
 
 ##################################################################################
@@ -364,8 +400,8 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 ##################################################################################
 
 
-hub: "MockHub"
-remote: "MockRemote"
+hub: "CityHub | TechnicHub"
+remote: "Remote"
 
 
 def setup_hub():
@@ -389,6 +425,10 @@ def setup_hub():
             print(ex2)
             raise Exception('This program only support Lego City hub and Lego Technic hub')
 
+def hub_battery_ok()->bool:
+    global hub
+    mv_voltage = hub.battery.voltage()
+    return mv_voltage > MILLIVOLT_CRITICAL_LEVEL
 
 LED_FLASHING_SEQUENCE = [75] * 5 + [1000]
 
@@ -447,19 +487,32 @@ def main():
         countdown_timer.reset()
         mem_info()
         while True:
+            if countdown_timer.should_check_battery() and not hub_battery_ok():
+                error_flash_code.set_error_low_battery()
+                break
+
             if not REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
 
             if drive_motors.mh_supports_homing:
-                if not drive_motors.mh_auto_drive and ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
-                    drive_motors.enable_auto_drive()
+                if not drive_motors.mh_auto_drive:
+                    # Full auto: enable immediately once homed, no remote needed
+                    if REMOTE_DISABLED and drive_motors.mh_is_homed:
+                        drive_motors.enable_auto_drive()
+                    # Hybrid: enable after timeout with no remote activity
+                    elif ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
+                        drive_motors.enable_auto_drive()
 
                 if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
                     drive_motors.auto_unload()
                     drive_motors.auto_load()
+                    # Hybrid: if a button press interrupted auto, reset the idle timer so auto
+                    # doesn't re-enable immediately on the next loop iteration
+                    if not drive_motors.mh_auto_drive:
+                        countdown_timer.reset_time_since_last_remote_press()
 
             # if there is no remote, then there is no point in a countdown
-            elif countdown_timer.has_time_remaining() or REMOTE_DISABLED:
+            if countdown_timer.has_time_remaining() or REMOTE_DISABLED:
                 if drive_motors.mh_supports_homing:
                     drive_motors.do_homing()
                 if drive_motors.mh_supports_flip:
@@ -469,16 +522,16 @@ def main():
             else:
                 drive_motors.stop_motors()
                 if drive_motors.mh_supports_homing:
-                    drive_motors.auto_unload()
-                    drive_motors.auto_home()
+                #     drive_motors.auto_unload()
+                #     drive_motors.auto_home()
                     drive_motors.reset_homing()
 
             countdown_timer.show_status()
             # add a small delay to keep the loop stable and allow for events to occur
             wait(10)
 
-            if REMOTE_DISABLED and ODV_AUTO_DRIVE_TIMEOUT_SECS == 0:
-                print("No remote or auto drive exiting")
+            if REMOTE_DISABLED and not drive_motors.mh_supports_homing:
+                print("No remote exiting")
                 raise SystemExit
 
     except Exception as e:

@@ -83,6 +83,7 @@ class RunSkidSteerMotors(MotorHelper):
         """
         global hub
         # Check which side of the hub is up.
+        assert hub is not None
         up_side = hub.imu.up()
 
         # if the hub hasn't flipped ignore the rest of the logic
@@ -108,6 +109,7 @@ class RunSkidSteerMotors(MotorHelper):
         if self.mh__remote_disabled:
             return
         # Check which remote_buttons are pressed.
+        assert remote is not None
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0 or Button.RIGHT in remote_buttons_pressed or Button.LEFT in remote_buttons_pressed:
             self.stop_motors()

@@ -1,0 +1,6 @@
+from typing import TypeVar
+
+_T = TypeVar("_T")
+
+def const(x: _T) -> _T: ...
+def mem_info(verbose: int = ...) -> None: ...
