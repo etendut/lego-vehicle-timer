@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from modules.vehicle_odv import (
     can_move_in_direction_by_type, _can_traverse_coarse, RunODVMotors,
     NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST,
+    ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2,
 )
 
 # Shorthand tile types
@@ -208,5 +209,64 @@ all_dirs_bfs_tests = [
 @pytest.mark.parametrize("start_tile,end_tile,expected_path", all_dirs_bfs_tests)
 def test_bfs_all_directions(start_tile, end_tile, expected_path):
     helper = RunODVMotors(MagicMock(), 80, ALL_DIRS_GRID)
+    result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
+    check.equal(result, expected_path)
+
+
+# ---------------------------------------------------------------------------
+# Production grid BFS tests
+# Verifies BFS finds the correct shortest path between Load and Unload on the
+# three real grids.  Expected paths were captured from a verified run.
+#
+# ODV_GRID_DEFAULT = ["L##<U", "X#X#X", "X###X"]
+#   L=(0,0)  U=(4,0)
+#
+# ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
+#   L=(0,1)  U=(6,1)
+#
+# ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
+#   L=(0,1)  U=(4,1)
+# ---------------------------------------------------------------------------
+
+production_bfs_tests = [
+    # --- DEFAULT ---
+    pytest.param(
+        ODV_GRID_DEFAULT, (0, 0), (4, 0),
+        [((0,0),-1), ((1,0),EAST), ((2,0),EAST), ((3,1),SOUTH_EAST), ((4,0),NORTH_EAST)],
+        id="default-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_DEFAULT, (4, 0), (0, 0),
+        [((4,0),-1), ((3,1),SOUTH_WEST), ((2,2),SOUTH_WEST), ((1,1),NORTH_WEST), ((0,0),NORTH_WEST)],
+        id="default-unload-to-load",
+    ),
+    # --- EX1 ---
+    pytest.param(
+        ODV_GRID_EX1, (0, 1), (6, 1),
+        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,1),SOUTH_EAST), ((4,1),EAST), ((5,2),SOUTH_EAST), ((6,1),NORTH_EAST)],
+        id="ex1-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_EX1, (6, 1), (0, 1),
+        [((6,1),-1), ((5,2),SOUTH_WEST), ((4,2),WEST), ((3,1),NORTH_WEST), ((2,2),SOUTH_WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        id="ex1-unload-to-load",
+    ),
+    # --- EX2 ---
+    pytest.param(
+        ODV_GRID_EX2, (0, 1), (4, 1),
+        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,0),EAST), ((4,1),SOUTH_EAST)],
+        id="ex2-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_EX2, (4, 1), (0, 1),
+        [((4,1),-1), ((3,2),SOUTH_WEST), ((2,2),WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        id="ex2-unload-to-load",
+    ),
+]
+
+
+@pytest.mark.parametrize("grid,start_tile,end_tile,expected_path", production_bfs_tests)
+def test_bfs_production_grids(grid, start_tile, end_tile, expected_path):
+    helper = RunODVMotors(MagicMock(), 80, grid)
     result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
     check.equal(result, expected_path)
