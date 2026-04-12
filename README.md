@@ -50,7 +50,8 @@ Left buttons for drive, Right buttons for steering
 ### ODV
 
 Left buttons for Y, Right buttons for X
-<img src="images/ODVSteerRemote.jpg" alt="ODV Remote Instructions" style="max-height:200px;" />
+<img src="images/ODVSteerRemoteUpDown.jpg" alt="ODV Remote Y axis" style="max-height:200px;" />
+<img src="images/ODVSteerRemoteLeftRight.jpg" alt="ODV Remote X axis" style="max-height:200px;" />
 
 ## Light Codes
 
