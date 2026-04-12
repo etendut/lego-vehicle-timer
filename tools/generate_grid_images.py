@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tools.compile_pybricks_files as _compile
 from PIL import Image, ImageDraw, ImageFont
-from modules.vehicle_odv import ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2
+from modules.vehicle_odv import ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2, ODV_GRID_EX3
 
 # ── layout ────────────────────────────────────────────────────────────────────
 TILE   = 36   # px per tile (square)
@@ -44,6 +44,7 @@ GRIDS = [
     ('ODV_GRID_DEFAULT', ODV_GRID_DEFAULT),
     ('ODV_GRID_EX1', ODV_GRID_EX1),
     ('ODV_GRID_EX2', ODV_GRID_EX2),
+    ('ODV_GRID_EX3', ODV_GRID_EX3),
 ]
 
 

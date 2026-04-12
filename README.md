@@ -168,6 +168,11 @@ ODV_GRID = `["###X#XX", "LX###XU", "###X###"]`<br>
 ODV_GRID = `["X###X", "L###U", "X###X"]`<br>
 <img src="images/ODV_GRID_EX2.png" alt="Grid example 2" /> <br>
 
+**Example 3 (one-way clockwise loop)**<br>
+ODV_GRID = `["X#>#X", "L###U", "X#<#X"]`<br>
+L→U travels top (eastward through `>`), U→L travels bottom (westward through `<`)<br>
+<img src="images/ODV_GRID_EX3.png" alt="Grid example 3" /> <br>
+
 ## Releases
 
 ### Version 2.2.0 (current)

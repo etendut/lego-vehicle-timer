@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from modules.vehicle_odv import (
     can_move_in_direction_by_type, _can_traverse_coarse, RunODVMotors,
     NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST,
-    ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2,
+    ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2, ODV_GRID_EX3,
 )
 
 # Shorthand tile types
@@ -261,6 +261,17 @@ production_bfs_tests = [
         ODV_GRID_EX2, (4, 1), (0, 1),
         [((4,1),-1), ((3,2),SOUTH_WEST), ((2,2),WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
         id="ex2-unload-to-load",
+    ),
+    # --- EX3 (one-way clockwise loop) ---
+    pytest.param(
+        ODV_GRID_EX3, (0, 1), (4, 1),
+        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,0),EAST), ((4,1),SOUTH_EAST)],
+        id="ex3-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_EX3, (4, 1), (0, 1),
+        [((4,1),-1), ((3,2),SOUTH_WEST), ((2,2),WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        id="ex3-unload-to-load",
     ),
 ]
 
