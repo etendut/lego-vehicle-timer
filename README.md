@@ -157,15 +157,15 @@ ODV_GRID = [] grid tiles specified in a list
 X = obstacle, L = Load, U = Unload/End (homing wall NORTH and EAST), # = grid tile, < = one-way left, > = one-way right
 
 **Default**<br>
-ODV_GRID = `["X##U", "X#X#", "L#<#"]`<br>
+ODV_GRID = `["L##<U", "X#X#X", "X###X"]`<br>
 <img src="images/ODV_GRID_DEFAULT.png" alt="Grid default" />
 
 **Example 1**<br>
-ODV_GRID = `["L##<U", "X#X#X", "X###X"]`<br>
+ODV_GRID = `["###X#XX", "LX###XU", "###X###"]`<br>
 <img src="images/ODV_GRID_EX1.png" alt="Grid example 1" /> <br>
 
 **Example 2**<br>
-ODV_GRID = `["X###X", "X#X#X", "L#<#U"]`<br>
+ODV_GRID = `["X###X", "L###U", "X###X"]`<br>
 <img src="images/ODV_GRID_EX2.png" alt="Grid example 2" /> <br>
 
 ## Releases
