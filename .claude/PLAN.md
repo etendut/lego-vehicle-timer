@@ -19,7 +19,7 @@ Run `python -m modules.compile_pybricks_files` to regenerate the compiled `lego_
 ## Tasks
 
 ### Task 1 — Add DEBUG flag and wrap all print statements
-**Status**: pending  
+**Status**: done  
 **File**: `modules/vehicle_odv.py`  
 **Details**: Add `DEBUG = const(False)` near the top of the module section. Wrap every `print()` call in `if DEBUG:`. MicroPython's const() dead-branch elimination means zero runtime cost when DEBUG is False — no string allocation on hot paths.  
 **Commit message**: `perf: add DEBUG flag to eliminate print overhead in vehicle_odv`
