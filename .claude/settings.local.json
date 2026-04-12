@@ -6,7 +6,8 @@
       "Bash(pyright modules/ *.py)",
       "Bash(python -m pyright modules/vehicle_odv.py)",
       "Bash(python -m pytest tests/test_vehicle_odv.py -v)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(ls:*)"
     ]
   }
 }

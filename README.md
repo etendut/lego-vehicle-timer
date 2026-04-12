@@ -6,27 +6,27 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
 
 - Lego City Hub or Lego Technic Hub using PyBricks firmware
 - Train
-    - 1 or 2 motors
+  - 1 or 2 motors
 - Skid Steer
-    - 2 motors, one for each side
+  - 2 motors, one for each side
 - Servo Steer
-    - 1 motor for drive
-    - 1 motor with rotation sensor for steering
+  - 1 motor for drive
+  - 1 motor with rotation sensor for steering
 - ODV:
-    - This mode is specific to
-      the [Omni-Directional Vehicles GBC, by Akiyuki](https://rebrickable.com/mocs/MOC-224417/Planet%20GBC/omni-directional-vehicles-gbc-by-akiyuki/#details)
-    - a built ODV vehicle with 2 motors
-    - a grid course to run on
+  - This mode is specific to
+    the [Omni-Directional Vehicles GBC, by Akiyuki](https://rebrickable.com/mocs/MOC-224417/Planet%20GBC/omni-directional-vehicles-gbc-by-akiyuki/#details)
+  - a built ODV vehicle with 2 motors
+  - a grid course to run on
 - Lego Remote (not required for ODV full auto mode)
 
 ## How do I get set up?
 
 - Use [PyBricks](https://code.pybricks.com/) to configure your hub
 - select the program based on the vehicle type
-    - [lego_vehicle_timer_train](lego_vehicle_timer_train.py)
-    - [lego_vehicle_timer_skid_steer](lego_vehicle_timer_skid_steer.py)
-    - [lego_vehicle_timer_servo](lego_vehicle_timer_servo.py)
-    - [lego_vehicle_timer_odv](lego_vehicle_timer_odv.py)
+  - [lego_vehicle_timer_train](lego_vehicle_timer_train.py)
+  - [lego_vehicle_timer_skid_steer](lego_vehicle_timer_skid_steer.py)
+  - [lego_vehicle_timer_servo](lego_vehicle_timer_servo.py)
+  - [lego_vehicle_timer_odv](lego_vehicle_timer_odv.py)
 - configure the settings as per below [Configuration](#configuration)
 - load the program onto your hub using PyBricks
 
@@ -50,7 +50,8 @@ Left buttons for drive, Right buttons for steering
 ### ODV
 
 Left buttons for Y, Right buttons for X
-<img src="images/ODVSteerRemote.jpg" alt="ODV Remote Instructions" style="max-height:200px;" />
+<img src="images/ODVSteerRemoteUpDown.jpg" alt="ODV Remote Y axis" style="max-height:200px;" />
+<img src="images/ODVSteerRemoteLeftRight.jpg" alt="ODV Remote X axis" style="max-height:200px;" />
 
 ## Light Codes
 
@@ -59,7 +60,7 @@ Left buttons for Y, Right buttons for X
 Once the program starts certain errors will be flashed on the hub
 
 |                                                                                                                                                                    | Sequence                   | Meaning                                                                                                                                                                                                                                          |
-|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | <img src="images/blue_dot_f.png" alt="Blue flashing" />                                                                                                            | BLUE flashing              | CAUTION If the hub continues this sequence despite multiple clicks of the hub button it means the hub has been wiped and needs to be reprogrammed.<br/> So far the only anecdotal cause seems to be when the batteries dip below critical levels |
 | <img src="images/blue_dot.png" alt="Blue" />                                                                                                                       | BLUE On                    | Program started                                                                                                                                                                                                                                  |
 | <img src="images/white_dot_f.png" alt="White" /><img src="images/white_dot_f.png" alt="White flashing" /><img src="images/white_dot_f.png" alt="White flashing" /> | 3 WHITE flashes then pause | Looking for remote                                                                                                                                                                                                                               |
@@ -74,7 +75,7 @@ Once the program starts certain errors will be flashed on the hub
 Once the program starts certain errors will be flashed on the hub
 
 |                                                                                                                                                                                                                                                                           | Sequence                  | Meaning                 |
-|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|-------------------------|
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------- |
 | <img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                                                                     | Constant RED Flash on/off | Other Error             |
 | <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                | 2 RED flashes then pause  | Missing Motor on Port A |
 | <img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" /><img src="images/red_dot_f.png" alt="Red flashing" />                                                                                                           | 3 RED flashes then pause  | Missing Motor on Port B |
@@ -87,7 +88,7 @@ Each vehicle has its own configuration
 
 ### Common
 
-MILLIVOLT_CRITICAL_LEVEL = const(1.2 * 6 * 1000) # low voltage protection in millivolts e.g. 7.2V = 7200mV
+MILLIVOLT*CRITICAL_LEVEL = const(1.2 * 6 \_ 1000) # low voltage protection in millivolts e.g. 7.2V = 7200mV
 
 #### Countdown time settings
 
@@ -146,27 +147,32 @@ ODV_SPEED: int = const(45) # set between 40 and 70<br>
 
 #### ODV Drive Modes
 
-| Mode | `REMOTE_DISABLED` | `ODV_AUTO_DRIVE_TIMEOUT_SECS` | Description |
-|------|-------------------|-------------------------------|-------------|
-| Full manual | `False` | `0` | Remote controls the vehicle only; no automatic movement |
-| Hybrid | `False` | `30` | Remote controls the vehicle; after 30 seconds of no input the vehicle starts automatic load/unload cycles. Any button press hands control back and restarts the 30s timer |
-| Full auto | `True` | `0` | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete |
+| Mode        | `REMOTE_DISABLED` | `ODV_AUTO_DRIVE_TIMEOUT_SECS` | Description                                                                                                                                                               |
+| ----------- | ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full manual | `False`           | `0`                           | Remote controls the vehicle only; no automatic movement                                                                                                                   |
+| Hybrid      | `False`           | `30`                          | Remote controls the vehicle; after 30 seconds of no input the vehicle starts automatic load/unload cycles. Any button press hands control back and restarts the 30s timer |
+| Full auto   | `True`            | `0`                           | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete                                                                               |
 
 ODV_GRID = [] grid tiles specified in a list
 
-X= obstacle, H = Home,L = Load, U = Unload, # = grid tile, < = one-way left, > = one-way right 
+X = obstacle, L = Load, U = Unload/End (homing wall NORTH and EAST), # = grid tile, < = one-way left, > = one-way right
+
+**Default**<br>
+ODV_GRID = `["L##<U", "X#X#X", "X###X"]`<br>
+<img src="images/ODV_GRID_DEFAULT.png" alt="Grid default" />
 
 **Example 1**<br>
-ODV_GRID = `["H##X","LX#U","###X"]`<br>
-<img src="images/odv_grid_1.png" alt="Grid example 1" />
+ODV_GRID = `["###X#XX", "LX###XU", "###X###"]`<br>
+<img src="images/ODV_GRID_EX1.png" alt="Grid example 1" /> <br>
 
 **Example 2**<br>
-ODV_GRID = `["H##X#XX","LX###XU","###X###"]`<br>
-<img src="images/odv_grid_2.png" alt="Grid example 2" /> <br>
+ODV_GRID = `["X###X", "L###U", "X###X"]`<br>
+<img src="images/ODV_GRID_EX2.png" alt="Grid example 2" /> <br>
 
-**Example 3**<br>
-ODV_GRID = `["XL##XU", "H#X###"]`<br>
-<img src="images/odv_grid_3.png" alt="Grid example 3" /> <br>
+**Example 3 (one-way clockwise loop)**<br>
+ODV_GRID = `["X#>#X", "L###U", "X#<#X"]`<br>
+L→U travels top (eastward through `>`), U→L travels bottom (westward through `<`)<br>
+<img src="images/ODV_GRID_EX3.png" alt="Grid example 3" /> <br>
 
 ## Releases
 
@@ -203,7 +209,7 @@ ODV_GRID = `["XL##XU", "H#X###"]`<br>
 
 - Clone this repo
 - Update code in the [modules](/modules) folder as needed
-- run [compile_pybricks_files](/modules/compile_pybricks_files.py) to create the lego*vehicle_timer*\* files for use
+- run [compile_pybricks_files](/tools/compile_pybricks_files.py) to create the lego*vehicle_timer*\* files for use
   in [PyBricks](https://code.pybricks.com/)
 
 ## Licence

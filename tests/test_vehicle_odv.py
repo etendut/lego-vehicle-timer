@@ -6,14 +6,14 @@ from unittest.mock import MagicMock
 from modules.vehicle_odv import (
     can_move_in_direction_by_type, _can_traverse_coarse, RunODVMotors,
     NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST,
+    ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2, ODV_GRID_EX3,
 )
 
 # Shorthand tile types
 T = '#'   # TRACK
 W = 'X'   # WALL
-H = 'H'   # HOME
 L = 'L'   # LOAD
-U = 'U'   # UNLOAD
+U = 'U'   # UNLOAD (end tile — homing wall NORTH and EAST)
 LT = '<'  # WEST_ONLY
 RT = '>'  # EAST_ONLY
 
@@ -42,16 +42,15 @@ can_move_tests = [
     pytest.param(EAST, RT, T,  T,  RT, True,  id="rt-east-allowed"),
     pytest.param(EAST, T,  RT, RT, T,  True,  id="rt-east-allowed-2"),
 
-    # --- Rule 4: any corner on HOME and direction not in {N, W, NW} → block ---
-    pytest.param(EAST,       H, T, T, T, False, id="home-east"),
-    pytest.param(SOUTH,      T, H, T, T, False, id="home-south"),
-    pytest.param(SOUTH_EAST, T, T, H, T, False, id="home-south-east"),
-    pytest.param(SOUTH_WEST, T, T, T, H, False, id="home-south-west"),
-    pytest.param(NORTH_EAST, H, T, T, T, False, id="home-north-east"),
-    # HOME allowed when entering from NORTH, WEST, or NORTH_WEST
-    pytest.param(NORTH,      H, T, T, T, True,  id="home-north-allowed"),
-    pytest.param(WEST,       T, T, T, H, True,  id="home-west-allowed"),
-    pytest.param(NORTH_WEST, H, T, T, T, True,  id="home-north-west-allowed"),
+    # --- Rule 4: any corner on UNLOAD and direction == NORTH → block ---
+    pytest.param(NORTH, U, T, T, T, False, id="unload-north-tl"),
+    pytest.param(NORTH, T, U, T, T, False, id="unload-north-tr"),
+    pytest.param(NORTH, T, T, U, T, False, id="unload-north-br"),
+    pytest.param(NORTH, T, T, T, U, False, id="unload-north-bl"),
+    # UNLOAD allowed in other directions
+    pytest.param(EAST,  U, T, T, T, True,  id="unload-east-allowed"),
+    pytest.param(SOUTH, U, T, T, T, True,  id="unload-south-allowed"),
+    pytest.param(WEST,  U, T, T, T, True,  id="unload-west-allowed"),
 
     # --- Rule 5: all other combinations → allow ---
     pytest.param(NORTH, T, T, T, T, True, id="all-track-north"),
@@ -92,7 +91,7 @@ def test_can_load_unload(direction, tl, tr, br, bl, expected_load, expected_unlo
 coarse_tests = [
     # WALL destination always blocks
     pytest.param(T,  W,  NORTH, False, id="to-wall"),
-    pytest.param(H,  W,  EAST,  False, id="to-wall-from-home"),
+    pytest.param(T,  W,  EAST,  False, id="to-wall-from-track"),
 
     # < (WEST_ONLY): either tile blocks if direction != WEST
     pytest.param(LT, T,  EAST,  False, id="from-lt-east"),
@@ -107,16 +106,14 @@ coarse_tests = [
     pytest.param(RT, T,  EAST,  True,  id="from-rt-east-allowed"),
     pytest.param(T,  RT, EAST,  True,  id="to-rt-east-allowed"),
 
-    # HOME destination: only NORTH, WEST, NORTH_WEST allowed
-    pytest.param(T,  H,  EAST,       False, id="to-home-east"),
-    pytest.param(T,  H,  SOUTH,      False, id="to-home-south"),
-    pytest.param(T,  H,  SOUTH_EAST, False, id="to-home-south-east"),
-    pytest.param(T,  H,  NORTH,      True,  id="to-home-north-allowed"),
-    pytest.param(T,  H,  WEST,       True,  id="to-home-west-allowed"),
-    pytest.param(T,  H,  NORTH_WEST, True,  id="to-home-north-west-allowed"),
-    # HOME as from_type does not restrict direction
-    pytest.param(H,  T,  EAST,       True,  id="from-home-east-allowed"),
-    pytest.param(H,  T,  SOUTH,      True,  id="from-home-south-allowed"),
+    # UNLOAD source: NORTH is blocked (homing wall above)
+    pytest.param(U,  T,  NORTH, False, id="from-unload-north"),
+    pytest.param(U,  T,  EAST,  True,  id="from-unload-east-allowed"),
+    pytest.param(U,  T,  SOUTH, True,  id="from-unload-south-allowed"),
+    pytest.param(U,  T,  WEST,  True,  id="from-unload-west-allowed"),
+    # UNLOAD as destination: allowed from any direction
+    pytest.param(T,  U,  SOUTH, True,  id="to-unload-south"),
+    pytest.param(T,  U,  EAST,  True,  id="to-unload-east"),
 
     # free traversal
     pytest.param(T, T, NORTH, True, id="track-to-track"),
@@ -132,13 +129,13 @@ def test_can_traverse_coarse(from_type, to_type, direction, expected):
 
 # ---------------------------------------------------------------------------
 # BFS tests
-# Grid: ["XH<U", "X#X#", "L#>#"]
-#   (0,0)=X  (1,0)=H  (2,0)=<  (3,0)=U
+# Grid: ["X#<U", "X#X#", "L#>#"]
+#   (0,0)=X  (1,0)=#  (2,0)=<  (3,0)=U
 #   (0,1)=X  (1,1)=#  (2,1)=X  (3,1)=#
 #   (0,2)=L  (1,2)=#  (2,2)=>  (3,2)=#
 # ---------------------------------------------------------------------------
 
-TEST_GRID = ["XH<U", "X#X#", "L#>#"]
+TEST_GRID = ["X#<U", "X#X#", "L#>#"]
 
 bfs_tests = [
     pytest.param(
@@ -155,12 +152,12 @@ bfs_tests = [
     pytest.param(
         (1, 0), (3, 0),
         [((1,0),-1), ((1,1),SOUTH), ((1,2),SOUTH), ((2,2),EAST), ((3,2),EAST), ((3,1),NORTH), ((3,0),NORTH)],
-        id="home-to-unload",
+        id="track-to-unload",
     ),
     pytest.param(
         (3, 0), (1, 0),
         [((3,0),-1), ((2,0),WEST), ((1,0),WEST)],
-        id="unload-to-home",
+        id="unload-to-track",
     ),
 ]
 
@@ -168,5 +165,119 @@ bfs_tests = [
 @pytest.mark.parametrize("start_tile,end_tile,expected_path", bfs_tests)
 def test_bfs(start_tile, end_tile, expected_path):
     helper = RunODVMotors(MagicMock(), 80, TEST_GRID)
+    result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
+    check.equal(result, expected_path)
+
+
+# ---------------------------------------------------------------------------
+# All-directions BFS tests
+# Grid: ["X###X", "L###U", "X###X"]
+#   (0,0)=X  (1,0)=#  (2,0)=#  (3,0)=#  (4,0)=X
+#   (0,1)=L  (1,1)=#  (2,1)=#  (3,1)=#  (4,1)=U
+#   (0,2)=X  (1,2)=#  (2,2)=#  (3,2)=#  (4,2)=X
+#
+# Each diagonal test uses a corner-to-opposite-corner path through centre (2,1),
+# exercising all 8 direction constants (cardinal directions covered in bfs_tests).
+# ---------------------------------------------------------------------------
+
+ALL_DIRS_GRID = ["X###X", "L###U", "X###X"]
+
+all_dirs_bfs_tests = [
+    pytest.param(
+        (1, 0), (3, 2),
+        [((1,0),-1), ((2,1),SOUTH_EAST), ((3,2),SOUTH_EAST)],
+        id="diagonal-south-east",
+    ),
+    pytest.param(
+        (3, 0), (1, 2),
+        [((3,0),-1), ((2,1),SOUTH_WEST), ((1,2),SOUTH_WEST)],
+        id="diagonal-south-west",
+    ),
+    pytest.param(
+        (1, 2), (3, 0),
+        [((1,2),-1), ((2,1),NORTH_EAST), ((3,0),NORTH_EAST)],
+        id="diagonal-north-east",
+    ),
+    pytest.param(
+        (3, 2), (1, 0),
+        [((3,2),-1), ((2,1),NORTH_WEST), ((1,0),NORTH_WEST)],
+        id="diagonal-north-west",
+    ),
+]
+
+
+@pytest.mark.parametrize("start_tile,end_tile,expected_path", all_dirs_bfs_tests)
+def test_bfs_all_directions(start_tile, end_tile, expected_path):
+    helper = RunODVMotors(MagicMock(), 80, ALL_DIRS_GRID)
+    result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
+    check.equal(result, expected_path)
+
+
+# ---------------------------------------------------------------------------
+# Production grid BFS tests
+# Verifies BFS finds the correct shortest path between Load and Unload on the
+# three real grids.  Expected paths were captured from a verified run.
+#
+# ODV_GRID_DEFAULT = ["L##<U", "X#X#X", "X###X"]
+#   L=(0,0)  U=(4,0)
+#
+# ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
+#   L=(0,1)  U=(6,1)
+#
+# ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
+#   L=(0,1)  U=(4,1)
+# ---------------------------------------------------------------------------
+
+production_bfs_tests = [
+    # --- DEFAULT ---
+    pytest.param(
+        ODV_GRID_DEFAULT, (0, 0), (4, 0),
+        [((0,0),-1), ((1,0),EAST), ((2,0),EAST), ((3,1),SOUTH_EAST), ((4,0),NORTH_EAST)],
+        id="default-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_DEFAULT, (4, 0), (0, 0),
+        [((4,0),-1), ((3,1),SOUTH_WEST), ((2,2),SOUTH_WEST), ((1,1),NORTH_WEST), ((0,0),NORTH_WEST)],
+        id="default-unload-to-load",
+    ),
+    # --- EX1 ---
+    pytest.param(
+        ODV_GRID_EX1, (0, 1), (6, 1),
+        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,1),SOUTH_EAST), ((4,1),EAST), ((5,2),SOUTH_EAST), ((6,1),NORTH_EAST)],
+        id="ex1-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_EX1, (6, 1), (0, 1),
+        [((6,1),-1), ((5,2),SOUTH_WEST), ((4,2),WEST), ((3,1),NORTH_WEST), ((2,2),SOUTH_WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        id="ex1-unload-to-load",
+    ),
+    # --- EX2 ---
+    pytest.param(
+        ODV_GRID_EX2, (0, 1), (4, 1),
+        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,0),EAST), ((4,1),SOUTH_EAST)],
+        id="ex2-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_EX2, (4, 1), (0, 1),
+        [((4,1),-1), ((3,2),SOUTH_WEST), ((2,2),WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        id="ex2-unload-to-load",
+    ),
+    # --- EX3 (one-way clockwise loop) ---
+    pytest.param(
+        ODV_GRID_EX3, (0, 1), (4, 1),
+        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,0),EAST), ((4,1),SOUTH_EAST)],
+        id="ex3-load-to-unload",
+    ),
+    pytest.param(
+        ODV_GRID_EX3, (4, 1), (0, 1),
+        [((4,1),-1), ((3,2),SOUTH_WEST), ((2,2),WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        id="ex3-unload-to-load",
+    ),
+]
+
+
+@pytest.mark.parametrize("grid,start_tile,end_tile,expected_path", production_bfs_tests)
+def test_bfs_production_grids(grid, start_tile, end_tile, expected_path):
+    helper = RunODVMotors(MagicMock(), 80, grid)
     result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
     check.equal(result, expected_path)
