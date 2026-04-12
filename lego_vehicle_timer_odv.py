@@ -52,12 +52,12 @@ DEBUG = const(False)
 
 # odv settings
 ODV_SPEED: int = const(45)  # set between 40 and 70
-# X= obstacle, H= Home, L = Load, U = Unload, # = grid tile, < left direction only, > right direction only
+# X= obstacle, L = Load, U = Unload/End (homing wall NORTH and EAST), # = grid tile, < left direction only, > right direction only
 # ODV_GRID = ["H######", "###X#XX", "LX###XU", "###X###"]
 # ODV_GRID = ["XL##XU", "H#X###"]
 
-ODV_GRID_YE2 = ["XH#U", "X#X#", "L#<#"]
-ODV_GRID_GR3 = ["L##<U", "H#X#X", "X###X"]
+ODV_GRID_YE2 = ["XX#U", "X#X#", "L#<#"]
+ODV_GRID_GR3 = ["L##<U", "X#X#X", "X###X"]
 ODV_GRID_BL4 = ["X###X", "#X#X", "L#<#U"]
 
 ODV_GRID = ODV_GRID_GR3
@@ -501,7 +501,6 @@ WALL = 'X'
 TRACK = '#'
 WEST_ONLY_TRACK = '<'
 EAST_ONLY_TRACK = '>'
-HOME = 'H'
 LOAD = 'L'
 UNLOAD = 'U'
 OK_MOVES = [TRACK, LOAD, UNLOAD]
@@ -566,7 +565,7 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
         can_move = False
     elif (tl_type == EAST_ONLY_TRACK or tr_type == EAST_ONLY_TRACK or br_type == EAST_ONLY_TRACK or bl_type == EAST_ONLY_TRACK) and direction != EAST:
         can_move = False
-    elif (tl_type == HOME or tr_type == HOME or br_type == HOME or bl_type == HOME) and direction != NORTH and direction != WEST and direction != NORTH_WEST:
+    elif (tl_type == UNLOAD or tr_type == UNLOAD or br_type == UNLOAD or bl_type == UNLOAD) and direction == NORTH:
         can_move = False
     else:
         can_move = True
@@ -586,7 +585,7 @@ def _can_traverse_coarse(from_type: str, to_type: str, direction: int) -> bool:
         return False
     if (from_type == EAST_ONLY_TRACK or to_type == EAST_ONLY_TRACK) and direction != EAST:
         return False
-    if to_type == HOME and direction != NORTH and direction != WEST and direction != NORTH_WEST:
+    if from_type == UNLOAD and direction == NORTH:
         return False
     return True
 
@@ -629,7 +628,6 @@ class RunODVMotors(MotorHelper):
         super().__init__(False, True)
         # grid setup
         self.motors_running = None
-        self.home_tile: tuple[int, int] = (0, 0)
         self.unload_tile: tuple[int, int] = (0, 0)
         self.load_tile: tuple[int, int] = (0, 0)
         self.last_fine_grid_position: tuple[int, int] = (0, 0)
@@ -691,10 +689,6 @@ class RunODVMotors(MotorHelper):
                 if character == EAST_ONLY_TRACK:
                     self.gt_one_way_right.append((x, y))
                 # set load/unload points
-                if character == HOME:
-                    # print('----home_tile----')
-                    # mem_info()
-                    self.home_tile = const((x, y))  # mem_info()  # print('----home_tile----')
                 if character == LOAD:
                     # print('----load_tile----')
                     # mem_info()
@@ -709,7 +703,6 @@ class RunODVMotors(MotorHelper):
         if DEBUG:
             mem_info()
             print('Grid Loaded')
-            print(f"--home tile is {self.home_tile}")
             print(f"--loads tile is {self.load_tile}")
             print(f"--unload tile is {self.unload_tile}")
             self._display_grid_()
@@ -722,8 +715,6 @@ class RunODVMotors(MotorHelper):
             for x in range(self.coarse_grid_width):
                 if position_x_y is not None and (x, y) == position_x_y:
                     print("R", end='')
-                elif (x, y) == self.home_tile:
-                    print(HOME, end='')
                 elif (x, y) == self.load_tile:
                     print(LOAD, end='')
                 elif (x, y) == self.unload_tile:
@@ -743,26 +734,29 @@ class RunODVMotors(MotorHelper):
 
     def do_homing(self):
         # Slowly move until the motor stalls (hits a physical stop),
-        # then move forward by an offset distance and set that as the zero origin.
+        # then step back one pitch and set that as the zero origin.
+        # Homing wall is NORTH and EAST of the unload tile.
         if self.mh_is_homed:
             return
-        # Homing axis Y
+        unload_tile_angle = self._tile_to_angle(self.unload_tile)
+
+        # Homing axis Y — run NORTH until stalled against top wall
         self.motor_y.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
         wait(200)
-        home_tile_angle = self._tile_to_angle(self.home_tile)
-        self.motor_y.reset_angle(home_tile_angle[1])
+        self.motor_y.reset_angle(unload_tile_angle[1])
         self.motor_y.run_angle(_MAX_MOTOR_ROT_SPEED, _GEAR_RATIO_TO_GRID)
         wait(200)
 
-        # Homing axis X
-        self.motor_x.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
+        # Homing axis X — run EAST until stalled against right wall
+        self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
         wait(200)
-        self.motor_x.reset_angle(home_tile_angle[0])
-        self.motor_x.run_angle(_MAX_MOTOR_ROT_SPEED, _GEAR_RATIO_TO_GRID)
+        self.motor_x.reset_angle(unload_tile_angle[0] + (_FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID))
+        self.motor_x.run_angle(_MAX_MOTOR_ROT_SPEED, -_GEAR_RATIO_TO_GRID)
         wait(200)
 
+        self.has_load = False
         self.set_is_homed()
-        self._display_grid_(self.home_tile)
+        self._display_grid_(self.unload_tile)
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
         if direction != NORTH and direction != EAST and direction != SOUTH and direction != WEST:
@@ -841,8 +835,6 @@ class RunODVMotors(MotorHelper):
 
         if DEBUG:
             print("-Coarse", coarse_position)
-        if coarse_position == self.home_tile:
-            return coarse_position, HOME
         if coarse_position == self.load_tile:
             return coarse_position, LOAD
         if coarse_position == self.unload_tile:
@@ -965,7 +957,7 @@ class RunODVMotors(MotorHelper):
         if DEBUG:
             print('getting path to home')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
-        path = self._bfs_path_to_grid_tile(tile, self.home_tile)
+        path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
         self._navigate_grid_tile_path(path)
         if DEBUG:
             print('homed')
@@ -1008,7 +1000,6 @@ class RunODVMotors(MotorHelper):
             print("--grid_tracks", self.grid_tracks)
             print("--gt_one_way_left", self.gt_one_way_left)
             print("--gt_one_way_right", self.gt_one_way_right)
-            self.print_tile_pos("--home_tile", self.home_tile)
             self.print_tile_pos("--load_tile", self.load_tile)
             self.print_tile_pos("--unload_tile", self.unload_tile)
         # parent[tile] = (parent_tile, direction_taken_to_reach_tile)
