@@ -62,7 +62,7 @@ def main() -> None:
         new_content = new_content.replace('# VEHICLE_SECTION',  vehicle_section_content)
         new_content = new_content.replace('drive_motors = MotorHelper(False, False)', drive_section_content)
 
-        out_path = PROJECT_ROOT / f'lego_vehicle_timer_{vehicle}.py'
+        out_path = PROJECT_ROOT / 'docs' / 'pybricks' / f'lego_vehicle_timer_{vehicle}.py'
         if out_path.exists():
             os.remove(out_path)
         with open(out_path, 'w') as f:
