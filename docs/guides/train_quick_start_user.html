@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>ODV Vehicle — Quick Start</title>
+    <title>Train Vehicle — Quick Start</title>
     <style>
       /* ── Page setup ─────────────────────────────────────────────────── */
       @page {
@@ -161,7 +161,7 @@
 
       .flash {
         animation: none;
-      } /* no animation in print */
+      }
       .seq {
         white-space: nowrap;
       }
@@ -256,7 +256,7 @@
   </head>
   <body>
     <header>
-      <h1>ODV Vehicle &mdash; Quick Start</h1>
+      <h1>Train Vehicle &mdash; Quick Start</h1>
     </header>
 
     <!-- ── RUNNING ───────────────────────────────────────────────────── -->
@@ -269,7 +269,7 @@
               <div style="flex: 1; text-align: center">
                 <img
                   class="diagram"
-                  src="images/ODVSteerRemoteUpDown.jpg"
+                  src="../images/TrainRemoteLeft.jpg"
                   alt="Remote up/down"
                   style="width: 100%"
                 />
@@ -277,7 +277,7 @@
               <div style="flex: 1; text-align: center">
                 <img
                   class="diagram"
-                  src="images/ODVSteerRemoteLeftRight.jpg"
+                  src="../images/TrainRemoteRight.jpg"
                   alt="Remote left/right"
                   style="width: 100%"
                 />
@@ -295,7 +295,7 @@
                 <tr>
                   <td>
                     <img
-                      src="images/green_dot_f.png"
+                      src="../images/green_dot_f.png"
                       alt="Green flashing"
                       style="height: 13pt; vertical-align: middle"
                     />
@@ -306,7 +306,7 @@
                 <tr>
                   <td>
                     <img
-                      src="images/green_dot.png"
+                      src="../images/green_dot.png"
                       alt="Green steady"
                       style="height: 13pt; vertical-align: middle"
                     />
@@ -317,7 +317,7 @@
                 <tr>
                   <td>
                     <img
-                      src="images/orange_dot.png"
+                      src="../images/orange_dot.png"
                       alt="Orange steady"
                       style="height: 13pt; vertical-align: middle"
                     />
@@ -328,7 +328,7 @@
                 <tr>
                   <td>
                     <img
-                      src="images/red_dot_f.png"
+                      src="../images/red_dot_f.png"
                       alt="Red flashing"
                       style="height: 13pt; vertical-align: middle"
                     />
@@ -343,50 +343,6 @@
       </div>
     </section>
 
-    <!-- ── THE GRID ─────────────────────────────────────────────────── -->
-    <section class="setup">
-      <h2>The Grid</h2>
-      <div class="body">
-        <div class="diagram-row">
-          <div class="steps-col">
-            <ul class="trouble">
-              <li>
-                <span class="trouble-icon">&#129001;</span>
-                <span
-                  ><strong class="trouble-title">Green tile — Load</strong>This
-                  is where the vehicle picks up its cargo.</span
-                >
-              </li>
-              <li>
-                <span class="trouble-icon">&#128994;</span>
-                <span
-                  ><strong class="trouble-title">Orange tile — End</strong>This
-                  is where the vehicle drops off its cargo. It also homes itself
-                  here at startup.</span
-                >
-              </li>
-              <li>
-                <span class="trouble-icon">&#9654;</span>
-                <span
-                  ><strong class="trouble-title">Arrow tiles — One way</strong>
-                  The vehicle will not drive against the arrow.</span
-                >
-              </li>
-            </ul>
-          </div>
-          <div class="img-col">
-            <img
-              class="diagram"
-              src="images/ODV_GRID_DEFAULT.png"
-              alt="Grid layout diagram"
-            />
-            <p class="diagram-caption">
-              Green&nbsp;=&nbsp;Load &nbsp;|&nbsp; Orange&nbsp;=&nbsp;End
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
     <!-- ── TROUBLESHOOTING ───────────────────────────────────────────── -->
     <section class="trouble">
       <h2>Troubleshooting</h2>
@@ -409,17 +365,9 @@
               ask for help.
             </span>
           </li>
-          <li>
-            <span class="trouble-icon">&#128663;</span>
-            <span>
-              <strong class="trouble-title">Vehicle fell off the track</strong>
-              It happens, please ask for help.
-            </span>
-          </li>
         </ul>
       </div>
     </section>
-
     <footer>
       <a href="https://github.com/etendut/lego-vehicle-timer"
         >github.com/etendut/lego-vehicle-timer</a

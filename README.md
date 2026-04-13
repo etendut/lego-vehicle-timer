@@ -25,10 +25,10 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
 
 - Use [PyBricks](https://code.pybricks.com/) to configure your hub
 - select the program based on the vehicle type
-  - [lego_vehicle_timer_train](lego_vehicle_timer_train.py)
-  - [lego_vehicle_timer_skid_steer](lego_vehicle_timer_skid_steer.py)
-  - [lego_vehicle_timer_servo](lego_vehicle_timer_servo.py)
-  - [lego_vehicle_timer_odv](lego_vehicle_timer_odv.py)
+  - [lego_vehicle_timer_train](docs/pybricks/lego_vehicle_timer_train.py)
+  - [lego_vehicle_timer_skid_steer](docs/pybricks/lego_vehicle_timer_skid_steer.py)
+  - [lego_vehicle_timer_servo](docs/pybricks/lego_vehicle_timer_servo.py)
+  - [lego_vehicle_timer_odv](docs/pybricks/lego_vehicle_timer_odv.py)
 - configure the settings as per below [Configuration](#configuration)
 - load the program onto your hub using PyBricks
 
@@ -36,19 +36,19 @@ A python program to enable a time limited running of a Train, Servo Steer, Skid 
 
 ### Train
 
-[User Quick Start](https://etendut.github.io/lego-vehicle-timer/train_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/train_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/train_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/train_quick_start_instructor.html)
 
 ### Skid Steer
 
-[User Quick Start](https://etendut.github.io/lego-vehicle-timer/skid_steer_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/skid_steer_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/skid_steer_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/skid_steer_quick_start_instructor.html)
 
 ### Servo Steer
 
-[User Quick Start](https://etendut.github.io/lego-vehicle-timer/servo_steer_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/servo_steer_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/servo_steer_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/servo_steer_quick_start_instructor.html)
 
 ### ODV
 
-[User Quick Start](https://etendut.github.io/lego-vehicle-timer/odv_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/odv_quick_start_instructor.html)
+[User Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/odv_quick_start_user.html) | [Instructor Quick Start](https://etendut.github.io/lego-vehicle-timer/guides/odv_quick_start_instructor.html)
 
 ## Configuration
 
@@ -69,7 +69,7 @@ REMOTE_DISABLED = False # for debugging or ODV full auto
 
 ### Train
 
-Configuration should be done in [lego_vehicle_timer_train](lego_vehicle_timer_train.py) before installing
+Configuration should be done in [lego_vehicle_timer_train](docs/pybricks/lego_vehicle_timer_train.py) before installing
 with [PyBricks](https://code.pybricks.com/)
 
 Expects a train motor on Port A, and an optional train motor or light on Port B<br>
@@ -82,7 +82,7 @@ TRAIN_REVERSE_MOTOR_2 = True # only used if a second train motor is on Port B<br
 
 ### Skid Steer
 
-Configuration should be done in [lego_vehicle_timer_skid_steer](lego_vehicle_timer_skid_steer.py) before installing
+Configuration should be done in [lego_vehicle_timer_skid_steer](docs/pybricks/lego_vehicle_timer_skid_steer.py) before installing
 with [PyBricks](https://code.pybricks.com/)
 
 Expects a DC motor on Port A and Port B<br>
@@ -94,7 +94,7 @@ SKID_STEER_REVERSE_RIGHT_MOTOR = False # set to True if remote + button cause mo
 
 ### Servo Steer
 
-Configuration should be done in [lego_vehicle_timer_servo](lego_vehicle_timer_servo.py) before installing
+Configuration should be done in [lego_vehicle_timer_servo](docs/pybricks/lego_vehicle_timer_servo.py) before installing
 with [PyBricks](https://code.pybricks.com/)
 
 Expects a DC motor on Port A and a motor with a rotation sensor on Port B<br>
@@ -106,7 +106,7 @@ SERVO_STEER_REVERSE_TURN_MOTOR = False # set to True if remote + button cause mo
 
 ### ODV
 
-Configuration should be done in [lego_vehicle_timer_odv](lego_vehicle_timer_odv.py) before installing
+Configuration should be done in [lego_vehicle_timer_odv](docs/pybricks/lego_vehicle_timer_odv.py) before installing
 with [PyBricks](https://code.pybricks.com/)
 
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
@@ -141,35 +141,6 @@ ODV_GRID = `["X###X", "L###U", "X###X"]`<br>
 ODV_GRID = `["X#>#X", "L###U", "X#<#X"]`<br>
 L→U travels top (eastward through `>`), U→L travels bottom (westward through `<`)<br>
 <img src="docs/images/ODV_GRID_EX3.png" alt="Grid example 3" /> <br>
-
-## Light Codes
-
-### Hub Light Codes
-
-Once the program starts certain errors will be flashed on the hub
-
-|                                                                                                                                                                    | Sequence                   | Meaning                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <img src="docs/images/blue_dot_f.png" alt="Blue flashing" />                                                                                                            | BLUE flashing              | CAUTION If the hub continues this sequence despite multiple clicks of the hub button it means the hub has been wiped and needs to be reprogrammed.<br/> So far the only anecdotal cause seems to be when the batteries dip below critical levels |
-| <img src="docs/images/blue_dot.png" alt="Blue" />                                                                                                                       | BLUE On                    | Program started                                                                                                                                                                                                                                  |
-| <img src="docs/images/white_dot_f.png" alt="White" /><img src="docs/images/white_dot_f.png" alt="White flashing" /><img src="docs/images/white_dot_f.png" alt="White flashing" /> | 3 WHITE flashes then pause | Looking for remote                                                                                                                                                                                                                               |
-| <img src="docs/images/green_dot_f.png" alt="Green flashing" />                                                                                                          | GREEN flashing             | Ready for start                                                                                                                                                                                                                                  |
-| <img src="docs/images/green_dot.png" alt="Green" />                                                                                                                     | GREEN On                   | Timer Running                                                                                                                                                                                                                                    |
-| <img src="docs/images/orange_dot_fs.png" alt="Orange flashing" />                                                                                                       | ORANGE slow flashing       | Last 60 secs                                                                                                                                                                                                                                     |
-| <img src="docs/images/orange_dot_f.png" alt="Orange flashing" />                                                                                                        | ORANGE fast flashing       | Last 20 secs                                                                                                                                                                                                                                     |
-| <img src="docs/images/orange_dot.png" alt="Orange flashing" />                                                                                                          | ORANGE On                  | Time complete                                                                                                                                                                                                                                    |
-
-### Error Codes
-
-Once the program starts certain errors will be flashed on the hub
-
-|                                                                                                                                                                                                                                                                           | Sequence                  | Meaning                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------- |
-| <img src="docs/images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                                                                     | Constant RED Flash on/off | Other Error             |
-| <img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" />                                                                                                                                                                | 2 RED flashes then pause  | Missing Motor on Port A |
-| <img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" />                                                                                                           | 3 RED flashes then pause  | Missing Motor on Port B |
-| <img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" />                                                      | 4 RED flashes then pause  | Missing Remote          |
-| <img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" /><img src="docs/images/red_dot_f.png" alt="Red flashing" /> | 5 RED flashes then pause  | Low Battery             |
 
 ## Releases
 
