@@ -555,9 +555,23 @@ class RunODVMotors(MotorHelper):
                 if new_pos in parent:
                     continue
                 to_type = self._get_grid_tile_type_from_coarse_xy_(new_pos)
-                if _can_traverse_coarse(from_type, to_type, direction):
-                    parent[new_pos] = (current, direction)
-                    queue.append(new_pos)
+                if not _can_traverse_coarse(from_type, to_type, direction):
+                    continue
+                # For diagonal moves, check the two corner cells to prevent cutting
+                # through walls or one-way tiles at the edges of the diagonal.
+                if direction in (NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST):
+                    dx = new_pos[0] - current[0]
+                    dy = new_pos[1] - current[1]
+                    cx_type = self._get_grid_tile_type_from_coarse_xy_((new_pos[0], current[1]))
+                    cy_type = self._get_grid_tile_type_from_coarse_xy_((current[0], new_pos[1]))
+                    x_dir = EAST if dx > 0 else WEST
+                    y_dir = NORTH if dy < 0 else SOUTH
+                    if not _can_traverse_coarse(from_type, cx_type, y_dir):
+                        continue
+                    if not _can_traverse_coarse(from_type, cy_type, x_dir):
+                        continue
+                parent[new_pos] = (current, direction)
+                queue.append(new_pos)
 
         if not found:
             if DEBUG:

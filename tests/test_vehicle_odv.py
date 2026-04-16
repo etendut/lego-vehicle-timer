@@ -145,8 +145,8 @@ bfs_tests = [
     ),
     pytest.param(
         (3, 0), (0, 2),
-        # diagonal SW from (1,1) reaches (0,2) directly
-        [((3,0),-1), ((2,0),WEST), ((1,0),WEST), ((1,1),SOUTH), ((0,2),SOUTH_WEST)],
+        # SW from (1,1) to (0,2) blocked — corner (0,1) is WALL
+        [((3,0),-1), ((2,0),WEST), ((1,0),WEST), ((1,1),SOUTH), ((1,2),SOUTH), ((0,2),WEST)],
         id="unload-to-load",
     ),
     pytest.param(
@@ -230,47 +230,56 @@ def test_bfs_all_directions(start_tile, end_tile, expected_path):
 
 production_bfs_tests = [
     # --- DEFAULT ---
+    # ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"] — col 2 is WEST_ONLY, so diagonals
+    # that cut past it are blocked; BFS routes via the bottom row cardinally.
     pytest.param(
         ODV_GRID_DEFAULT, (0, 0), (4, 0),
-        [((0,0),-1), ((1,1),SOUTH_EAST), ((2,2),SOUTH_EAST), ((3,1),NORTH_EAST), ((4,0),NORTH_EAST)],
+        [((0,0),-1), ((1,0),EAST), ((1,1),SOUTH), ((1,2),SOUTH), ((2,2),EAST), ((3,2),EAST), ((3,1),NORTH), ((3,0),NORTH), ((4,0),EAST)],
         id="default-load-to-unload",
     ),
     pytest.param(
         ODV_GRID_DEFAULT, (4, 0), (0, 0),
-        [((4,0),-1), ((3,1),SOUTH_WEST), ((2,2),SOUTH_WEST), ((1,1),NORTH_WEST), ((0,0),NORTH_WEST)],
+        # Direct west through the WEST_ONLY top row
+        [((4,0),-1), ((3,0),WEST), ((2,0),WEST), ((1,0),WEST), ((0,0),WEST)],
         id="default-unload-to-load",
     ),
     # --- EX1 ---
+    # ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"] — col 3 is WALL, row 0/2 open.
+    # Diagonals that would cut across wall corners are blocked; path uses cardinal steps.
     pytest.param(
         ODV_GRID_EX1, (0, 1), (6, 1),
-        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,1),SOUTH_EAST), ((4,1),EAST), ((5,2),SOUTH_EAST), ((6,1),NORTH_EAST)],
+        [((0,1),-1), ((0,0),NORTH), ((1,0),EAST), ((2,0),EAST), ((2,1),SOUTH), ((3,1),EAST), ((4,1),EAST), ((4,2),SOUTH), ((5,2),EAST), ((6,2),EAST), ((6,1),NORTH)],
         id="ex1-load-to-unload",
     ),
     pytest.param(
         ODV_GRID_EX1, (6, 1), (0, 1),
-        [((6,1),-1), ((5,2),SOUTH_WEST), ((4,2),WEST), ((3,1),NORTH_WEST), ((2,2),SOUTH_WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        [((6,1),-1), ((6,2),SOUTH), ((5,2),WEST), ((4,2),WEST), ((4,1),NORTH), ((3,1),WEST), ((2,1),WEST), ((2,0),NORTH), ((1,0),WEST), ((0,0),WEST), ((0,1),SOUTH)],
         id="ex1-unload-to-load",
     ),
     # --- EX2 ---
+    # ODV_GRID_EX2 = ["X###X", "L###U", "X###X"] — no directional tiles, corner cells
+    # are only walls on the border, so interior diagonals remain valid.
     pytest.param(
         ODV_GRID_EX2, (0, 1), (4, 1),
-        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,0),EAST), ((4,1),SOUTH_EAST)],
+        [((0,1),-1), ((1,1),EAST), ((2,0),NORTH_EAST), ((3,1),SOUTH_EAST), ((4,1),EAST)],
         id="ex2-load-to-unload",
     ),
     pytest.param(
         ODV_GRID_EX2, (4, 1), (0, 1),
-        [((4,1),-1), ((3,2),SOUTH_WEST), ((2,2),WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        [((4,1),-1), ((3,1),WEST), ((2,2),SOUTH_WEST), ((1,1),NORTH_WEST), ((0,1),WEST)],
         id="ex2-unload-to-load",
     ),
     # --- EX3 (one-way clockwise loop) ---
+    # ODV_GRID_EX3 = ["X#>#X", "L#X#U", "X#<#X"] — col 2 is EAST_ONLY top, WEST_ONLY
+    # bottom; diagonals past those tiles are blocked.
     pytest.param(
         ODV_GRID_EX3, (0, 1), (4, 1),
-        [((0,1),-1), ((1,0),NORTH_EAST), ((2,0),EAST), ((3,0),EAST), ((4,1),SOUTH_EAST)],
+        [((0,1),-1), ((1,1),EAST), ((1,0),NORTH), ((2,0),EAST), ((3,0),EAST), ((3,1),SOUTH), ((4,1),EAST)],
         id="ex3-load-to-unload",
     ),
     pytest.param(
         ODV_GRID_EX3, (4, 1), (0, 1),
-        [((4,1),-1), ((3,2),SOUTH_WEST), ((2,2),WEST), ((1,2),WEST), ((0,1),NORTH_WEST)],
+        [((4,1),-1), ((3,1),WEST), ((3,2),SOUTH), ((2,2),WEST), ((1,2),WEST), ((1,1),NORTH), ((0,1),WEST)],
         id="ex3-unload-to-load",
     ),
 ]
