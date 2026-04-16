@@ -218,7 +218,7 @@ def test_bfs_all_directions(start_tile, end_tile, expected_path):
 # Verifies BFS finds the correct shortest path between Load and Unload on the
 # three real grids.  Expected paths were captured from a verified run.
 #
-# ODV_GRID_DEFAULT = ["L##<U", "X#X#X", "X###X"]
+# ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
 #   L=(0,0)  U=(4,0)
 #
 # ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
@@ -232,7 +232,7 @@ production_bfs_tests = [
     # --- DEFAULT ---
     pytest.param(
         ODV_GRID_DEFAULT, (0, 0), (4, 0),
-        [((0,0),-1), ((1,0),EAST), ((2,0),EAST), ((3,1),SOUTH_EAST), ((4,0),NORTH_EAST)],
+        [((0,0),-1), ((1,1),SOUTH_EAST), ((2,2),SOUTH_EAST), ((3,1),NORTH_EAST), ((4,0),NORTH_EAST)],
         id="default-load-to-unload",
     ),
     pytest.param(
