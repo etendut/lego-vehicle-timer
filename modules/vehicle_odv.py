@@ -296,12 +296,9 @@ class RunODVMotors(MotorHelper):
     def reset_homing(self) -> None:
         self.reset_is_homed()
 
-    def do_homing(self):
-        # Slowly move until the motor stalls (hits a physical stop),
-        # then step back one pitch and set that as the zero origin.
+    def home_and_unload(self):
+        # Homing — slowly stall against top and right walls, then back off to unload tile.
         # Homing wall is NORTH and EAST of the unload tile.
-        if self.mh_is_homed:
-            return
         unload_tile_angle = self._tile_to_angle(self.unload_tile)
 
         # Homing axis Y — run NORTH until stalled against top wall
@@ -312,8 +309,11 @@ class RunODVMotors(MotorHelper):
         wait(200)
 
         # Homing axis X — run EAST until stalled against right wall
-        self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
-        wait(200)
+        # this by nature of design also unloads the cart
+        self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)        
+        if DEBUG:
+            print("unloading..")
+        wait(2000)
         self.motor_x.reset_angle(unload_tile_angle[0] + (_FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID))
         self.motor_x.run_angle(_MAX_MOTOR_ROT_SPEED, -_GEAR_RATIO_TO_GRID)
         wait(200)
@@ -454,26 +454,6 @@ class RunODVMotors(MotorHelper):
         if DEBUG:
             print("ready to go")
 
-    def _do_unload_(self):
-
-        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
-        if tile != self.unload_tile and self._distance(tile, self.unload_tile) > 1:
-            if DEBUG:
-                print(f'{tile} is too far away from unload_tile {self.load_tile}')
-            return
-
-        tile_angle = self._navigate_to_grid_tile(self.unload_tile)
-        wait(200)
-        if DEBUG:
-            print("unloading..")
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle[0] + (_GEAR_RATIO_TO_GRID * 5))
-        wait(2000)
-        self._navigate_to_grid_tile(self.unload_tile)
-        wait(200)
-        self.has_load = False
-        if DEBUG:
-            print("ready to go")
-
     @staticmethod
     def _tile_to_angle(tile: tuple[int, int]) -> tuple[int, int]:
         """
@@ -515,17 +495,6 @@ class RunODVMotors(MotorHelper):
 
         return True
 
-    def auto_home(self):
-        if not self.mh_is_homed:
-            return
-        if DEBUG:
-            print('getting path to home')
-        tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
-        path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
-        self._navigate_grid_tile_path(path)
-        if DEBUG:
-            print('homed')
-
     def auto_load(self):
         if not self.mh_is_homed:
             return
@@ -544,7 +513,7 @@ class RunODVMotors(MotorHelper):
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
         self._navigate_grid_tile_path(path)
-        self._do_unload_()
+        self.home_and_unload()
 
     @staticmethod
     def _distance(start_tile: tuple[int, int], end_tile: tuple[int, int]) -> int:
@@ -666,7 +635,7 @@ class RunODVMotors(MotorHelper):
             return
         if can_unload and direction == EAST:
             self.stop_motors()
-            self._do_unload_()
+            self.home_and_unload()
             return
 
         if not can_move:

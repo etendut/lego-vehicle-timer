@@ -100,7 +100,7 @@ class MotorHelper:
         """Tracked racer only"""
         pass
 
-    def do_homing(self):
+    def home_and_unload(self):
         """ODV only"""
         pass
 
@@ -113,10 +113,6 @@ class MotorHelper:
         pass
 
     def auto_load(self):
-        """ODV only"""
-        pass
-
-    def auto_home(self):
         """ODV only"""
         pass
 
@@ -514,8 +510,8 @@ def main():
 
             # if there is no remote, then there is no point in a countdown
             if countdown_timer.has_time_remaining() or REMOTE_DISABLED:
-                if drive_motors.mh_supports_homing:
-                    drive_motors.do_homing()
+                if drive_motors.mh_supports_homing and not drive_motors.mh_is_homed:
+                    drive_motors.home_and_unload()
                 if drive_motors.mh_supports_flip:
                     drive_motors.handle_flip()
                 if not REMOTE_DISABLED:
@@ -524,7 +520,6 @@ def main():
                 drive_motors.stop_motors()
                 if drive_motors.mh_supports_homing:
                 #     drive_motors.auto_unload()
-                #     drive_motors.auto_home()
                     drive_motors.reset_homing()
 
             countdown_timer.show_status()
