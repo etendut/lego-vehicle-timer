@@ -41,6 +41,11 @@ ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 REMOTE_DISABLED = False
 
 # low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
+
+# battery notes
+# - fresh battery = 1.6V
+# - hub programming often fails below 1.5v
+# - TODO critical level may be too low
 MILLIVOLT_CRITICAL_LEVEL = const(7200) 
 
 # skid steer dual motor settings
