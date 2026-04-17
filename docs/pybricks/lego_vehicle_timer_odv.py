@@ -49,7 +49,7 @@ REMOTE_DISABLED = True
 # low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
 MILLIVOLT_CRITICAL_LEVEL = const(7200) 
 
-DEBUG = const(True)
+DEBUG = const(False)
 
 # odv settings
 ODV_SPEED: int = const(45)  # set between 40 and 70

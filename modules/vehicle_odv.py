@@ -30,7 +30,7 @@ remote: Remote | None = None
 from pybricks.parameters import Button
 
 # VARS_START
-DEBUG = const(True)
+DEBUG = const(False)
 
 # odv settings
 ODV_SPEED: int = const(45)  # set between 40 and 70
