@@ -508,6 +508,8 @@ class RunODVMotors(MotorHelper):
     def auto_unload(self):
         if not self.mh_is_homed:
             return
+        if not self.has_load:
+          return
         if DEBUG:
             print('getting path to unload')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
