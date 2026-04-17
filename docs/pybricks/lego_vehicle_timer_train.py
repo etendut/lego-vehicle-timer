@@ -39,8 +39,8 @@ ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
 
-# low voltage protection in millivolts e.g. 7.2V = 7200mV
-MILLIVOLT_CRITICAL_LEVEL = const(1.2 * 6 * 1000)
+# low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
+MILLIVOLT_CRITICAL_LEVEL = const(7200) 
 
 # Train mode settings
 TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed

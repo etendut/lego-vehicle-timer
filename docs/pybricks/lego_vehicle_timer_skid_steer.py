@@ -40,8 +40,8 @@ ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
 
-# low voltage protection in millivolts e.g. 7.2V = 7200mV
-MILLIVOLT_CRITICAL_LEVEL = const(1.2 * 6 * 1000)
+# low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
+MILLIVOLT_CRITICAL_LEVEL = const(7200) 
 
 # skid steer dual motor settings
 SKID_STEER_SPEED: int = const(80)  # set between 50 and 100
