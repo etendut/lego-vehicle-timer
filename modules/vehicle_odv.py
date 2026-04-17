@@ -30,7 +30,7 @@ remote: Remote | None = None
 from pybricks.parameters import Button
 
 # VARS_START
-DEBUG = const(False)
+DEBUG = const(True)
 
 # odv settings
 ODV_SPEED: int = const(45)  # set between 40 and 70
@@ -310,17 +310,21 @@ class RunODVMotors(MotorHelper):
 
         # Homing axis X — run EAST until stalled against right wall
         # this by nature of design also unloads the cart
-        self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)        
+        self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED*3, duty_limit=_HOMING_DUTY)        
         if DEBUG:
             print("unloading..")
         wait(2000)
-        self.motor_x.reset_angle(unload_tile_angle[0] + (_FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID))
-        self.motor_x.run_angle(_MAX_MOTOR_ROT_SPEED, -_GEAR_RATIO_TO_GRID)
+        self.motor_x.reset_angle(unload_tile_angle[0] + ((_FINE_GRID_SIZE-1) * _GEAR_RATIO_TO_GRID))
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, unload_tile_angle[0] + (_FINE_GRID_SIZE // 2) * _GEAR_RATIO_TO_GRID)
         wait(200)
 
         self.has_load = False
         self.set_is_homed()
         self._display_grid_(self.unload_tile)
+        if DEBUG:
+            fp = self._get_fine_grid_position_()
+            self._get_grid_tile_from_fine_xy_(fp, False)
+
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
         if direction != NORTH and direction != EAST and direction != SOUTH and direction != WEST:
@@ -468,7 +472,7 @@ class RunODVMotors(MotorHelper):
     def _navigate_to_grid_tile(self, tile: tuple[int, int], stop=Stop.HOLD) -> tuple[int, int]:
         if DEBUG:
             print(f"navigating to tile {tile}")
-        tile_angle_x = tile[0] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID
+        tile_angle_x = tile[0] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID + (_FINE_GRID_SIZE // 2) * _GEAR_RATIO_TO_GRID
         tile_angle_y = (tile[1] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID) + _GEAR_RATIO_TO_GRID
         self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
