@@ -1001,13 +1001,19 @@ class RunODVMotors(MotorHelper):
                 to_type = self._get_grid_tile_type_from_coarse_xy_(new_pos)
                 if not _can_traverse_coarse(from_type, to_type, direction):
                     continue
-                # For diagonal moves, block only if a corner cell is a WALL.
-                # One-way tiles as corners are allowed — the directional constraint
-                # applies to direct traversal, not to clipping a corner while passing by.
+                # For diagonal moves, check corner cells.
+                # cx (at new_x, current_y) — the diagonal crosses cx's incoming edge:
+                #   west edge if moving east (dx>0), east edge if moving west (dx<0).
+                # cy (at current_x, new_y) — diagonal passes by cy's side, not its wall edge.
                 if direction in (NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST):
+                    dx = new_pos[0] - current[0]
                     cx_type = self._get_grid_tile_type_from_coarse_xy_((new_pos[0], current[1]))
                     cy_type = self._get_grid_tile_type_from_coarse_xy_((current[0], new_pos[1]))
-                    if cx_type == WALL or cy_type == WALL:
+                    if cy_type == WALL or cx_type == WALL:
+                        continue
+                    if dx > 0 and cx_type == WEST_ONLY_TRACK:
+                        continue
+                    if dx < 0 and cx_type == EAST_ONLY_TRACK:
                         continue
                 parent[new_pos] = (current, direction)
                 queue.append(new_pos)

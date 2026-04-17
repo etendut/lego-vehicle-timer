@@ -242,8 +242,9 @@ production_bfs_tests = [
     # that cut past it are blocked; BFS routes via the bottom row cardinally.
     pytest.param(
         ODV_GRID_DEFAULT, (0, 0), (4, 0),
-        # SE from (1,1) clips corner (2,1)=WEST_ONLY but doesn't traverse it; NE (2,2)->(3,1) similarly clips it
-        [((0,0),-1), ((1,0),EAST), ((1,1),SOUTH), ((2,2),SOUTH_EAST), ((3,1),NORTH_EAST), ((3,0),NORTH), ((4,0),EAST)],
+        # SE from (1,1) crosses the west wall of cx=(2,1)=WEST_ONLY → blocked.
+        # BFS routes S to (1,2), E to (2,2), NE to (3,1), N to (3,0), E to (4,0).
+        [((0,0),-1), ((1,0),EAST), ((1,1),SOUTH), ((1,2),SOUTH), ((2,2),EAST), ((3,1),NORTH_EAST), ((3,0),NORTH), ((4,0),EAST)],
         id="default-load-to-unload",
     ),
     pytest.param(
