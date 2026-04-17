@@ -37,7 +37,7 @@ COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right cente
 ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 
 # for debugging or ODV full auto
-REMOTE_DISABLED = False
+REMOTE_DISABLED = True
 
 # low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
 MILLIVOLT_CRITICAL_LEVEL = const(7200) 

@@ -44,7 +44,7 @@ COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right cente
 ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(0)
 
 # for debugging or ODV full auto
-REMOTE_DISABLED = False
+REMOTE_DISABLED = True
 
 # low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
 MILLIVOLT_CRITICAL_LEVEL = const(7200) 
@@ -942,6 +942,8 @@ class RunODVMotors(MotorHelper):
     def auto_unload(self):
         if not self.mh_is_homed:
             return
+        if not self.has_load:
+          return
         if DEBUG:
             print('getting path to unload')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
