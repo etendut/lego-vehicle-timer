@@ -463,6 +463,7 @@ def main():
     print('SETUP')
     print('--setup hub')
     setup_hub()
+    print('voltage',hub.battery.voltage())
     try:
         print("--setup countdown")
         countdown_timer = CountdownTimer()
