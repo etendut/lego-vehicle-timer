@@ -144,7 +144,11 @@ L→U travels top (eastward through `>`), U→L travels bottom (westward through
 
 ## Releases
 
-### Version 2.2.0 (current)
+### Version 2.3.0 (current)
+
+- ODV autodrive fixes
+
+### Version 2.2.0
 
 - ODV full auto, hybrid, and manual drive modes working correctly
 - Fix hybrid mode timer reset when user interrupts auto navigation
