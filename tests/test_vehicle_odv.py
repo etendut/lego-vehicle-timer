@@ -93,18 +93,26 @@ coarse_tests = [
     pytest.param(T,  W,  NORTH, False, id="to-wall"),
     pytest.param(T,  W,  EAST,  False, id="to-wall-from-track"),
 
-    # < (WEST_ONLY): either tile blocks if direction != WEST
-    pytest.param(LT, T,  EAST,  False, id="from-lt-east"),
-    pytest.param(T,  LT, NORTH, False, id="to-lt-north"),
-    pytest.param(LT, LT, SOUTH, False, id="both-lt-south"),
-    pytest.param(LT, T,  WEST,  True,  id="from-lt-west-allowed"),
-    pytest.param(T,  LT, WEST,  True,  id="to-lt-west-allowed"),
+    # < (WEST_ONLY): blocks eastward components (EAST, NE, SE); N/S/W/NW/SW allowed
+    pytest.param(LT, T,  EAST,       False, id="from-lt-east"),
+    pytest.param(T,  LT, EAST,       False, id="to-lt-east"),
+    pytest.param(T,  LT, NORTH_EAST, False, id="to-lt-north-east"),
+    pytest.param(T,  LT, SOUTH_EAST, False, id="to-lt-south-east"),
+    pytest.param(T,  LT, NORTH,      True,  id="to-lt-north-allowed"),
+    pytest.param(LT, LT, SOUTH,      True,  id="both-lt-south-allowed"),
+    pytest.param(LT, T,  WEST,       True,  id="from-lt-west-allowed"),
+    pytest.param(T,  LT, WEST,       True,  id="to-lt-west-allowed"),
+    pytest.param(T,  LT, NORTH_WEST, True,  id="to-lt-north-west-allowed"),
 
-    # > (EAST_ONLY): either tile blocks if direction != EAST
-    pytest.param(RT, T,  WEST,  False, id="from-rt-west"),
-    pytest.param(T,  RT, NORTH, False, id="to-rt-north"),
-    pytest.param(RT, T,  EAST,  True,  id="from-rt-east-allowed"),
-    pytest.param(T,  RT, EAST,  True,  id="to-rt-east-allowed"),
+    # > (EAST_ONLY): blocks westward components (WEST, NW, SW); N/S/E/NE/SE allowed
+    pytest.param(RT, T,  WEST,       False, id="from-rt-west"),
+    pytest.param(T,  RT, WEST,       False, id="to-rt-west"),
+    pytest.param(T,  RT, NORTH_WEST, False, id="to-rt-north-west"),
+    pytest.param(T,  RT, SOUTH_WEST, False, id="to-rt-south-west"),
+    pytest.param(T,  RT, NORTH,      True,  id="to-rt-north-allowed"),
+    pytest.param(RT, T,  EAST,       True,  id="from-rt-east-allowed"),
+    pytest.param(T,  RT, EAST,       True,  id="to-rt-east-allowed"),
+    pytest.param(T,  RT, NORTH_EAST, True,  id="to-rt-north-east-allowed"),
 
     # UNLOAD source: NORTH is blocked (homing wall above)
     pytest.param(U,  T,  NORTH, False, id="from-unload-north"),
@@ -234,12 +242,13 @@ production_bfs_tests = [
     # that cut past it are blocked; BFS routes via the bottom row cardinally.
     pytest.param(
         ODV_GRID_DEFAULT, (0, 0), (4, 0),
-        [((0,0),-1), ((1,0),EAST), ((1,1),SOUTH), ((1,2),SOUTH), ((2,2),EAST), ((3,2),EAST), ((3,1),NORTH), ((3,0),NORTH), ((4,0),EAST)],
+        # SE from (1,1) clips corner (2,1)=WEST_ONLY but doesn't traverse it; NE (2,2)->(3,1) similarly clips it
+        [((0,0),-1), ((1,0),EAST), ((1,1),SOUTH), ((2,2),SOUTH_EAST), ((3,1),NORTH_EAST), ((3,0),NORTH), ((4,0),EAST)],
         id="default-load-to-unload",
     ),
     pytest.param(
         ODV_GRID_DEFAULT, (4, 0), (0, 0),
-        # Direct west through the WEST_ONLY top row
+        # Cardinals-first exploration prefers straight W,W,W,W over equal-length SW/NW zigzag
         [((4,0),-1), ((3,0),WEST), ((2,0),WEST), ((1,0),WEST), ((0,0),WEST)],
         id="default-unload-to-load",
     ),
@@ -261,12 +270,14 @@ production_bfs_tests = [
     # are only walls on the border, so interior diagonals remain valid.
     pytest.param(
         ODV_GRID_EX2, (0, 1), (4, 1),
-        [((0,1),-1), ((1,1),EAST), ((2,0),NORTH_EAST), ((3,1),SOUTH_EAST), ((4,1),EAST)],
+        # Cardinals-first: straight east across row 1 preferred over equal-length diagonal zigzag
+        [((0,1),-1), ((1,1),EAST), ((2,1),EAST), ((3,1),EAST), ((4,1),EAST)],
         id="ex2-load-to-unload",
     ),
     pytest.param(
         ODV_GRID_EX2, (4, 1), (0, 1),
-        [((4,1),-1), ((3,1),WEST), ((2,2),SOUTH_WEST), ((1,1),NORTH_WEST), ((0,1),WEST)],
+        # Cardinals-first: straight west across row 1
+        [((4,1),-1), ((3,1),WEST), ((2,1),WEST), ((1,1),WEST), ((0,1),WEST)],
         id="ex2-unload-to-load",
     ),
     # --- EX3 (one-way clockwise loop) ---

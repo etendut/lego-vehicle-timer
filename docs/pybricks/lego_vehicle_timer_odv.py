@@ -493,7 +493,7 @@ SOUTH = const(5)
 SOUTH_WEST = const(6)
 WEST = const(7)
 
-_ALL_DIRECTIONS = (NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST)
+_ALL_DIRECTIONS = (NORTH, EAST, SOUTH, WEST, NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST)
 
 WALL = 'X'
 TRACK = '#'
@@ -579,9 +579,9 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
 def _can_traverse_coarse(from_type: str, to_type: str, direction: int) -> bool:
     if to_type == WALL:
         return False
-    if (from_type == WEST_ONLY_TRACK or to_type == WEST_ONLY_TRACK) and direction != WEST:
+    if (from_type == WEST_ONLY_TRACK or to_type == WEST_ONLY_TRACK) and direction in (EAST, NORTH_EAST, SOUTH_EAST):
         return False
-    if (from_type == EAST_ONLY_TRACK or to_type == EAST_ONLY_TRACK) and direction != EAST:
+    if (from_type == EAST_ONLY_TRACK or to_type == EAST_ONLY_TRACK) and direction in (WEST, NORTH_WEST, SOUTH_WEST):
         return False
     if from_type == UNLOAD and direction == NORTH:
         return False
@@ -908,8 +908,12 @@ class RunODVMotors(MotorHelper):
             print(f"navigating to tile {tile}")
         tile_angle_x = tile[0] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID + (_FINE_GRID_SIZE // 2) * _GEAR_RATIO_TO_GRID
         tile_angle_y = (tile[1] * _FINE_GRID_SIZE * _GEAR_RATIO_TO_GRID) + _GEAR_RATIO_TO_GRID
-        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop)
+        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_y, then=stop, wait=False)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, tile_angle_x, then=stop)
+        # Sync: X blocks until done; Y runs concurrently — wait until Y also reaches its target.
+        # Important for cardinal N/S moves where X is a no-op and returns instantly.
+        while abs(self.motor_y.angle() - tile_angle_y) > _GEAR_RATIO_TO_GRID // 2:
+            wait(10)
         return tile_angle_x, tile_angle_y
 
     def _navigate_grid_tile_path(self, grid_tile_path: list[tuple[tuple[int, int], int]]) -> bool:
@@ -997,18 +1001,13 @@ class RunODVMotors(MotorHelper):
                 to_type = self._get_grid_tile_type_from_coarse_xy_(new_pos)
                 if not _can_traverse_coarse(from_type, to_type, direction):
                     continue
-                # For diagonal moves, check the two corner cells to prevent cutting
-                # through walls or one-way tiles at the edges of the diagonal.
+                # For diagonal moves, block only if a corner cell is a WALL.
+                # One-way tiles as corners are allowed — the directional constraint
+                # applies to direct traversal, not to clipping a corner while passing by.
                 if direction in (NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST):
-                    dx = new_pos[0] - current[0]
-                    dy = new_pos[1] - current[1]
                     cx_type = self._get_grid_tile_type_from_coarse_xy_((new_pos[0], current[1]))
                     cy_type = self._get_grid_tile_type_from_coarse_xy_((current[0], new_pos[1]))
-                    x_dir = EAST if dx > 0 else WEST
-                    y_dir = NORTH if dy < 0 else SOUTH
-                    if not _can_traverse_coarse(from_type, cx_type, y_dir):
-                        continue
-                    if not _can_traverse_coarse(from_type, cy_type, x_dir):
+                    if cx_type == WALL or cy_type == WALL:
                         continue
                 parent[new_pos] = (current, direction)
                 queue.append(new_pos)
