@@ -918,14 +918,18 @@ class RunODVMotors(MotorHelper):
         :param grid_tile_path:
         :return: succeeded
         """
-        for path in grid_tile_path:
+        for i, path in enumerate(grid_tile_path):
             # if user takes over break
             if self.mh_auto_drive and not self.mh__remote_disabled and remote is not None and len(remote.buttons.pressed()) > 0:
                 self.disable_auto_drive()
                 self.stop_motors()
                 return False
 
-            self._navigate_to_grid_tile(path[0])
+            if path[1] is not None and i < (len(grid_tile_path) - 1) and grid_tile_path[i + 1][1] is not None and \
+                    grid_tile_path[i + 1][1] == path[1]:
+                self._navigate_to_grid_tile(path[0], Stop.NONE)
+            else:
+                self._navigate_to_grid_tile(path[0])
 
         return True
 
