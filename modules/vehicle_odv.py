@@ -48,10 +48,13 @@ HYBRID = const(1)
 AUTO = const(2)
 
 DRIVE_MODE = HYBRID
-IDLE_TIMEOUT_SECS = const(30)
+IDLE_TIMEOUT_SECS = const(20) # allows robot time to do an unload an load within 30s
 
 ODV_SPEED = const(45)
 ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
+ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
+ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
+ODV_GRID_EX3 = ["X#>#X", "L#X#U", "X#<#X"]
 ODV_GRID = ODV_GRID_DEFAULT
 # VARS_END
 

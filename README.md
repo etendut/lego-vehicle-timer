@@ -144,7 +144,11 @@ L→U travels top (eastward through `>`), U→L travels bottom (westward through
 
 ## Releases
 
-### Version 2.3.0 (current)
+### Version 3.0.0 (current)
+
+- Full re-write of ODV logic
+
+### Version 2.3.0
 
 - ODV autodrive fixes
 
