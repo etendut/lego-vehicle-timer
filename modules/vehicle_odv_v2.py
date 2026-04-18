@@ -25,6 +25,7 @@ _LOOKAHEAD_DEG = const(40)
 _STOP_RAMP_MS = const(200)
 _BOTH_AXES_DUTY_NUM = const(71)
 _BOTH_AXES_DUTY_DEN = const(100)
+_AIM_SWITCH_DEG = const(160)
 
 _HOMING_MOTOR_ROT_SPEED = const(200)
 _HOMING_DUTY = const(45)
@@ -273,6 +274,10 @@ def _sign(n):
     return 0
 
 
+def _within(a, b, r):
+    return abs(a - b) <= r
+
+
 class Planner:
     def __init__(self, grid):
         self.grid = grid
@@ -403,6 +408,54 @@ class Planner:
         if dx < 0 and t == EAST_ONLY_TRACK:
             return False
         return True
+
+
+class AutoDriver:
+    def __init__(self, grid, planner, axis_controller):
+        self.grid = grid
+        self.planner = planner
+        self.axis_controller = axis_controller
+        self.waypoints = ()
+        self.i = 0
+
+    def start_journey(self, from_tile, to_tile):
+        self.waypoints = self.planner.plan(from_tile, to_tile)
+        self.i = 0
+
+    def tick(self, remote):
+        """Run one tick. Returns:
+            None while journey continues,
+            'reached_load' / 'reached_unload' / 'reached_end' on arrival,
+            'yielded' if any real remote button is pressed (joystick not emitted).
+        """
+        if any(remote.buttons.pressed()):
+            return 'yielded'
+
+        if self.i >= len(self.waypoints) - 1:
+            return self._end_tag()
+
+        cx, cy = self.axis_controller.deg_pos()
+        target = self.grid.tile_center_deg(self.waypoints[self.i + 1])
+
+        if _within(cx, target[0], _AIM_SWITCH_DEG) and _within(cy, target[1], _AIM_SWITCH_DEG):
+            self.i += 1
+            if self.i >= len(self.waypoints) - 1:
+                return self._end_tag()
+            target = self.grid.tile_center_deg(self.waypoints[self.i + 1])
+
+        vj = VirtualJoystick(_sign(target[0] - cx), _sign(target[1] - cy))
+        self.axis_controller.tick(vj)
+        return None
+
+    def _end_tag(self):
+        if not self.waypoints:
+            return 'reached_end'
+        last = self.waypoints[-1]
+        if last == self.grid.load_tile:
+            return 'reached_load'
+        if last == self.grid.unload_tile:
+            return 'reached_unload'
+        return 'reached_end'
 
 
 class HomingRoutine:

@@ -2,7 +2,9 @@ import pytest
 from pytest_check import check
 from unittest.mock import MagicMock
 
-from modules.vehicle_odv_v2 import Grid, VirtualJoystick, AxisController, HomingRoutine, Planner
+from modules.vehicle_odv_v2 import (
+    Grid, VirtualJoystick, AxisController, HomingRoutine, Planner, AutoDriver,
+)
 
 DEFAULT = ["L#<#U", "X#<#X", "X###X"]
 EX3 = ["X#>#X", "L#X#U", "X#<#X"]
@@ -367,3 +369,109 @@ def test_planner_westbound_into_east_only_blocked():
     result = Planner(g).plan((4, 0), (0, 0))
     # Westbound from (3,0) to (2,0)='>' is blocked.
     check.is_true(len(result) > 2, f"expected detour, got {result}")
+
+
+# --- Task 5: AutoDriver ---
+
+def _mock_remote(pressed=()):
+    remote = MagicMock()
+    remote.buttons.pressed.return_value = pressed
+    return remote
+
+
+def _mock_ac(cx=0, cy=0):
+    ac = MagicMock()
+    ac.deg_pos.return_value = (cx, cy)
+    return ac
+
+
+def test_autodriver_start_journey_plans_and_resets_index():
+    g = Grid(["L#U"])
+    planner = Planner(g)
+    ac = _mock_ac()
+    ad = AutoDriver(g, planner, ac)
+    ad.i = 99  # pretend we had a prior journey
+    ad.start_journey(g.load_tile, g.unload_tile)
+    check.equal(ad.i, 0)
+    check.is_true(len(ad.waypoints) >= 2)
+    check.equal(ad.waypoints[0], g.load_tile)
+    check.equal(ad.waypoints[-1], g.unload_tile)
+
+
+def test_autodriver_yields_on_remote_press():
+    g = Grid(["L#U"])
+    ac = _mock_ac(400, 400)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+
+    remote = _mock_remote(pressed=["Button.CENTER"])
+    check.equal(ad.tick(remote), 'yielded')
+    ac.tick.assert_not_called()
+
+
+def test_autodriver_emits_joystick_toward_next_waypoint():
+    # L at (0,0), U at (2,0). Cart at (0,0) centre = (400, 400).
+    # Expected next waypoint is (2,0); joystick = (+1, 0).
+    g = Grid(["L#U"])
+    ac = _mock_ac(400, 400)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+
+    result = ad.tick(_mock_remote())
+    check.is_none(result)
+    ac.tick.assert_called_once()
+    vj = ac.tick.call_args.args[0]
+    check.equal(vj.ax, +1)
+    check.equal(vj.ay, 0)
+
+
+def test_autodriver_advances_index_when_near_waypoint():
+    # Two-waypoint path L(0,0) -> U(2,0). Cart placed within aim-switch
+    # tolerance of (2,0) centre = (2000, 400). Within 160° on both axes.
+    g = Grid(["L#U"])
+    ac = _mock_ac(1900, 450)  # |Δ|=(100, 50), within 160
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+    # Waypoints: ((0,0), (2,0)). Index 0 targets (2,0). When we arrive,
+    # i goes to 1 which == len-1 -> end.
+    check.equal(ad.tick(_mock_remote()), 'reached_unload')
+
+
+def test_autodriver_reports_reached_load():
+    g = Grid(["L#U"])
+    ac = _mock_ac(400, 400)  # at load-tile centre
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.unload_tile, g.load_tile)
+    check.equal(ad.tick(_mock_remote()), 'reached_load')
+
+
+def test_autodriver_unreachable_returns_reached_end():
+    # Goal surrounded by walls -> empty plan.
+    g = Grid(["LX#U"])
+    ac = _mock_ac(400, 400)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey((0, 0), (3, 0))
+    check.equal(ad.waypoints, ())
+    check.equal(ad.tick(_mock_remote()), 'reached_end')
+
+
+def test_autodriver_diagonal_aim():
+    # Multi-waypoint journey where the next waypoint requires a diagonal
+    # joystick. DEFAULT plan from L has waypoints including (2,2); place
+    # cart at (1,2) centre so the next aim is SE toward (2,2).
+    g = Grid(DEFAULT)
+    ac = _mock_ac(400, 400)  # at L
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+    # First real tick: cart at L centre, target waypoint (1,0) center=(1200,400)
+    # -> joystick (+1, 0).
+    ad.tick(_mock_remote())
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (+1, 0))
+
+    # Now move cart to (1,0) centre to cross aim-switch; next tick should
+    # advance and emit joystick toward (1,2) -> pure south (0, +1).
+    ac.deg_pos.return_value = (1200, 400)
+    ad.tick(_mock_remote())
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, +1))
