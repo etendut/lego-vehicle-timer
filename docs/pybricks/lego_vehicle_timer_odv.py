@@ -564,9 +564,9 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
 
     if tl_type == WALL or tr_type == WALL or br_type == WALL or bl_type == WALL:
         can_move = False
-    elif (tl_type == WEST_ONLY_TRACK or tr_type == WEST_ONLY_TRACK or br_type == WEST_ONLY_TRACK or bl_type == WEST_ONLY_TRACK) and direction == EAST:
+    elif (tl_type == WEST_ONLY_TRACK or tr_type == WEST_ONLY_TRACK or br_type == WEST_ONLY_TRACK or bl_type == WEST_ONLY_TRACK) and direction in (WEST, NORTH_WEST, SOUTH_WEST):
         can_move = False
-    elif (tl_type == EAST_ONLY_TRACK or tr_type == EAST_ONLY_TRACK or br_type == EAST_ONLY_TRACK or bl_type == EAST_ONLY_TRACK) and direction == WEST:
+    elif (tl_type == EAST_ONLY_TRACK or tr_type == EAST_ONLY_TRACK or br_type == EAST_ONLY_TRACK or bl_type == EAST_ONLY_TRACK) and direction in (EAST, NORTH_EAST, SOUTH_EAST):
         can_move = False
     elif (tl_type == UNLOAD or tr_type == UNLOAD or br_type == UNLOAD or bl_type == UNLOAD) and direction == NORTH:
         can_move = False
@@ -765,10 +765,6 @@ class RunODVMotors(MotorHelper):
 
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
-        if direction != NORTH and direction != EAST and direction != SOUTH and direction != WEST:
-        # if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
-            return False, False, False
-
         # Centre the box in X on the fine position so the right edge doesn't overflow
         # into the adjacent coarse tile. Y stays at fine_y (cart hangs downward).
         fine_x, fine_y = self.last_fine_grid_position
