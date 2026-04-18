@@ -2,7 +2,7 @@ import pytest
 from pytest_check import check
 from unittest.mock import MagicMock
 
-from modules.vehicle_odv_v2 import Grid, VirtualJoystick, AxisController, HomingRoutine
+from modules.vehicle_odv_v2 import Grid, VirtualJoystick, AxisController, HomingRoutine, Planner
 
 DEFAULT = ["L#<#U", "X#<#X", "X###X"]
 EX3 = ["X#>#X", "L#X#U", "X#<#X"]
@@ -272,3 +272,70 @@ def test_homing_order_y_then_x():
     y_reset_idx = names.index('y.reset_angle')
     x_reset_idx = names.index('x.reset_angle')
     check.less(y_reset_idx, x_reset_idx)
+
+
+# --- Task 4: Planner ---
+
+EX2 = ["X###X", "L###U", "X###X"]
+
+
+def test_planner_same_tile_returns_single_waypoint():
+    g = Grid(EX2)
+    check.equal(Planner(g).plan((0, 1), (0, 1)), ((0, 1),))
+
+
+def test_planner_ex2_straight_east():
+    g = Grid(EX2)
+    check.equal(Planner(g).plan((0, 1), (4, 1)), ((0, 1), (4, 1)))
+
+
+def test_planner_default_l_to_u():
+    g = Grid(DEFAULT)
+    # L at (0,0), U at (4,0). Row 0 barrier '<' at (2,0) blocks eastbound,
+    # so path goes south to row 2, east, then north.
+    result = Planner(g).plan((0, 0), (4, 0))
+    check.equal(result, ((0, 0), (1, 0), (1, 2), (3, 2), (3, 0), (4, 0)))
+
+
+def test_planner_default_u_to_l():
+    g = Grid(DEFAULT)
+    # Westbound through '<' is the arrow direction — allowed.
+    # Direct west all the way, compressed to endpoints only.
+    result = Planner(g).plan((4, 0), (0, 0))
+    check.equal(result, ((4, 0), (0, 0)))
+
+
+def test_planner_ex3_l_to_u():
+    g = Grid(EX3)
+    # (2,1)=X in the middle blocks the straight shot. Path goes north
+    # through '>' (eastbound allowed), east, then south to U.
+    result = Planner(g).plan((0, 1), (4, 1))
+    check.equal(result, ((0, 1), (1, 1), (1, 0), (3, 0), (3, 1), (4, 1)))
+
+
+def test_planner_unreachable_returns_empty():
+    # A grid fully walled off between start and goal.
+    walled = ["LX#U"]
+    g = Grid(walled)
+    check.equal(Planner(g).plan((0, 0), (3, 0)), ())
+
+
+def test_planner_eastbound_into_west_only_blocked():
+    # '<' blocks eastbound entry; must detour.
+    # Simple 2-row grid: eastbound direct is blocked by '<' at (2,0),
+    # detour south available.
+    layout = ["L#<#U", "#####"]
+    g = Grid(layout)
+    result = Planner(g).plan((0, 0), (4, 0))
+    # Must go south to escape '<'; can't enter (2,0) eastbound.
+    check.is_true((1, 1) in result or (2, 1) in result,
+                  f"expected detour through row 1, got {result}")
+
+
+def test_planner_westbound_into_east_only_blocked():
+    # '>' blocks westbound entry from east; must detour.
+    layout = ["L#>#U", "#####"]
+    g = Grid(layout)
+    result = Planner(g).plan((4, 0), (0, 0))
+    # Westbound from (3,0) to (2,0)='>' is blocked.
+    check.is_true(len(result) > 2, f"expected detour, got {result}")

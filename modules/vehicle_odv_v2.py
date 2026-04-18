@@ -262,6 +262,85 @@ class AxisController:
             )
 
 
+_DIRECTIONS = ((1, 0), (-1, 0), (0, 1), (0, -1))
+
+
+class Planner:
+    def __init__(self, grid):
+        self.grid = grid
+
+    def plan(self, start, goal):
+        """Return an immutable tuple of coarse-tile waypoints from start to
+        goal. First element == start, last == goal. Intermediate elements
+        are only turn-points (cells where the direction changes). Returns
+        empty tuple if unreachable or if start/goal is impassable."""
+        if not self._passable(start) or not self._passable(goal):
+            return ()
+        if start == goal:
+            return (start,)
+
+        parents = {start: None}
+        queue = [start]
+        qi = 0
+        found = False
+        while qi < len(queue):
+            tile = queue[qi]
+            qi += 1
+            if tile == goal:
+                found = True
+                break
+            for dx, dy in _DIRECTIONS:
+                nxt = (tile[0] + dx, tile[1] + dy)
+                if nxt in parents:
+                    continue
+                if not self._can_step(nxt, dx):
+                    continue
+                parents[nxt] = tile
+                queue.append(nxt)
+
+        if not found:
+            return ()
+
+        path = []
+        cur = goal
+        while cur is not None:
+            path.append(cur)
+            cur = parents[cur]
+        path.reverse()
+
+        if len(path) <= 2:
+            return tuple(path)
+        waypoints = [path[0]]
+        prev_dir = (path[1][0] - path[0][0], path[1][1] - path[0][1])
+        for i in range(1, len(path) - 1):
+            next_dir = (path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
+            if next_dir != prev_dir:
+                waypoints.append(path[i])
+            prev_dir = next_dir
+        waypoints.append(path[-1])
+        return tuple(waypoints)
+
+    def _passable(self, tile):
+        tx, ty = tile
+        g = self.grid
+        if tx < 0 or ty < 0 or ty >= g.n_rows or tx >= g.n_cols:
+            return False
+        return g.tile_type(tx, ty) != WALL
+
+    def _can_step(self, nxt, dx):
+        if not self._passable(nxt):
+            return False
+        # N1d edge barriers: arrow direction is the allowed one.
+        # '<' west edge blocks eastbound entry into '<'.
+        # '>' east edge blocks westbound entry into '>'.
+        t = self.grid.tile_type(*nxt)
+        if dx > 0 and t == WEST_ONLY_TRACK:
+            return False
+        if dx < 0 and t == EAST_ONLY_TRACK:
+            return False
+        return True
+
+
 class HomingRoutine:
     def __init__(self, motor_x, motor_y, grid):
         self.motor_x = motor_x
