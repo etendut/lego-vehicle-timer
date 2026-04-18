@@ -457,7 +457,7 @@ class AutoDriver:
             'reached_load' / 'reached_unload' / 'reached_end' on arrival,
             'yielded' if any real remote button is pressed (joystick not emitted).
         """
-        if any(remote.buttons.pressed()):
+        if remote is not None and any(remote.buttons.pressed()):
             return 'yielded'
 
         if self.i >= len(self.waypoints) - 1:

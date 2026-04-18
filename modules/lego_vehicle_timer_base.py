@@ -395,7 +395,7 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 
 
 hub: "CityHub | TechnicHub"
-remote: "Remote"
+remote: "Remote" = None  # type: ignore  # bound by setup_remote(); stays None in headless modes
 
 
 def setup_hub():
