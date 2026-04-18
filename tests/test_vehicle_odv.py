@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from pybricks.parameters import Button
 
-from modules.vehicle_odv_v2 import (
+from modules.vehicle_odv import (
     Grid, VirtualJoystick, AxisController, HomingRoutine, Planner, AutoDriver,
     IdleTimeout, RunODVMotors, MANUAL, HYBRID, AUTO,
 )
