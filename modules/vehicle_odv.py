@@ -327,9 +327,10 @@ class RunODVMotors(MotorHelper):
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
         # Centre the box in X on the fine position so the right edge doesn't overflow
-        # into the adjacent coarse tile. Y stays at fine_y (cart hangs downward).
+        # into the adjacent coarse tile. Offset Y by +1 so the top edge isn't flush
+        # with fine_y, giving _GEAR_RATIO_TO_GRID more northward travel.
         fine_x, fine_y = self.last_fine_grid_position
-        cart = ODVBox((fine_x - _ODV_SIZE // 2, fine_y), _ODV_SIZE, _ODV_SIZE)
+        cart = ODVBox((fine_x - _ODV_SIZE // 2, fine_y + 1), _ODV_SIZE, _ODV_SIZE)
 
         # print("Cart", cart)
 
