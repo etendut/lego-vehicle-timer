@@ -1,4 +1,8 @@
 # IMPORTS_START
+try:
+    from pybricks.tools import StopWatch
+except ImportError:
+    StopWatch = None
 # IMPORTS_END
 
 # local var only
@@ -14,6 +18,11 @@ DEBUG = const(False)
 
 _DEG_PER_TILE = const(800)
 _CART_SIZE_DEG = const(640)
+
+_LOOKAHEAD_DEG = const(40)
+_STOP_RAMP_MS = const(200)
+_BOTH_AXES_DUTY_NUM = const(71)
+_BOTH_AXES_DUTY_DEN = const(100)
 # VARS_END
 
 # MODULE_START
@@ -161,6 +170,90 @@ class Grid:
                 valid_dy = d_deg_y
 
         return valid_dx, valid_dy
+
+
+class VirtualJoystick:
+    __slots__ = ('ax', 'ay')
+
+    def __init__(self, ax=0, ay=0):
+        self.ax = ax  # -1, 0, or +1
+        self.ay = ay  # -1, 0, or +1
+
+
+class AxisController:
+    def __init__(self, motor_x, motor_y, grid, base_duty, _clock=None):
+        # _clock: injectable StopWatch-like; defaults to pybricks StopWatch.
+        self.motor_x = motor_x
+        self.motor_y = motor_y
+        self.grid = grid
+        self.base_duty = base_duty
+        if _clock is None:
+            if StopWatch is None:
+                raise RuntimeError("StopWatch unavailable; pass _clock explicitly")
+            _clock = StopWatch()
+        self._clock = _clock
+        self._prev_duty_x = 0
+        self._prev_duty_y = 0
+        self._ramp_start_x = None  # ms timestamp, or None
+        self._ramp_start_y = None
+
+    def deg_pos(self):
+        return (self.motor_x.angle(), self.motor_y.angle())
+
+    def _ramp_stop_axis(self, motor, prev_duty, ramp_start):
+        """Run one ramp-stop tick for one axis.
+        Returns (new_prev_duty, new_ramp_start)."""
+        if prev_duty == 0:
+            return 0, None
+        now = self._clock.time()
+        if ramp_start is None:
+            ramp_start = now
+        elapsed = now - ramp_start
+        if elapsed >= _STOP_RAMP_MS:
+            motor.dc(0)
+            return 0, None
+        factor = (_STOP_RAMP_MS - elapsed) * 100 // _STOP_RAMP_MS
+        motor.dc(prev_duty * factor // 100)
+        return prev_duty, ramp_start  # prev_duty unchanged during ramp
+
+    def tick(self, vj):
+        """One control tick. Proposes a lookahead step, clips it via Grid,
+        issues motor.dc per axis. Active→idle transition ramps to zero."""
+        cx, cy = self.deg_pos()
+        both = vj.ax != 0 and vj.ay != 0
+        duty = self.base_duty * _BOTH_AXES_DUTY_NUM // _BOTH_AXES_DUTY_DEN if both else self.base_duty
+
+        requested_dx = vj.ax * _LOOKAHEAD_DEG
+        requested_dy = vj.ay * _LOOKAHEAD_DEG
+        valid_dx, valid_dy = self.grid.propose_step((cx, cy), requested_dx, requested_dy)
+
+        # X axis
+        if valid_dx > 0:
+            self.motor_x.dc(+duty)
+            self._prev_duty_x = +duty
+            self._ramp_start_x = None
+        elif valid_dx < 0:
+            self.motor_x.dc(-duty)
+            self._prev_duty_x = -duty
+            self._ramp_start_x = None
+        else:
+            self._prev_duty_x, self._ramp_start_x = self._ramp_stop_axis(
+                self.motor_x, self._prev_duty_x, self._ramp_start_x
+            )
+
+        # Y axis
+        if valid_dy > 0:
+            self.motor_y.dc(+duty)
+            self._prev_duty_y = +duty
+            self._ramp_start_y = None
+        elif valid_dy < 0:
+            self.motor_y.dc(-duty)
+            self._prev_duty_y = -duty
+            self._ramp_start_y = None
+        else:
+            self._prev_duty_y, self._ramp_start_y = self._ramp_stop_axis(
+                self.motor_y, self._prev_duty_y, self._ramp_start_y
+            )
 
 # MODULE_END
 

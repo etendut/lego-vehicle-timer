@@ -1,7 +1,8 @@
 import pytest
 from pytest_check import check
+from unittest.mock import MagicMock
 
-from modules.vehicle_odv_v2 import Grid
+from modules.vehicle_odv_v2 import Grid, VirtualJoystick, AxisController
 
 DEFAULT = ["L#<#U", "X#<#X", "X###X"]
 EX3 = ["X#>#X", "L#X#U", "X#<#X"]
@@ -83,3 +84,134 @@ def test_case14_load_unload_parse():
     g = Grid(DEFAULT)
     check.equal(g.load_tile, (0, 0))
     check.equal(g.unload_tile, (4, 0))
+
+
+# --- Task 2: AxisController ---
+
+def _make_clock(ms=0):
+    """Return a mock StopWatch-like whose .time() returns the given value."""
+    clock = MagicMock()
+    clock.time.return_value = ms
+    return clock
+
+
+def _make_ac(layout, base_duty=45, motor_x_angle=400, motor_y_angle=400, clock_ms=0):
+    """Build an AxisController with mock motors over the given layout."""
+    grid = Grid(layout)
+    motor_x = MagicMock()
+    motor_x.angle.return_value = motor_x_angle
+    motor_y = MagicMock()
+    motor_y.angle.return_value = motor_y_angle
+    clock = _make_clock(clock_ms)
+    ac = AxisController(motor_x, motor_y, grid, base_duty, _clock=clock)
+    return ac, motor_x, motor_y, clock
+
+
+# --- 2a: zero joystick, both axes already stopped → dc(0) called via ramp ---
+
+def test_zero_joystick_first_tick_no_active_ramp():
+    # prev_duty starts at 0; _ramp_stop_axis returns early without calling dc.
+    ac, mx, my, _ = _make_ac(["L###U"])
+    ac.tick(VirtualJoystick(0, 0))
+    mx.dc.assert_not_called()
+    my.dc.assert_not_called()
+
+
+def test_zero_joystick_after_ramp_duration_calls_dc_zero():
+    # First drive X active, then go idle; advance clock past _STOP_RAMP_MS.
+    ac, mx, my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    # Drive east to record prev_duty_x = 45
+    ac.tick(VirtualJoystick(+1, 0))
+    mx.dc.assert_called_with(+45)
+    # Now zero joystick; clock still at 0 — ramp starts
+    ac.tick(VirtualJoystick(0, 0))
+    # Clock past ramp duration
+    clock.time.return_value = 200
+    ac.tick(VirtualJoystick(0, 0))
+    # Last call on motor_x must be dc(0)
+    last_x = mx.dc.call_args_list[-1]
+    check.equal(last_x.args[0], 0)
+
+
+# --- 2b: joystick (+1, 0) in clear space ---
+
+def test_joystick_x_only_clear_space():
+    # motor_x should get dc(+45); motor_y should not be driven (prev_duty 0 → no dc)
+    ac, mx, my, _ = _make_ac(["L###U"])
+    ac.tick(VirtualJoystick(+1, 0))
+    mx.dc.assert_called_with(+45)
+    my.dc.assert_not_called()
+
+
+# --- 2c: joystick (+1, +1) in clear space → 45 * 71 // 100 = 31 ---
+
+def test_diagonal_joystick_speed_compensation():
+    ac, mx, my, _ = _make_ac(["L###U"])
+    ac.tick(VirtualJoystick(+1, +1))
+    check.equal(45 * 71 // 100, 31)  # sanity: formula gives 31
+    mx.dc.assert_called_with(+31)
+    my.dc.assert_called_with(+31)
+
+
+# --- 2d: joystick (+1, 0) blocked by east grid edge → ramp path on X ---
+
+def test_joystick_x_blocked_first_tick_ramp_decay():
+    # Cart at tile (0,0) centre in a 1-tile grid ["LXU"]; east is blocked.
+    # But ["LXU"] is 1-row x 3-cols; cart at (400, 400), step east → X wall.
+    # Use a tighter approach: cart near east edge of a 1-col grid.
+    # ["L#U"] has cols 0,1,2. Cart at (1680, 400): east face = 2000, grid east = 2400.
+    # Step east 40 → east face 2040, still inside. Use ["LU"] instead (1 open col each).
+    # Simpler: put cart very close to east grid edge so the lookahead exits bounds.
+    # Grid ["L#U"]: n_cols=3, east_bound=2400. Cart at (2080, 400): east face=2400,
+    # flush — dc(0) on first tick because _aabb_hits_wall sees R > bound on step.
+    # Actually use cart position where east face + 40 > 2400: cx=2080, R=2400, step=40 → R=2440 > 2400.
+    ac, mx, my, clock = _make_ac(["L#U"], motor_x_angle=2080, motor_y_angle=400)
+    # Drive one tick first so prev_duty is set
+    ac.tick(VirtualJoystick(+1, 0))
+    # propose_step returns (0,0) because east face 2400+40 > 2400 → blocked
+    # So first tick already goes to ramp path; prev_duty=0 initially → no dc call
+    # Let's instead start with an active state by driving in clear space first
+    # then move to a blocked position.
+    ac2, mx2, my2, clock2 = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    # Tick east while clear
+    ac2.tick(VirtualJoystick(+1, 0))
+    mx2.dc.assert_called_with(+45)
+    # Now simulate motor moved to blocked position (near east edge of 5-col grid, east=4000)
+    # Cart at 3680: east face = 4000, step 40 → 4040 > 4000 → blocked
+    mx2.motor_x = MagicMock()
+    mx2.motor_x.angle.return_value = 3680
+    ac2.motor_x = mx2.motor_x
+    clock2.time.return_value = 0
+    ac2.tick(VirtualJoystick(+1, 0))
+    # Ramp started; elapsed=0, factor=100, duty applied = 45 * 100 // 100 = 45 — same as before.
+    # Advance to mid-ramp: elapsed=100ms, factor=(200-100)*100//200=50
+    clock2.time.return_value = 100
+    ac2.tick(VirtualJoystick(+1, 0))
+    mid_call = mx2.motor_x.dc.call_args_list[-1]
+    mid_value = mid_call.args[0]
+    check.is_true(0 < mid_value < 45, f"mid-ramp value {mid_value} not in (0, 45)")
+
+
+# --- 2e: ramp completion → dc(0) after _STOP_RAMP_MS elapsed ---
+
+def test_ramp_completion_calls_dc_zero():
+    ac, mx, my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    # Drive east to set prev_duty_x
+    ac.tick(VirtualJoystick(+1, 0))
+    # Move to blocked position (near east edge)
+    mx.angle.return_value = 3680
+    # First stop tick: start ramp
+    clock.time.return_value = 0
+    ac.tick(VirtualJoystick(+1, 0))
+    # Advance past ramp duration
+    clock.time.return_value = 200
+    ac.tick(VirtualJoystick(+1, 0))
+    last_call = mx.dc.call_args_list[-1]
+    check.equal(last_call.args[0], 0)
+
+
+# --- 2f: deg_pos() returns (motor_x.angle(), motor_y.angle()) ---
+
+def test_deg_pos():
+    ac, mx, my, _ = _make_ac(["L###U"], motor_x_angle=1234, motor_y_angle=5678)
+    check.equal(ac.deg_pos(), (1234, 5678))
