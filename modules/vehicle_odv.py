@@ -718,6 +718,9 @@ class RunODVMotors(MotorHelper):
             if result is not None:
                 if DEBUG:
                     print(result)
+                ex, ey = self.grid.tile_center_deg(goal_tile)
+                self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, ex)
+                self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, ey)
                 self.stop_motors()
                 wait(500)
                 return True

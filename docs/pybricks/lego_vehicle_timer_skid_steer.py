@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = 'f72a8c1-dirty @ 2026-04-18 22:34'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'aca5120-dirty @ 2026-04-19 07:47'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings

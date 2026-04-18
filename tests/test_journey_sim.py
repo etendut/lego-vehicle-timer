@@ -136,6 +136,24 @@ def test_journey_unload_to_load_on_default_grid(compiled):
     assert final_tile == rom.grid.load_tile
 
 
+def test_journey_parks_exactly_at_goal_tile_center(compiled):
+    """AutoDriver emits 'reached' before hitting tile center — short by ~160° on rig.
+    _drive_auto_journey must force-park at the exact goal tile center on arrival so
+    load/unload sequences (which assume cart-at-tile-center) start from the right spot."""
+    m = compiled
+    layout = m.ODV_GRID_DEFAULT
+    rom, mx, my, clock = _build_rom(m, layout)
+    _install_sim_wait(m, mx, my, clock)
+    _park_on_tile(m, mx, my, rom.grid.unload_tile)
+    rom.mh_is_homed = True
+
+    reached = rom._drive_auto_journey(rom.grid.load_tile)
+
+    assert reached is True
+    expected = rom.grid.tile_center_deg(rom.grid.load_tile)
+    assert (mx.angle(), my.angle()) == expected
+
+
 def test_journey_load_to_unload_on_default_grid(compiled):
     m = compiled
     layout = m.ODV_GRID_DEFAULT

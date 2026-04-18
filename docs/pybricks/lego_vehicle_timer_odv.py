@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = 'f72a8c1-dirty @ 2026-04-18 22:34'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'aca5120-dirty @ 2026-04-19 07:47'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -1153,6 +1153,9 @@ class RunODVMotors(MotorHelper):
             if result is not None:
                 if DEBUG:
                     print(result)
+                ex, ey = self.grid.tile_center_deg(goal_tile)
+                self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, ex)
+                self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, ey)
                 self.stop_motors()
                 wait(500)
                 return True

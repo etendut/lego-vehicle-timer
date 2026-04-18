@@ -703,8 +703,8 @@ def test_rom_auto_load_journey_loop_completes():
     ad.start_journey.assert_called_once_with((4, 0), rom.grid.load_tile)
     check.equal(ad.tick.call_count, 3)
     check.is_true(rom.has_load)
-    # _do_load_ called after journey
-    check.equal(mx.run_target.call_count, 2)
+    # 1 run_target from _drive_auto_journey force-park + 2 from _do_load_
+    check.equal(mx.run_target.call_count, 3)
 
 
 def test_rom_auto_load_journey_yields_on_interrupt():
