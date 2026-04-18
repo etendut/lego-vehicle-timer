@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = 'ebc0a6b-dirty @ 2026-04-18 21:58'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '87063f3-dirty @ 2026-04-18 22:02'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -1038,9 +1038,13 @@ class RunODVMotors(MotorHelper):
         return remote
 
     def home_and_unload(self):
+        if DEBUG:
+            print('home_and_unload start pos=(', self.motor_x.angle(), self.motor_y.angle(), ')')
         self.homing_routine.run()
         self.has_load = False
         self.set_is_homed()
+        if DEBUG:
+            print('home_and_unload done pos=(', self.motor_x.angle(), self.motor_y.angle(), ')')
 
     def reset_homing(self):
         self.reset_is_homed()
@@ -1104,12 +1108,19 @@ class RunODVMotors(MotorHelper):
 
     def _do_load_(self):
         if self.has_load:
+            if DEBUG:
+                print('_do_load_ skip (has_load)')
             return
         target_x = self.grid.tile_center_deg(self.grid.load_tile)[0]
+        if DEBUG:
+            print('_do_load_ start pos=(', self.motor_x.angle(), self.motor_y.angle(),
+                  ') dip to', target_x - _LOAD_DIP_DEG)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _LOAD_DIP_DEG)
         wait(2000)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x)
         self.has_load = True
+        if DEBUG:
+            print('_do_load_ done pos=(', self.motor_x.angle(), self.motor_y.angle(), ')')
 
     def _drive_auto_journey(self, goal_tile):
         start = self._current_tile()
