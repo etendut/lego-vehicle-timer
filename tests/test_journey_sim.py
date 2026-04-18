@@ -223,6 +223,40 @@ def test_autodriver_zero_dy_inside_deadband(compiled):
     assert vj.ay == 0   # 4° Y drift is inside deadband — no pulse
 
 
+def test_auto_load_calibration_stops_at_tile_3_0(compiled, monkeypatch):
+    """CALIBRATION HACK: with _CALIBRATE_X_OFFSET flag set, auto_load must drive
+    to tile (3, 0), park at center, and raise SystemExit so the X offset can be
+    measured on rig. Flag defaults off — normal auto_load is unaffected."""
+    m = compiled
+    monkeypatch.setattr(m, '_CALIBRATE_X_OFFSET', True)
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    _install_sim_wait(m, mx, my, clock)
+    _park_on_tile(m, mx, my, rom.grid.unload_tile)
+    rom.mh_is_homed = True
+
+    with pytest.raises(SystemExit):
+        rom.auto_load()
+
+    expected = rom.grid.tile_center_deg((3, 0))
+    assert (mx.angle(), my.angle()) == expected
+    assert mx._duty == 0
+    assert my._duty == 0
+
+
+def test_auto_load_calibration_off_by_default(compiled):
+    """With flag off (default), auto_load runs the normal journey to L and loads."""
+    m = compiled
+    assert m._CALIBRATE_X_OFFSET is False
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    _install_sim_wait(m, mx, my, clock)
+    _park_on_tile(m, mx, my, rom.grid.unload_tile)
+    rom.mh_is_homed = True
+
+    rom.auto_load()  # must not raise
+
+    assert rom.has_load is True
+
+
 def test_journey_yields_on_remote_press(compiled):
     m = compiled
     layout = m.ODV_GRID_DEFAULT

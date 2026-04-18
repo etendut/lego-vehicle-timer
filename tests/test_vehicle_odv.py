@@ -240,9 +240,9 @@ def test_homing_call_sequence_default_grid():
     motor_y.reset_angle.assert_called_once_with(320)  # _HALF = cart center south of N wall
     motor_y.run_target.assert_called_once_with(1400, 0 * 800 + 400)  # U tile center Y
 
-    # Then X stalled east
+    # Then X stalled east — reset to east_wall_deg - 80 (rig-measured stall offset)
     motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
-    motor_x.reset_angle.assert_called_once_with(5 * 800 - 320)  # n_cols*tile - _HALF
+    motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
     motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)  # U tile center X
 
 
@@ -256,7 +256,7 @@ def test_homing_uses_unload_tile_from_grid():
 
     motor_y.reset_angle.assert_called_once_with(320)  # always _HALF (cart at N wall)
     motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400)  # uy=1 tile center
-    motor_x.reset_angle.assert_called_once_with(5 * 800 - 320)
+    motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
     motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)
 
 

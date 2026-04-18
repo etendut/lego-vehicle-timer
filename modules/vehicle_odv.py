@@ -42,6 +42,12 @@ _AIM_SWITCH_DEG = const(160)
 _HOMING_MOTOR_ROT_SPEED = const(200)
 _HOMING_DUTY = const(45)
 _MAX_MOTOR_ROT_SPEED = const(1400)
+# Rig-measured: at east stall, physical cart center is 80° west of east_wall_deg
+# (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
+_X_EAST_STALL_OFFSET_DEG = const(80)
+
+# Flip to True to halt auto_load at tile (3, 0) center for X-offset measurement.
+_CALIBRATE_X_OFFSET = False
 
 MANUAL = const(0)
 HYBRID = const(1)
@@ -543,7 +549,7 @@ class HomingRoutine:
         # Stall X EAST against right wall — also unloads the cart.
         self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED * 3, duty_limit=_HOMING_DUTY)
         wait(2000)
-        self.motor_x.reset_angle(east_wall_deg - _HALF)
+        self.motor_x.reset_angle(east_wall_deg - _X_EAST_STALL_OFFSET_DEG)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x)
         wait(200)
 
@@ -719,6 +725,16 @@ class RunODVMotors(MotorHelper):
 
     def auto_load(self):
         if not self.mh_is_homed:
+            return
+        if _CALIBRATE_X_OFFSET:
+            # Halt at tile (3, 0) center so the X offset can be measured on rig.
+            if self._drive_auto_journey((3, 0)):
+                ex, ey = self.grid.tile_center_deg((3, 0))
+                self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, ex)
+                self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, ey)
+                cx, cy = self.axis_controller.deg_pos()
+                print('CALIBRATE pos=(', cx, cy, ') expected=(', ex, ey, ')')
+                raise SystemExit('calibration stop at tile (3, 0)')
             return
         if self._drive_auto_journey(self.grid.load_tile):
             self._do_load_()
