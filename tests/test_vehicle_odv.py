@@ -712,6 +712,34 @@ def test_rom_auto_load_journey_yields_on_interrupt():
     check.is_false(rom.has_load)       # no load on yield
 
 
+def test_rom_idle_timed_out_reflects_idle_timeout():
+    rom, _, _, _ = _make_rom()
+    rom.idle_timeout = MagicMock()
+    rom.idle_timeout.fired.return_value = False
+    check.is_false(rom.idle_timed_out())
+    rom.idle_timeout.fired.return_value = True
+    check.is_true(rom.idle_timed_out())
+
+
+def test_rom_idle_timed_out_false_when_timer_absent():
+    rom, _, _, _ = _make_rom()
+    rom.idle_timeout = None
+    check.is_false(rom.idle_timed_out())
+
+
+def test_rom_reset_idle_timeout_delegates():
+    rom, _, _, _ = _make_rom()
+    rom.idle_timeout = MagicMock()
+    rom.reset_idle_timeout()
+    rom.idle_timeout.reset.assert_called_once()
+
+
+def test_rom_reset_idle_timeout_noop_when_timer_absent():
+    rom, _, _, _ = _make_rom()
+    rom.idle_timeout = None
+    rom.reset_idle_timeout()  # must not raise
+
+
 def test_rom_auto_unload_journey_completes_then_homes():
     rom, mx, my, _ = _make_rom(motor_x_angle=cen(0, 0)[0], motor_y_angle=cen(0, 0)[1])
     rom.set_is_homed()

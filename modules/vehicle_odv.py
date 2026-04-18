@@ -597,6 +597,15 @@ class RunODVMotors(MotorHelper):
         self.motor_x.stop()
         self.motor_y.stop()
 
+    def idle_timed_out(self):
+        if self.idle_timeout is None:
+            return False
+        return self.idle_timeout.fired()
+
+    def reset_idle_timeout(self):
+        if self.idle_timeout is not None:
+            self.idle_timeout.reset()
+
     def handle_remote_press(self):
         if self.mh__remote_disabled:
             return
