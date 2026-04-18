@@ -2,9 +2,11 @@ import pytest
 from pytest_check import check
 from unittest.mock import MagicMock
 
+from pybricks.parameters import Button
+
 from modules.vehicle_odv_v2 import (
     Grid, VirtualJoystick, AxisController, HomingRoutine, Planner, AutoDriver,
-    IdleTimeout, MANUAL, HYBRID, AUTO,
+    IdleTimeout, RunODVMotors, MANUAL, HYBRID, AUTO,
 )
 
 DEFAULT = ["L#<#U", "X#<#X", "X###X"]
@@ -515,3 +517,211 @@ def test_idle_timeout_reset_extends_deadline():
     check.is_false(t.fired())
     clock.time.return_value = 55_000  # 30s after reset
     check.is_true(t.fired())
+
+
+# --- Task 7: RunODVMotors ---
+
+
+def _make_rom(layout=None, pressed=(), motor_x_angle=400, motor_y_angle=400):
+    if layout is None:
+        layout = DEFAULT
+    efc = MagicMock()
+    mx = MagicMock()
+    my = MagicMock()
+    mx.angle.return_value = motor_x_angle
+    my.angle.return_value = motor_y_angle
+    rem = MagicMock()
+    rem.buttons.pressed.return_value = pressed
+    clock = MagicMock()
+    clock.time.return_value = 0
+    rom = RunODVMotors(efc, 45, layout,
+                       _motors=(mx, my), _remote=rem, _clock=clock)
+    return rom, mx, my, rem
+
+
+def test_rom_init_builds_stack():
+    rom, mx, my, _ = _make_rom()
+    check.is_instance(rom.grid, Grid)
+    check.is_instance(rom.planner, Planner)
+    check.is_instance(rom.axis_controller, AxisController)
+    check.is_instance(rom.auto_driver, AutoDriver)
+    check.is_instance(rom.homing_routine, HomingRoutine)
+    check.is_instance(rom.idle_timeout, IdleTimeout)  # HYBRID default
+    check.is_false(rom.has_load)
+    check.is_false(rom.mh_is_homed)
+    # supports_homing=True, supports_flip=False
+    check.is_true(rom.mh_supports_homing)
+    check.is_false(rom.mh_supports_flip)
+    # Constructor calls stop on both motors
+    mx.stop.assert_called_once()
+    my.stop.assert_called_once()
+
+
+def test_rom_stop_motors_stops_both():
+    rom, mx, my, _ = _make_rom()
+    mx.stop.reset_mock()
+    my.stop.reset_mock()
+    rom.stop_motors()
+    mx.stop.assert_called_once()
+    my.stop.assert_called_once()
+
+
+def test_rom_home_and_unload_delegates_sets_state():
+    rom, mx, my, _ = _make_rom()
+    rom.has_load = True
+    rom.home_and_unload()
+    # Delegated to HomingRoutine.run()
+    my.run_until_stalled.assert_called_once()
+    mx.run_until_stalled.assert_called_once()
+    check.is_false(rom.has_load)
+    check.is_true(rom.mh_is_homed)
+
+
+def test_rom_reset_homing_clears_is_homed():
+    rom, _, _, _ = _make_rom()
+    rom.set_is_homed()
+    rom.reset_homing()
+    check.is_false(rom.mh_is_homed)
+
+
+def _stub_axis_controller(rom, cx=1200, cy=1200):
+    """Replace axis_controller with a MagicMock whose deg_pos() returns (cx, cy)."""
+    ac = MagicMock()
+    ac.deg_pos.return_value = (cx, cy)
+    rom.axis_controller = ac
+    return ac
+
+
+def test_rom_handle_remote_press_empty_stops():
+    rom, _, _, _ = _make_rom(pressed=())
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, 0))
+
+
+def test_rom_handle_remote_press_left_plus_north():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, -1))
+
+
+def test_rom_handle_remote_press_right_plus_east():
+    rom, _, _, _ = _make_rom(pressed=[Button.RIGHT_PLUS])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (+1, 0))
+
+
+def test_rom_handle_remote_press_diagonal_ne():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS, Button.RIGHT_PLUS])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (+1, -1))
+
+
+def test_rom_handle_remote_press_center_button_stops():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, 0))
+
+
+def test_rom_handle_remote_press_resets_idle_timeout():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS])
+    _stub_axis_controller(rom)
+    rom.idle_timeout = MagicMock()
+    rom.handle_remote_press()
+    rom.idle_timeout.reset.assert_called_once()
+
+
+def test_rom_handle_remote_press_remote_disabled_returns():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS])
+    rom.mh__remote_disabled = True
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    ac.tick.assert_not_called()
+
+
+def test_rom_handle_remote_press_at_unload_east_triggers_home():
+    # Place cart at U tile centre; pressing east triggers home_and_unload.
+    rom, mx, my, _ = _make_rom(pressed=[Button.RIGHT_PLUS])
+    _stub_axis_controller(rom, *cen(4, 0))
+    rom.has_load = True
+    rom.handle_remote_press()
+    # home_and_unload ran -> motors stalled and state updated
+    my.run_until_stalled.assert_called_once()
+    mx.run_until_stalled.assert_called_once()
+    check.is_false(rom.has_load)
+    check.is_true(rom.mh_is_homed)
+
+
+def test_rom_handle_remote_press_at_load_west_triggers_load():
+    # Place cart at L tile centre; pressing west triggers _do_load_.
+    rom, mx, _, _ = _make_rom(pressed=[Button.RIGHT_MINUS])
+    _stub_axis_controller(rom, *cen(0, 0))
+    rom.handle_remote_press()
+    check.is_true(rom.has_load)
+    # Two run_target calls: dip and return
+    check.equal(mx.run_target.call_count, 2)
+
+
+def test_rom_auto_load_requires_homed():
+    rom, _, _, _ = _make_rom()
+    rom.auto_driver = MagicMock()
+    rom.auto_load()
+    rom.auto_driver.start_journey.assert_not_called()
+
+
+def test_rom_auto_unload_requires_has_load():
+    rom, _, _, _ = _make_rom()
+    rom.set_is_homed()
+    rom.auto_driver = MagicMock()
+    rom.auto_unload()
+    rom.auto_driver.start_journey.assert_not_called()
+
+
+def test_rom_auto_load_journey_loop_completes():
+    rom, mx, _, _ = _make_rom(motor_x_angle=cen(4, 0)[0], motor_y_angle=cen(4, 0)[1])
+    rom.set_is_homed()
+    ad = MagicMock()
+    ad.tick.side_effect = [None, None, 'reached_load']
+    rom.auto_driver = ad
+    rom.auto_load()
+    ad.start_journey.assert_called_once_with((4, 0), rom.grid.load_tile)
+    check.equal(ad.tick.call_count, 3)
+    check.is_true(rom.has_load)
+    # _do_load_ called after journey
+    check.equal(mx.run_target.call_count, 2)
+
+
+def test_rom_auto_load_journey_yields_on_interrupt():
+    rom, mx, my, _ = _make_rom(motor_x_angle=cen(4, 0)[0], motor_y_angle=cen(4, 0)[1])
+    rom.set_is_homed()
+    rom.enable_auto_drive()
+    ad = MagicMock()
+    ad.tick.side_effect = [None, 'yielded']
+    rom.auto_driver = ad
+    rom.auto_load()
+    check.is_false(rom.mh_auto_drive)  # disable_auto_drive called
+    check.is_false(rom.has_load)       # no load on yield
+
+
+def test_rom_auto_unload_journey_completes_then_homes():
+    rom, mx, my, _ = _make_rom(motor_x_angle=cen(0, 0)[0], motor_y_angle=cen(0, 0)[1])
+    rom.set_is_homed()
+    rom.has_load = True
+    ad = MagicMock()
+    ad.tick.side_effect = ['reached_unload']
+    rom.auto_driver = ad
+    rom.auto_unload()
+    ad.start_journey.assert_called_once_with((0, 0), rom.grid.unload_tile)
+    # home_and_unload ran
+    my.run_until_stalled.assert_called_once()
+    check.is_false(rom.has_load)
+    check.is_true(rom.mh_is_homed)

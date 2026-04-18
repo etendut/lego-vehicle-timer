@@ -1,10 +1,16 @@
 # IMPORTS_START
+from pybricks.pupdevices import Motor
+from pybricks.parameters import Port, Direction
 try:
     from pybricks.tools import StopWatch, wait
 except ImportError:
     StopWatch = None
     def wait(time):
         pass
+try:
+    from uerrno import ENODEV
+except ImportError:
+    ENODEV = -99
 # IMPORTS_END
 
 # local var only
@@ -14,6 +20,12 @@ def mock_const(val):
 # for testing
 if const(12) is None:
     const = mock_const
+
+from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
+from pybricks.parameters import Button
+
+error_flash_code = ErrorFlashCodes()
+remote = None
 
 # VARS_START
 DEBUG = const(False)
@@ -37,6 +49,10 @@ AUTO = const(2)
 
 DRIVE_MODE = HYBRID
 IDLE_TIMEOUT_SECS = const(30)
+
+ODV_SPEED = const(45)
+ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
+ODV_GRID = ODV_GRID_DEFAULT
 # VARS_END
 
 # MODULE_START
@@ -514,8 +530,155 @@ class HomingRoutine:
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, unload_x_origin + _DEG_PER_TILE // 2)
         wait(200)
 
+
+_LOAD_DIP_DEG = const(240)
+
+
+class RunODVMotors(MotorHelper):
+    """ODV drive coordinator built on the Grid/AxisController/AutoDriver stack."""
+
+    def __init__(self, error_flash_code_helper, drive_speed, grid_layout,
+                 _motors=None, _remote=None, _clock=None):
+        super().__init__(False, True)
+        self.error_flash_code = error_flash_code_helper
+        self.drive_speed = drive_speed
+        self.has_load = False
+        self._remote = _remote
+
+        if _motors is not None:
+            self.motor_x, self.motor_y = _motors
+        else:
+            self.motor_x_port = Port.A
+            self.motor_y_port = Port.C
+            try:
+                self.motor_x = Motor(self.motor_x_port, Direction.COUNTERCLOCKWISE)
+            except OSError as ex:
+                if ex.errno == ENODEV:
+                    self.error_flash_code.set_error_no_motor_on_a()
+                raise
+            try:
+                self.motor_y = Motor(self.motor_y_port, Direction.CLOCKWISE)
+            except OSError as ex:
+                if ex.errno == ENODEV:
+                    self.error_flash_code.set_error_no_motor_on_b()
+                raise
+
+        self.grid = Grid(grid_layout)
+        self.planner = Planner(self.grid)
+        self.axis_controller = AxisController(self.motor_x, self.motor_y, self.grid,
+                                              drive_speed, _clock=_clock)
+        self.auto_driver = AutoDriver(self.grid, self.planner, self.axis_controller)
+        self.homing_routine = HomingRoutine(self.motor_x, self.motor_y, self.grid)
+
+        if DRIVE_MODE == HYBRID:
+            self.idle_timeout = IdleTimeout(IDLE_TIMEOUT_SECS, _clock=_clock)
+        else:
+            self.idle_timeout = None
+
+        self.stop_motors()
+
+    def _current_tile(self):
+        return self.grid.deg_to_tile(self.axis_controller.deg_pos())
+
+    def _get_remote(self):
+        if self._remote is not None:
+            return self._remote
+        return remote
+
+    def home_and_unload(self):
+        self.homing_routine.run()
+        self.has_load = False
+        self.set_is_homed()
+
+    def reset_homing(self):
+        self.reset_is_homed()
+
+    def stop_motors(self):
+        self.motor_x.stop()
+        self.motor_y.stop()
+
+    def handle_remote_press(self):
+        if self.mh__remote_disabled:
+            return
+        rem = self._get_remote()
+        if rem is None:
+            return
+        pressed = rem.buttons.pressed()
+
+        if len(pressed) == 0 or Button.LEFT in pressed or Button.RIGHT in pressed:
+            self.axis_controller.tick(VirtualJoystick(0, 0))
+            if len(pressed) > 0 and self.idle_timeout is not None:
+                self.idle_timeout.reset()
+            return
+
+        ax = 0
+        ay = 0
+        if Button.LEFT_PLUS in pressed:
+            ay = -1
+        elif Button.LEFT_MINUS in pressed:
+            ay = +1
+        if Button.RIGHT_PLUS in pressed:
+            ax = +1
+        elif Button.RIGHT_MINUS in pressed:
+            ax = -1
+
+        if self.idle_timeout is not None:
+            self.idle_timeout.reset()
+
+        if ax == 0 and ay == 0:
+            self.axis_controller.tick(VirtualJoystick(0, 0))
+            return
+
+        cur = self._current_tile()
+        if (ax, ay) == (-1, 0) and cur == self.grid.load_tile:
+            self.axis_controller.tick(VirtualJoystick(0, 0))
+            self._do_load_()
+            return
+        if (ax, ay) == (+1, 0) and cur == self.grid.unload_tile:
+            self.axis_controller.tick(VirtualJoystick(0, 0))
+            self.home_and_unload()
+            return
+
+        self.axis_controller.tick(VirtualJoystick(ax, ay))
+
+    def _do_load_(self):
+        if self.has_load:
+            return
+        target_x = self.grid.tile_center_deg(self.grid.load_tile)[0]
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _LOAD_DIP_DEG)
+        wait(2000)
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x)
+        self.has_load = True
+
+    def _drive_auto_journey(self, goal_tile):
+        self.auto_driver.start_journey(self._current_tile(), goal_tile)
+        rem = self._get_remote()
+        while True:
+            result = self.auto_driver.tick(rem)
+            if result == 'yielded':
+                self.disable_auto_drive()
+                self.stop_motors()
+                return False
+            if result is not None:
+                return True
+            wait(10)
+
+    def auto_load(self):
+        if not self.mh_is_homed:
+            return
+        if self._drive_auto_journey(self.grid.load_tile):
+            self._do_load_()
+
+    def auto_unload(self):
+        if not self.mh_is_homed:
+            return
+        if not self.has_load:
+            return
+        if self._drive_auto_journey(self.grid.unload_tile):
+            self.home_and_unload()
+
 # MODULE_END
 
 # DRIVE_SETUP_START
-# placeholder — populated in Task 7 cutover
+drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)
 # DRIVE_SETUP_END
