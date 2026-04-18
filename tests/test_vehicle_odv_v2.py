@@ -291,10 +291,38 @@ def test_planner_ex2_straight_east():
 
 def test_planner_default_l_to_u():
     g = Grid(DEFAULT)
-    # L at (0,0), U at (4,0). Row 0 barrier '<' at (2,0) blocks eastbound,
-    # so path goes south to row 2, east, then north.
+    # L at (0,0), U at (4,0). Corner-cut pass replaces the (3,2) E->N corner
+    # with (2,2): from (2,2) the cart can safely cut NE toward (3,0). The
+    # (1,2) S->E corner is kept because cutting via (1,1) would try to enter
+    # '<' at (2,1) eastbound. The (3,0) N->E corner is kept because cutting
+    # via (3,1) would drive the cart into 'X' at (4,1).
     result = Planner(g).plan((0, 0), (4, 0))
-    check.equal(result, ((0, 0), (1, 0), (1, 2), (3, 2), (3, 0), (4, 0)))
+    check.equal(result, ((0, 0), (1, 0), (1, 2), (2, 2), (3, 0), (4, 0)))
+
+
+def test_planner_corner_cut_skipped_when_barrier_intervenes():
+    # Corner-cut from (1,1) into (3,2) SE would cross '<' at (2,1) eastbound
+    # -> the cut must be rejected and (1,2) retained as the S->E turn point.
+    g = Grid(DEFAULT)
+    p = Planner(g)
+    check.is_false(p._safe_diagonal((1, 1), (3, 2)),
+                   "SE cut through '<' at (2,1) should be rejected")
+
+
+def test_planner_corner_cut_taken_when_safe():
+    g = Grid(DEFAULT)
+    p = Planner(g)
+    check.is_true(p._safe_diagonal((2, 2), (3, 0)),
+                  "NE cut (2,2)->(3,0) should be safe")
+
+
+def test_planner_corner_cut_skipped_when_wall_blocks():
+    # Cutting (3,0) N->E corner via (3,1) would route cart through 'X' at
+    # (4,1). AABB sweep rejects it.
+    g = Grid(DEFAULT)
+    p = Planner(g)
+    check.is_false(p._safe_diagonal((3, 1), (4, 0)),
+                   "NE cut (3,1)->(4,0) should fail due to 'X' at (4,1)")
 
 
 def test_planner_default_u_to_l():

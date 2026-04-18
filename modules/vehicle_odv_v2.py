@@ -265,6 +265,14 @@ class AxisController:
 _DIRECTIONS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
 
+def _sign(n):
+    if n > 0:
+        return 1
+    if n < 0:
+        return -1
+    return 0
+
+
 class Planner:
     def __init__(self, grid):
         self.grid = grid
@@ -310,15 +318,71 @@ class Planner:
 
         if len(path) <= 2:
             return tuple(path)
-        waypoints = [path[0]]
+        turn_points = [path[0]]
         prev_dir = (path[1][0] - path[0][0], path[1][1] - path[0][1])
         for i in range(1, len(path) - 1):
             next_dir = (path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
             if next_dir != prev_dir:
-                waypoints.append(path[i])
+                turn_points.append(path[i])
             prev_dir = next_dir
-        waypoints.append(path[-1])
-        return tuple(waypoints)
+        turn_points.append(path[-1])
+        return self._cut_corners(turn_points)
+
+    def _cut_corners(self, waypoints):
+        """Replace L-turn corner tiles with diagonal shortcuts where safe.
+        For each triple (a, b, c) with cardinal-perpendicular legs, try
+        replacing b with (b minus one step along a->b); keep the swap only
+        if the simulated diagonal from candidate to c stays unblocked."""
+        if len(waypoints) < 3:
+            return tuple(waypoints)
+        result = [waypoints[0]]
+        n = len(waypoints)
+        i = 1
+        while i < n - 1:
+            a = waypoints[i - 1]
+            b = waypoints[i]
+            c = waypoints[i + 1]
+            d1x, d1y = _sign(b[0] - a[0]), _sign(b[1] - a[1])
+            d2x, d2y = _sign(c[0] - b[0]), _sign(c[1] - b[1])
+            # Perpendicular cardinals: dot product zero AND neither is the zero vector.
+            perpendicular = (d1x * d2x + d1y * d2y) == 0 and (d1x or d1y) and (d2x or d2y)
+            if perpendicular:
+                candidate = (b[0] - d1x, b[1] - d1y)
+                if candidate != a and self._safe_diagonal(candidate, c):
+                    result.append(candidate)
+                    i += 1
+                    continue
+            result.append(b)
+            i += 1
+        result.append(waypoints[-1])
+        return tuple(result)
+
+    def _safe_diagonal(self, cand_tile, goal_tile):
+        """Simulate AutoDriver-style motion from cand_tile centre to
+        goal_tile centre. Safe iff every tick advances each requested axis
+        fully (no partial block)."""
+        g = self.grid
+        cx, cy = g.tile_center_deg(cand_tile)
+        gx, gy = g.tile_center_deg(goal_tile)
+        # Bound: Manhattan distance / lookahead, with headroom.
+        max_ticks = 4 * (abs(gx - cx) + abs(gy - cy)) // _LOOKAHEAD_DEG + 4
+        for _ in range(max_ticks):
+            dx = gx - cx
+            dy = gy - cy
+            if dx == 0 and dy == 0:
+                return True
+            step_x = _sign(dx) * _LOOKAHEAD_DEG
+            step_y = _sign(dy) * _LOOKAHEAD_DEG
+            if step_x and abs(step_x) > abs(dx):
+                step_x = dx
+            if step_y and abs(step_y) > abs(dy):
+                step_y = dy
+            valid_dx, valid_dy = g.propose_step((cx, cy), step_x, step_y)
+            if (step_x != 0 and valid_dx != step_x) or (step_y != 0 and valid_dy != step_y):
+                return False
+            cx += valid_dx
+            cy += valid_dy
+        return False
 
     def _passable(self, tile):
         tx, ty = tile
