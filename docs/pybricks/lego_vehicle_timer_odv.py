@@ -697,6 +697,9 @@ class AxisController:
         requested_dy = vj.ay * _LOOKAHEAD_DEG
         valid_dx, valid_dy = self.grid.propose_step((cx, cy), requested_dx, requested_dy)
 
+        if DEBUG and (valid_dx != requested_dx or valid_dy != requested_dy):
+            print('clip pos=(', cx, cy, ') req=(', requested_dx, requested_dy, ') valid=(', valid_dx, valid_dy, ')')
+
         # X axis
         if valid_dx > 0:
             self.motor_x.dc(+duty)
@@ -902,6 +905,8 @@ class AutoDriver:
 
         if _within(cx, target[0], _AIM_SWITCH_DEG) and _within(cy, target[1], _AIM_SWITCH_DEG):
             self.i += 1
+            if DEBUG:
+                print('advance i=', self.i, 'of', len(self.waypoints))
             if self.i >= len(self.waypoints) - 1:
                 return self._end_tag()
             target = self.grid.tile_center_deg(self.waypoints[self.i + 1])
@@ -1100,15 +1105,30 @@ class RunODVMotors(MotorHelper):
         self.has_load = True
 
     def _drive_auto_journey(self, goal_tile):
-        self.auto_driver.start_journey(self._current_tile(), goal_tile)
+        start = self._current_tile()
+        self.auto_driver.start_journey(start, goal_tile)
         rem = self._get_remote()
+        if DEBUG:
+            print('journey', start, '->', goal_tile, 'waypoints', self.auto_driver.waypoints)
+        tick_count = 0
         while True:
             result = self.auto_driver.tick(rem)
+            tick_count += 1
+            if DEBUG and tick_count % 50 == 0:
+                cx, cy = self.axis_controller.deg_pos()
+                i = self.auto_driver.i
+                wps = self.auto_driver.waypoints
+                nxt = wps[i + 1] if i + 1 < len(wps) else None
+                print('t=', tick_count, 'i=', i, 'pos=(', cx, cy, ') next=', nxt)
             if result == 'yielded':
+                if DEBUG:
+                    print('yielded')
                 self.disable_auto_drive()
                 self.stop_motors()
                 return False
             if result is not None:
+                if DEBUG:
+                    print(result)
                 return True
             wait(10)
 
