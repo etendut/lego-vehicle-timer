@@ -640,7 +640,7 @@ def main():
                         countdown_timer.reset_time_since_last_remote_press()
 
             # if there is no remote, then there is no point in a countdown
-            if countdown_timer.has_time_remaining() or REMOTE_DISABLED:
+            if countdown_timer.has_time_remaining() or REMOTE_DISABLED or drive_motors.mh_auto_drive:
                 if drive_motors.mh_supports_homing and not drive_motors.mh_is_homed:
                     drive_motors.home_and_unload()
                 if drive_motors.mh_supports_flip:
