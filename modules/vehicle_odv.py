@@ -712,6 +712,8 @@ class RunODVMotors(MotorHelper):
             if result is not None:
                 if DEBUG:
                     print(result)
+                self.stop_motors()
+                wait(500)
                 return True
             wait(10)
 

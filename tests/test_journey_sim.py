@@ -184,6 +184,24 @@ def test_journey_from_homed_position_reaches_load(compiled):
     assert rom.grid.deg_to_tile((mx.angle(), my.angle())) == rom.grid.load_tile
 
 
+def test_journey_stops_motors_on_arrival(compiled):
+    """On arrival, _drive_auto_journey must stop motors so subsequent actions
+    (home_and_unload, _do_load_) start from rest — not mid-stride.
+    Regression: cart slid diagonally into Y wall because X duty carried over
+    into home_and_unload's Y stall."""
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    _install_sim_wait(m, mx, my, clock)
+    _park_on_tile(m, mx, my, rom.grid.unload_tile)
+    rom.mh_is_homed = True
+
+    reached = rom._drive_auto_journey(rom.grid.load_tile)
+
+    assert reached is True
+    assert mx._duty == 0  # motors stopped before return
+    assert my._duty == 0
+
+
 def test_autodriver_zero_dy_inside_deadband(compiled):
     """AutoDriver must emit ay=0 when cart Y is within deadband of the target
     Y line — small drift shouldn't pulse the idle axis.

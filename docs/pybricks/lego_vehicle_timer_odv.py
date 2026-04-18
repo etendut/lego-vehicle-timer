@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '87063f3-dirty @ 2026-04-18 22:02'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '70eba5c-dirty @ 2026-04-18 22:19'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -1147,6 +1147,8 @@ class RunODVMotors(MotorHelper):
             if result is not None:
                 if DEBUG:
                     print(result)
+                self.stop_motors()
+                wait(500)
                 return True
             wait(10)
 
