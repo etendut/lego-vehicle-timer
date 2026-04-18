@@ -111,22 +111,25 @@ with [PyBricks](https://code.pybricks.com/)
 
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
-ODV_SPEED: int = const(45) # set between 40 and 70<br>
+ODV_SPEED = const(45) # base duty %, set between 40 and 70<br>
+IDLE_TIMEOUT_SECS = const(20) # HYBRID-mode idle period before auto-drive engages<br>
 
 #### ODV Drive Modes
 
-| Mode        | `REMOTE_DISABLED` | `ODV_AUTO_DRIVE_TIMEOUT_SECS` | Description                                                                                                                                                               |
-| ----------- | ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Full manual | `False`           | `0`                           | Remote controls the vehicle only; no automatic movement                                                                                                                   |
-| Hybrid      | `False`           | `30`                          | Remote controls the vehicle; after 30 seconds of no input the vehicle starts automatic load/unload cycles. Any button press hands control back and restarts the 30s timer |
-| Full auto   | `True`            | `0`                           | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete                                                                               |
+`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`.
+
+| Mode        | `DRIVE_MODE` | `REMOTE_DISABLED` | Description                                                                                                                                                                       |
+| ----------- | ------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full manual | `MANUAL`     | `False`           | Remote controls the vehicle only; no automatic movement                                                                                                                           |
+| Hybrid      | `HYBRID`     | `False`           | Remote controls the vehicle; after `IDLE_TIMEOUT_SECS` with no input the vehicle starts automatic load/unload cycles. Any button press yields control back and restarts the timer |
+| Full auto   | `AUTO`       | `True`            | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete                                                                                       |
 
 ODV_GRID = [] grid tiles specified in a list
 
 X = obstacle, L = Load, U = Unload/End (homing wall NORTH and EAST), # = grid tile, < = one-way left, > = one-way right
 
 **Default**<br>
-ODV_GRID = `["L##<U", "X#X#X", "X###X"]`<br>
+ODV_GRID = `["L#<#U", "X#<#X", "X###X"]`<br>
 <img src="docs/images/ODV_GRID_DEFAULT.png" alt="Grid default" />
 
 **Example 1**<br>
@@ -146,7 +149,20 @@ L→U travels top (eastward through `>`), U→L travels bottom (westward through
 
 ### Version 3.0.0 (current)
 
-- Full re-write of ODV logic
+- Full re-write of ODV movement system:
+  - Arcade-style hold-to-glide control: each cardinal button drives a
+    virtual joystick; diagonals are two-button combos at ~71% per-axis
+    speed; release ramps to stop over ~200ms
+  - AABB-in-tile-grid collision in motor-degree space — one
+    `Grid.propose_step` primitive validates every tick, manual and auto
+  - 4-direction BFS planner producing turn-point waypoints; `AutoDriver`
+    emits a virtual joystick so manual and auto share the same motion path
+  - Explicit `DRIVE_MODE` enum (`MANUAL` / `HYBRID` / `AUTO`) replaces the
+    two-boolean encoding
+  - Idle-timeout logic split out of `CountdownTimer` into a local
+    `IdleTimeout` (only active in `HYBRID`)
+  - Compile tool validates splice markers and lints compiled files with
+    ruff
 
 ### Version 2.3.0
 

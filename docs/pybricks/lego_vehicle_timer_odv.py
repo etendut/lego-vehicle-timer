@@ -53,7 +53,7 @@ REMOTE_DISABLED = False
 # - TODO critical level may be too low
 MILLIVOLT_CRITICAL_LEVEL = const(7200) 
 
-DEBUG = const(False)
+DEBUG = const(True)
 
 _DEG_PER_TILE = const(800)
 _CART_SIZE_DEG = const(640)
@@ -72,7 +72,7 @@ MANUAL = const(0)
 HYBRID = const(1)
 AUTO = const(2)
 
-DRIVE_MODE = HYBRID
+DRIVE_MODE = AUTO
 IDLE_TIMEOUT_SECS = const(20) # allows robot time to do an unload an load within 30s
 
 ODV_SPEED = const(45)
