@@ -75,6 +75,9 @@ AUTO = const(2)
 DRIVE_MODE = AUTO
 IDLE_TIMEOUT_SECS = const(20) # allows robot time to do an unload an load within 30s
 
+# DRIVE_MODE drives the remote flag: AUTO runs headless; MANUAL/HYBRID require the remote.
+REMOTE_DISABLED = (DRIVE_MODE == AUTO)
+
 ODV_SPEED = const(45)
 ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
 ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]

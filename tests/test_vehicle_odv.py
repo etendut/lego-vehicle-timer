@@ -546,7 +546,12 @@ def test_rom_init_builds_stack():
     check.is_instance(rom.axis_controller, AxisController)
     check.is_instance(rom.auto_driver, AutoDriver)
     check.is_instance(rom.homing_routine, HomingRoutine)
-    check.is_instance(rom.idle_timeout, IdleTimeout)  # HYBRID default
+    # idle_timeout is only constructed in HYBRID mode
+    from modules.vehicle_odv import DRIVE_MODE, HYBRID
+    if DRIVE_MODE == HYBRID:
+        check.is_instance(rom.idle_timeout, IdleTimeout)
+    else:
+        check.is_none(rom.idle_timeout)
     check.is_false(rom.has_load)
     check.is_false(rom.mh_is_homed)
     # supports_homing=True, supports_flip=False

@@ -65,7 +65,7 @@ tested :).<br>
 c = center button, + = + button, - = - button<br>
 COUNTDOWN_RESET_CODE = 'c,c,c' # left center button, center button, right center button<br>
 
-REMOTE_DISABLED = False # for debugging or ODV full auto
+REMOTE_DISABLED = False # headless / debug flag for train, skid_steer, servo (ODV derives this from DRIVE_MODE)
 
 ### Train
 
@@ -116,13 +116,13 @@ IDLE_TIMEOUT_SECS = const(20) # HYBRID-mode idle period before auto-drive engage
 
 #### ODV Drive Modes
 
-`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`.
+`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`. It is the single knob — the ODV module derives `REMOTE_DISABLED` automatically from it (`AUTO` runs headless; `MANUAL`/`HYBRID` require the remote).
 
-| Mode        | `DRIVE_MODE` | `REMOTE_DISABLED` | Description                                                                                                                                                                       |
-| ----------- | ------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Full manual | `MANUAL`     | `False`           | Remote controls the vehicle only; no automatic movement                                                                                                                           |
-| Hybrid      | `HYBRID`     | `False`           | Remote controls the vehicle; after `IDLE_TIMEOUT_SECS` with no input the vehicle starts automatic load/unload cycles. Any button press yields control back and restarts the timer |
-| Full auto   | `AUTO`       | `True`            | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete                                                                                       |
+| Mode        | `DRIVE_MODE` | Description                                                                                                                                                                       |
+| ----------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full manual | `MANUAL`     | Remote controls the vehicle only; no automatic movement                                                                                                                           |
+| Hybrid      | `HYBRID`     | Remote controls the vehicle; after `IDLE_TIMEOUT_SECS` with no input the vehicle starts automatic load/unload cycles. Any button press yields control back and restarts the timer |
+| Full auto   | `AUTO`       | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete                                                                                       |
 
 ODV_GRID = [] grid tiles specified in a list
 
