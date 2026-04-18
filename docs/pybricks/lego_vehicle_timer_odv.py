@@ -950,29 +950,25 @@ class HomingRoutine:
         self.grid = grid
 
     def run(self):
-        """Stall Y north, stall X east, reset encoders so that final
-        motor.angle() = (ux*_DEG_PER_TILE + _DEG_PER_TILE//2,
-                         uy*_DEG_PER_TILE + _DEG_PER_TILE//10).
-        Parking position matches legacy home_and_unload exactly.
+        """Stall Y north, stall X east, reset encoders so motor.angle() reads
+        cart-center position in the grid frame, then run to U's tile center.
+        After run(), motor.angle() == grid.tile_center_deg(grid.unload_tile).
         """
-        ux, uy = self.grid.unload_tile
-        unload_x_origin = ux * _DEG_PER_TILE
-        unload_y_origin = uy * _DEG_PER_TILE
+        target_x, target_y = self.grid.tile_center_deg(self.grid.unload_tile)
+        east_wall_deg = self.grid.n_cols * _DEG_PER_TILE
 
-        # Stall Y NORTH against top wall above U
+        # Stall Y NORTH against top wall; cart center is _HALF south of the wall.
         self.motor_y.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
         wait(200)
-        self.motor_y.reset_angle(unload_y_origin)
-        # Back off one fine-unit south so cart clears the stall wall
-        self.motor_y.run_angle(_MAX_MOTOR_ROT_SPEED, _DEG_PER_TILE // 10)
+        self.motor_y.reset_angle(_HALF)
+        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, target_y)
         wait(200)
 
-        # Stall X EAST against right wall — also unloads the cart
+        # Stall X EAST against right wall — also unloads the cart.
         self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED * 3, duty_limit=_HOMING_DUTY)
         wait(2000)
-        self.motor_x.reset_angle(unload_x_origin + (_DEG_PER_TILE - _DEG_PER_TILE // 10))
-        # Centre cart on U's tile centre in X
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, unload_x_origin + _DEG_PER_TILE // 2)
+        self.motor_x.reset_angle(east_wall_deg - _HALF)
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x)
         wait(200)
 
 

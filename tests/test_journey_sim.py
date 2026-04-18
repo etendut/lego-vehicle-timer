@@ -152,6 +152,38 @@ def test_journey_load_to_unload_on_default_grid(compiled):
     assert final_tile == rom.grid.unload_tile
 
 
+def test_homing_parks_on_unload_tile_center(compiled):
+    """HomingRoutine must land the cart at U's tile center in the grid frame,
+    so the AABB collision model doesn't see the cart wedged in the N/E walls."""
+    m = compiled
+    layout = m.ODV_GRID_DEFAULT
+    rom, mx, my, clock = _build_rom(m, layout)
+    _install_sim_wait(m, mx, my, clock)
+
+    rom.homing_routine.run()
+
+    expected = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    assert (mx.angle(), my.angle()) == expected
+
+
+def test_journey_from_homed_position_reaches_load(compiled):
+    """After HomingRoutine.run(), the auto-drive journey to L must succeed
+    (regression: Y was parking at wall-offset 80 instead of tile center 400,
+    causing the AABB to clip every tick to (0, 0))."""
+    m = compiled
+    layout = m.ODV_GRID_DEFAULT
+    rom, mx, my, clock = _build_rom(m, layout)
+    _install_sim_wait(m, mx, my, clock)
+
+    rom.homing_routine.run()
+    rom.mh_is_homed = True
+
+    reached = rom._drive_auto_journey(rom.grid.load_tile)
+
+    assert reached is True
+    assert rom.grid.deg_to_tile((mx.angle(), my.angle())) == rom.grid.load_tile
+
+
 def test_journey_yields_on_remote_press(compiled):
     m = compiled
     layout = m.ODV_GRID_DEFAULT

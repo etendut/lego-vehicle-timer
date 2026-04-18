@@ -225,8 +225,9 @@ def test_deg_pos():
 # --- Task 3: HomingRoutine ---
 
 def test_homing_call_sequence_default_grid():
-    """DEFAULT grid: unload_tile = (4, 0). Legacy parking:
-       motor_y final = 0 + 80; motor_x final = 4*800 + 400 = 3600.
+    """DEFAULT grid: unload_tile = (4, 0). Cart-center frame parking:
+       at N-stall motor_y = _HALF (320); at E-stall motor_x = n_cols*800 - _HALF (3680);
+       run_target lands cart center on U's tile center (3600, 400).
     """
     grid = Grid(DEFAULT)
     motor_x = MagicMock()
@@ -236,13 +237,13 @@ def test_homing_call_sequence_default_grid():
 
     # Y stalled north first
     motor_y.run_until_stalled.assert_called_once_with(-200, duty_limit=45)
-    motor_y.reset_angle.assert_called_once_with(0)  # uy * 800 = 0
-    motor_y.run_angle.assert_called_once_with(1400, 80)
+    motor_y.reset_angle.assert_called_once_with(320)  # _HALF = cart center south of N wall
+    motor_y.run_target.assert_called_once_with(1400, 0 * 800 + 400)  # U tile center Y
 
     # Then X stalled east
     motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
-    motor_x.reset_angle.assert_called_once_with(4 * 800 + 720)  # ux*800 + 720
-    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)  # centre on U
+    motor_x.reset_angle.assert_called_once_with(5 * 800 - 320)  # n_cols*tile - _HALF
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)  # U tile center X
 
 
 def test_homing_uses_unload_tile_from_grid():
@@ -253,8 +254,9 @@ def test_homing_uses_unload_tile_from_grid():
     motor_y = MagicMock()
     HomingRoutine(motor_x, motor_y, grid).run()
 
-    motor_y.reset_angle.assert_called_once_with(1 * 800)  # uy=1
-    motor_x.reset_angle.assert_called_once_with(4 * 800 + 720)
+    motor_y.reset_angle.assert_called_once_with(320)  # always _HALF (cart at N wall)
+    motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400)  # uy=1 tile center
+    motor_x.reset_angle.assert_called_once_with(5 * 800 - 320)
     motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)
 
 
