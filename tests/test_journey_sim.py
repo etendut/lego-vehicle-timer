@@ -184,6 +184,27 @@ def test_journey_from_homed_position_reaches_load(compiled):
     assert rom.grid.deg_to_tile((mx.angle(), my.angle())) == rom.grid.load_tile
 
 
+def test_autodriver_zero_dy_inside_deadband(compiled):
+    """AutoDriver must emit ay=0 when cart Y is within deadband of the target
+    Y line — small drift shouldn't pulse the idle axis.
+    Regression: _sign(dy) was ±1 for any nonzero dy, causing ±10° Y wobble
+    during straight-X transits on the rig."""
+    m = compiled
+    grid = m.Grid(m.ODV_GRID_DEFAULT)
+    planner = MagicMock()
+    planner.plan.return_value = ((4, 0), (0, 0))
+    ac = MagicMock()
+    ac.deg_pos.return_value = (3459, 396)  # rig-observed mid-transit drift
+
+    driver = m.AutoDriver(grid, planner, ac)
+    driver.start_journey((4, 0), (0, 0))
+    driver.tick(remote=None)
+
+    vj = ac.tick.call_args[0][0]
+    assert vj.ax == -1  # still pushing west toward (400, 400)
+    assert vj.ay == 0   # 4° Y drift is inside deadband — no pulse
+
+
 def test_journey_yields_on_remote_press(compiled):
     m = compiled
     layout = m.ODV_GRID_DEFAULT

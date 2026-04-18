@@ -732,6 +732,16 @@ class AxisController:
 _DIRECTIONS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
 
+def _aim(delta):
+    """Like _sign but with a _LOOKAHEAD_DEG deadband — prevents the idle axis
+    from pulsing on sub-step drift while transiting along the other axis."""
+    if delta > _LOOKAHEAD_DEG:
+        return 1
+    if delta < -_LOOKAHEAD_DEG:
+        return -1
+    return 0
+
+
 def _sign(n):
     if n > 0:
         return 1
@@ -911,7 +921,7 @@ class AutoDriver:
                 return self._end_tag()
             target = self.grid.tile_center_deg(self.waypoints[self.i + 1])
 
-        vj = VirtualJoystick(_sign(target[0] - cx), _sign(target[1] - cy))
+        vj = VirtualJoystick(_aim(target[0] - cx), _aim(target[1] - cy))
         self.axis_controller.tick(vj)
         return None
 
