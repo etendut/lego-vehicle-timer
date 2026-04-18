@@ -1,8 +1,10 @@
 # IMPORTS_START
 try:
-    from pybricks.tools import StopWatch
+    from pybricks.tools import StopWatch, wait
 except ImportError:
     StopWatch = None
+    def wait(time):
+        pass
 # IMPORTS_END
 
 # local var only
@@ -23,6 +25,10 @@ _LOOKAHEAD_DEG = const(40)
 _STOP_RAMP_MS = const(200)
 _BOTH_AXES_DUTY_NUM = const(71)
 _BOTH_AXES_DUTY_DEN = const(100)
+
+_HOMING_MOTOR_ROT_SPEED = const(200)
+_HOMING_DUTY = const(45)
+_MAX_MOTOR_ROT_SPEED = const(1400)
 # VARS_END
 
 # MODULE_START
@@ -254,6 +260,39 @@ class AxisController:
             self._prev_duty_y, self._ramp_start_y = self._ramp_stop_axis(
                 self.motor_y, self._prev_duty_y, self._ramp_start_y
             )
+
+
+class HomingRoutine:
+    def __init__(self, motor_x, motor_y, grid):
+        self.motor_x = motor_x
+        self.motor_y = motor_y
+        self.grid = grid
+
+    def run(self):
+        """Stall Y north, stall X east, reset encoders so that final
+        motor.angle() = (ux*_DEG_PER_TILE + _DEG_PER_TILE//2,
+                         uy*_DEG_PER_TILE + _DEG_PER_TILE//10).
+        Parking position matches legacy home_and_unload exactly.
+        """
+        ux, uy = self.grid.unload_tile
+        unload_x_origin = ux * _DEG_PER_TILE
+        unload_y_origin = uy * _DEG_PER_TILE
+
+        # Stall Y NORTH against top wall above U
+        self.motor_y.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
+        wait(200)
+        self.motor_y.reset_angle(unload_y_origin)
+        # Back off one fine-unit south so cart clears the stall wall
+        self.motor_y.run_angle(_MAX_MOTOR_ROT_SPEED, _DEG_PER_TILE // 10)
+        wait(200)
+
+        # Stall X EAST against right wall — also unloads the cart
+        self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED * 3, duty_limit=_HOMING_DUTY)
+        wait(2000)
+        self.motor_x.reset_angle(unload_x_origin + (_DEG_PER_TILE - _DEG_PER_TILE // 10))
+        # Centre cart on U's tile centre in X
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, unload_x_origin + _DEG_PER_TILE // 2)
+        wait(200)
 
 # MODULE_END
 

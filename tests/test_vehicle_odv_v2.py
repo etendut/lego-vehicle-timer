@@ -2,7 +2,7 @@ import pytest
 from pytest_check import check
 from unittest.mock import MagicMock
 
-from modules.vehicle_odv_v2 import Grid, VirtualJoystick, AxisController
+from modules.vehicle_odv_v2 import Grid, VirtualJoystick, AxisController, HomingRoutine
 
 DEFAULT = ["L#<#U", "X#<#X", "X###X"]
 EX3 = ["X#>#X", "L#X#U", "X#<#X"]
@@ -215,3 +215,60 @@ def test_ramp_completion_calls_dc_zero():
 def test_deg_pos():
     ac, mx, my, _ = _make_ac(["L###U"], motor_x_angle=1234, motor_y_angle=5678)
     check.equal(ac.deg_pos(), (1234, 5678))
+
+
+# --- Task 3: HomingRoutine ---
+
+def test_homing_call_sequence_default_grid():
+    """DEFAULT grid: unload_tile = (4, 0). Legacy parking:
+       motor_y final = 0 + 80; motor_x final = 4*800 + 400 = 3600.
+    """
+    grid = Grid(DEFAULT)
+    motor_x = MagicMock()
+    motor_y = MagicMock()
+    h = HomingRoutine(motor_x, motor_y, grid)
+    h.run()
+
+    # Y stalled north first
+    motor_y.run_until_stalled.assert_called_once_with(-200, duty_limit=45)
+    motor_y.reset_angle.assert_called_once_with(0)  # uy * 800 = 0
+    motor_y.run_angle.assert_called_once_with(1400, 80)
+
+    # Then X stalled east
+    motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
+    motor_x.reset_angle.assert_called_once_with(4 * 800 + 720)  # ux*800 + 720
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)  # centre on U
+
+
+def test_homing_uses_unload_tile_from_grid():
+    """EX3 grid has unload at (4, 1)."""
+    grid = Grid(EX3)
+    check.equal(grid.unload_tile, (4, 1))
+    motor_x = MagicMock()
+    motor_y = MagicMock()
+    HomingRoutine(motor_x, motor_y, grid).run()
+
+    motor_y.reset_angle.assert_called_once_with(1 * 800)  # uy=1
+    motor_x.reset_angle.assert_called_once_with(4 * 800 + 720)
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)
+
+
+def test_homing_order_y_then_x():
+    """Y stall+reset+back-off must happen before X stall+reset+centre."""
+    grid = Grid(DEFAULT)
+    motor_x = MagicMock()
+    motor_y = MagicMock()
+    parent = MagicMock()
+    parent.attach_mock(motor_x, 'x')
+    parent.attach_mock(motor_y, 'y')
+
+    HomingRoutine(motor_x, motor_y, grid).run()
+
+    names = [c[0] for c in parent.mock_calls]
+    # Only care about the high-level ordering of Y vs X actions
+    y_idx = names.index('y.run_until_stalled')
+    x_idx = names.index('x.run_until_stalled')
+    check.less(y_idx, x_idx)
+    y_reset_idx = names.index('y.reset_angle')
+    x_reset_idx = names.index('x.reset_angle')
+    check.less(y_reset_idx, x_reset_idx)
