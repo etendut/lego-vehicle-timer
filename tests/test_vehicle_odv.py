@@ -1,310 +1,727 @@
 import pytest
 from pytest_check import check
-
 from unittest.mock import MagicMock
 
-from modules.vehicle_odv import (
-    can_move_in_direction_by_type, _can_traverse_coarse, RunODVMotors,
-    NORTH, NORTH_EAST, EAST, SOUTH_EAST, SOUTH, SOUTH_WEST, WEST, NORTH_WEST,
-    ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2, ODV_GRID_EX3,
+from pybricks.parameters import Button
+
+from modules.vehicle_odv_v2 import (
+    Grid, VirtualJoystick, AxisController, HomingRoutine, Planner, AutoDriver,
+    IdleTimeout, RunODVMotors, MANUAL, HYBRID, AUTO,
 )
 
-# Shorthand tile types
-T = '#'   # TRACK
-W = 'X'   # WALL
-L = 'L'   # LOAD
-U = 'U'   # UNLOAD (end tile — homing wall NORTH and EAST)
-LT = '<'  # WEST_ONLY
-RT = '>'  # EAST_ONLY
-
-can_move_tests = [
-    # --- Rule 1: WALL — NORTH uses leading edge (tl/tr) only ---
-    pytest.param(NORTH, W, T, T, T, False, id="wall-tl-north"),
-    pytest.param(NORTH, T, W, T, T, False, id="wall-tr-north"),
-    pytest.param(NORTH, T, T, W, T, True,  id="wall-br-north-trailing"),
-    pytest.param(NORTH, T, T, T, W, True,  id="wall-bl-north-trailing"),
-    # --- WALL — other directions block on any corner ---
-    pytest.param(EAST,  W, T, T, T, False, id="wall-tl-east"),
-    pytest.param(SOUTH, T, T, W, T, False, id="wall-br-south"),
-    pytest.param(WEST,  T, T, T, W, False, id="wall-bl-west"),
-
-    # --- Rule 2: < blocks EAST/NE/SE on leading edge (tr/br) only ---
-    pytest.param(EAST,  T,  LT, T,  T,  False, id="lt-tr-east"),
-    pytest.param(EAST,  T,  T,  LT, T,  False, id="lt-br-east"),
-    pytest.param(EAST,  LT, T,  T,  T,  True,  id="lt-tl-east-allowed"),
-    pytest.param(EAST,  T,  T,  T,  LT, True,  id="lt-bl-east-allowed"),
-    pytest.param(NORTH, T,  LT, T,  T,  True,  id="lt-tr-north-allowed"),
-    pytest.param(SOUTH, T,  T,  LT, T,  True,  id="lt-br-south-allowed"),
-    pytest.param(WEST,  LT, T,  T,  LT, True,  id="lt-west-allowed"),
-    pytest.param(WEST,  T,  LT, LT, T,  True,  id="lt-west-allowed-2"),
-
-    # --- Rule 3: > blocks WEST/NW/SW on leading edge (tl/bl) only ---
-    pytest.param(WEST,  RT, T,  T,  T,  False, id="rt-tl-west"),
-    pytest.param(WEST,  T,  T,  T,  RT, False, id="rt-bl-west"),
-    pytest.param(WEST,  T,  RT, T,  T,  True,  id="rt-tr-west-allowed"),
-    pytest.param(WEST,  T,  T,  RT, T,  True,  id="rt-br-west-allowed"),
-    pytest.param(NORTH, T,  RT, T,  T,  True,  id="rt-tr-north-allowed"),
-    pytest.param(SOUTH, T,  T,  RT, T,  True,  id="rt-br-south-allowed"),
-    pytest.param(EAST,  RT, T,  T,  RT, True,  id="rt-east-allowed"),
-    pytest.param(EAST,  T,  RT, RT, T,  True,  id="rt-east-allowed-2"),
-
-    # --- Rule 4: any corner on UNLOAD and direction == NORTH → block ---
-    pytest.param(NORTH, U, T, T, T, False, id="unload-north-tl"),
-    pytest.param(NORTH, T, U, T, T, False, id="unload-north-tr"),
-    pytest.param(NORTH, T, T, U, T, False, id="unload-north-br"),
-    pytest.param(NORTH, T, T, T, U, False, id="unload-north-bl"),
-    # UNLOAD allowed in other directions
-    pytest.param(EAST,  U, T, T, T, True,  id="unload-east-allowed"),
-    pytest.param(SOUTH, U, T, T, T, True,  id="unload-south-allowed"),
-    pytest.param(WEST,  U, T, T, T, True,  id="unload-west-allowed"),
-
-    # --- Rule 5: all other combinations → allow ---
-    pytest.param(NORTH, T, T, T, T, True, id="all-track-north"),
-    pytest.param(EAST,  T, T, T, T, True, id="all-track-east"),
-    pytest.param(SOUTH, T, T, T, T, True, id="all-track-south"),
-    pytest.param(WEST,  T, T, T, T, True, id="all-track-west"),
-    # mixed track/load or track/unload → can move
-    pytest.param(EAST, T, L, T, T, True, id="mixed-load-track"),
-    pytest.param(EAST, T, U, T, T, True, id="mixed-unload-track"),
-]
+DEFAULT = ["L#<#U", "X#<#X", "X###X"]
+EX3 = ["X#>#X", "L#X#U", "X#<#X"]
 
 
-@pytest.mark.parametrize("direction,tl,tr,br,bl,expected_move", can_move_tests)
-def test_can_move(direction, tl, tr, br, bl, expected_move):
-    can_move, _, _ = can_move_in_direction_by_type(direction, tl, tr, br, bl)
-    check.equal(can_move, expected_move)
+def cen(tx, ty):
+    return (tx * 800 + 400, ty * 800 + 400)
 
 
-can_load_unload_tests = [
-    pytest.param(EAST, L, L, L, L, True,  False, id="all-load"),
-    pytest.param(EAST, U, U, U, U, False, True,  id="all-unload"),
-    pytest.param(EAST, L, T, T, T, False, False, id="partial-load"),
-    pytest.param(EAST, T, T, T, T, False, False, id="all-track"),
-]
+# --- Task 1: Grid.propose_step ---
 
-
-@pytest.mark.parametrize("direction,tl,tr,br,bl,expected_load,expected_unload", can_load_unload_tests)
-def test_can_load_unload(direction, tl, tr, br, bl, expected_load, expected_unload):
-    _, can_load, can_unload = can_move_in_direction_by_type(direction, tl, tr, br, bl)
-    check.equal(can_load, expected_load)
-    check.equal(can_unload, expected_unload)
-
-
-# ---------------------------------------------------------------------------
-# _can_traverse_coarse tests
-# ---------------------------------------------------------------------------
-
-coarse_tests = [
-    # WALL destination always blocks
-    pytest.param(T,  W,  NORTH, False, id="to-wall"),
-    pytest.param(T,  W,  EAST,  False, id="to-wall-from-track"),
-
-    # < (WEST_ONLY): blocks eastward components (EAST, NE, SE); N/S/W/NW/SW allowed
-    pytest.param(LT, T,  EAST,       False, id="from-lt-east"),
-    pytest.param(T,  LT, EAST,       False, id="to-lt-east"),
-    pytest.param(T,  LT, NORTH_EAST, False, id="to-lt-north-east"),
-    pytest.param(T,  LT, SOUTH_EAST, False, id="to-lt-south-east"),
-    pytest.param(T,  LT, NORTH,      True,  id="to-lt-north-allowed"),
-    pytest.param(LT, LT, SOUTH,      True,  id="both-lt-south-allowed"),
-    pytest.param(LT, T,  WEST,       True,  id="from-lt-west-allowed"),
-    pytest.param(T,  LT, WEST,       True,  id="to-lt-west-allowed"),
-    pytest.param(T,  LT, NORTH_WEST, True,  id="to-lt-north-west-allowed"),
-
-    # > (EAST_ONLY): blocks westward components (WEST, NW, SW); N/S/E/NE/SE allowed
-    pytest.param(RT, T,  WEST,       False, id="from-rt-west"),
-    pytest.param(T,  RT, WEST,       False, id="to-rt-west"),
-    pytest.param(T,  RT, NORTH_WEST, False, id="to-rt-north-west"),
-    pytest.param(T,  RT, SOUTH_WEST, False, id="to-rt-south-west"),
-    pytest.param(T,  RT, NORTH,      True,  id="to-rt-north-allowed"),
-    pytest.param(RT, T,  EAST,       True,  id="from-rt-east-allowed"),
-    pytest.param(T,  RT, EAST,       True,  id="to-rt-east-allowed"),
-    pytest.param(T,  RT, NORTH_EAST, True,  id="to-rt-north-east-allowed"),
-
-    # UNLOAD source: NORTH is blocked (homing wall above)
-    pytest.param(U,  T,  NORTH, False, id="from-unload-north"),
-    pytest.param(U,  T,  EAST,  True,  id="from-unload-east-allowed"),
-    pytest.param(U,  T,  SOUTH, True,  id="from-unload-south-allowed"),
-    pytest.param(U,  T,  WEST,  True,  id="from-unload-west-allowed"),
-    # UNLOAD as destination: allowed from any direction
-    pytest.param(T,  U,  SOUTH, True,  id="to-unload-south"),
-    pytest.param(T,  U,  EAST,  True,  id="to-unload-east"),
-
-    # free traversal
-    pytest.param(T, T, NORTH, True, id="track-to-track"),
-    pytest.param(T, L, EAST,  True, id="track-to-load"),
-    pytest.param(T, U, WEST,  True, id="track-to-unload"),
-]
-
-
-@pytest.mark.parametrize("from_type,to_type,direction,expected", coarse_tests)
-def test_can_traverse_coarse(from_type, to_type, direction, expected):
-    check.equal(_can_traverse_coarse(from_type, to_type, direction), expected)
-
-
-# ---------------------------------------------------------------------------
-# BFS tests
-# Grid: ["X#<U", "X#X#", "L#>#"]
-#   (0,0)=X  (1,0)=#  (2,0)=<  (3,0)=U
-#   (0,1)=X  (1,1)=#  (2,1)=X  (3,1)=#
-#   (0,2)=L  (1,2)=#  (2,2)=>  (3,2)=#
-# ---------------------------------------------------------------------------
-
-TEST_GRID = ["X#<U", "X#X#", "L#>#"]
-
-bfs_tests = [
+propose_step_tests = [
     pytest.param(
-        (0, 2), (3, 0),
-        [((0,2),-1), ((1,2),EAST), ((2,2),EAST), ((3,2),EAST), ((3,1),NORTH), ((3,0),NORTH)],
-        id="load-to-unload",
+        ["L#U"], cen(0, 0), 100, 0, (100, 0),
+        id="case01-clear-east-full-step",
     ),
     pytest.param(
-        (3, 0), (0, 2),
-        # SW from (1,1) to (0,2) blocked — corner (0,1) is WALL
-        [((3,0),-1), ((2,0),WEST), ((1,0),WEST), ((1,1),SOUTH), ((1,2),SOUTH), ((0,2),WEST)],
-        id="unload-to-load",
+        ["L#U"], (2080, 400), 10, 0, (0, 0),
+        id="case02-exit-east-grid-edge",
     ),
     pytest.param(
-        (1, 0), (3, 0),
-        [((1,0),-1), ((1,1),SOUTH), ((1,2),SOUTH), ((2,2),EAST), ((3,2),EAST), ((3,1),NORTH), ((3,0),NORTH)],
-        id="track-to-unload",
+        ["LXU"], cen(0, 0), 100, 0, (0, 0),
+        id="case03-wall-blocks-east",
     ),
     pytest.param(
-        (3, 0), (1, 0),
-        [((3,0),-1), ((2,0),WEST), ((1,0),WEST)],
-        id="unload-to-track",
+        ["LXU"], cen(0, 0), 0, 100, (0, 0),
+        id="case04-exit-south-grid-edge",
+    ),
+    pytest.param(
+        ["L#<#U"], cen(1, 0), 500, 0, (0, 0),
+        id="case05-west-barrier-blocks-east",
+    ),
+    pytest.param(
+        ["L#<#U"], cen(2, 0), -500, 0, (-500, 0),
+        id="case06-inside-west-only-westbound-allowed",
+    ),
+    pytest.param(
+        ["L#<#U"], cen(3, 0), -500, 0, (-500, 0),
+        id="case07-west-of-barrier-westbound-allowed",
+    ),
+    pytest.param(
+        ["L#>#U"], cen(3, 0), -500, 0, (0, 0),
+        id="case08-east-barrier-blocks-west",
+    ),
+    pytest.param(
+        ["L#>#U"], cen(2, 0), 500, 0, (500, 0),
+        id="case09-inside-east-only-eastbound-allowed",
+    ),
+    pytest.param(
+        DEFAULT, cen(1, 2), 800, -800, (800, -800),
+        id="case10-diagonal-corner-cut-both-axes-legal",
+    ),
+    pytest.param(
+        EX3, cen(1, 0), 800, 800, (800, 800),
+        id="case11-diagonal-into-wall-per-axis-both-pass",
+    ),
+    pytest.param(
+        ["L#U"], cen(0, 0), 0, 0, (0, 0),
+        id="case12-no-op",
+    ),
+    pytest.param(
+        ["L#U"], (400, 400), -400, 0, (0, 0),
+        id="case13-exit-west-grid-edge",
     ),
 ]
 
 
-@pytest.mark.parametrize("start_tile,end_tile,expected_path", bfs_tests)
-def test_bfs(start_tile, end_tile, expected_path):
-    helper = RunODVMotors(MagicMock(), 80, TEST_GRID)
-    result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
-    check.equal(result, expected_path)
+@pytest.mark.parametrize(
+    "layout,deg_pos,d_deg_x,d_deg_y,expected",
+    propose_step_tests,
+)
+def test_propose_step(layout, deg_pos, d_deg_x, d_deg_y, expected):
+    g = Grid(layout)
+    result = g.propose_step(deg_pos, d_deg_x, d_deg_y)
+    check.equal(result, expected)
 
 
-# ---------------------------------------------------------------------------
-# All-directions BFS tests
-# Grid: ["X###X", "L###U", "X###X"]
-#   (0,0)=X  (1,0)=#  (2,0)=#  (3,0)=#  (4,0)=X
-#   (0,1)=L  (1,1)=#  (2,1)=#  (3,1)=#  (4,1)=U
-#   (0,2)=X  (1,2)=#  (2,2)=#  (3,2)=#  (4,2)=X
-#
-# Each diagonal test uses a corner-to-opposite-corner path through centre (2,1),
-# exercising all 8 direction constants (cardinal directions covered in bfs_tests).
-# ---------------------------------------------------------------------------
-
-ALL_DIRS_GRID = ["X###X", "L###U", "X###X"]
-
-all_dirs_bfs_tests = [
-    pytest.param(
-        (1, 0), (3, 2),
-        [((1,0),-1), ((2,1),SOUTH_EAST), ((3,2),SOUTH_EAST)],
-        id="diagonal-south-east",
-    ),
-    pytest.param(
-        (3, 0), (1, 2),
-        [((3,0),-1), ((2,1),SOUTH_WEST), ((1,2),SOUTH_WEST)],
-        id="diagonal-south-west",
-    ),
-    pytest.param(
-        (1, 2), (3, 0),
-        [((1,2),-1), ((2,1),NORTH_EAST), ((3,0),NORTH_EAST)],
-        id="diagonal-north-east",
-    ),
-    pytest.param(
-        (3, 2), (1, 0),
-        [((3,2),-1), ((2,1),NORTH_WEST), ((1,0),NORTH_WEST)],
-        id="diagonal-north-west",
-    ),
-]
+def test_case14_load_unload_parse():
+    g = Grid(DEFAULT)
+    check.equal(g.load_tile, (0, 0))
+    check.equal(g.unload_tile, (4, 0))
 
 
-@pytest.mark.parametrize("start_tile,end_tile,expected_path", all_dirs_bfs_tests)
-def test_bfs_all_directions(start_tile, end_tile, expected_path):
-    helper = RunODVMotors(MagicMock(), 80, ALL_DIRS_GRID)
-    result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
-    check.equal(result, expected_path)
+# --- Task 2: AxisController ---
+
+def _make_clock(ms=0):
+    """Return a mock StopWatch-like whose .time() returns the given value."""
+    clock = MagicMock()
+    clock.time.return_value = ms
+    return clock
 
 
-# ---------------------------------------------------------------------------
-# Production grid BFS tests
-# Verifies BFS finds the correct shortest path between Load and Unload on the
-# three real grids.  Expected paths were captured from a verified run.
-#
-# ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
-#   L=(0,0)  U=(4,0)
-#
-# ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
-#   L=(0,1)  U=(6,1)
-#
-# ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
-#   L=(0,1)  U=(4,1)
-# ---------------------------------------------------------------------------
-
-production_bfs_tests = [
-    # --- DEFAULT ---
-    # ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"] — col 2 is WEST_ONLY, so diagonals
-    # that cut past it are blocked; BFS routes via the bottom row cardinally.
-    pytest.param(
-        ODV_GRID_DEFAULT, (0, 0), (4, 0),
-        # SE from (1,1) crosses the west wall of cx=(2,1)=WEST_ONLY → blocked.
-        # BFS routes S to (1,2), E to (2,2), NE to (3,1), N to (3,0), E to (4,0).
-        [((0,0),-1), ((1,0),EAST), ((1,1),SOUTH), ((1,2),SOUTH), ((2,2),EAST), ((3,1),NORTH_EAST), ((3,0),NORTH), ((4,0),EAST)],
-        id="default-load-to-unload",
-    ),
-    pytest.param(
-        ODV_GRID_DEFAULT, (4, 0), (0, 0),
-        # Cardinals-first exploration prefers straight W,W,W,W over equal-length SW/NW zigzag
-        [((4,0),-1), ((3,0),WEST), ((2,0),WEST), ((1,0),WEST), ((0,0),WEST)],
-        id="default-unload-to-load",
-    ),
-    # --- EX1 ---
-    # ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"] — col 3 is WALL, row 0/2 open.
-    # Diagonals that would cut across wall corners are blocked; path uses cardinal steps.
-    pytest.param(
-        ODV_GRID_EX1, (0, 1), (6, 1),
-        [((0,1),-1), ((0,0),NORTH), ((1,0),EAST), ((2,0),EAST), ((2,1),SOUTH), ((3,1),EAST), ((4,1),EAST), ((4,2),SOUTH), ((5,2),EAST), ((6,2),EAST), ((6,1),NORTH)],
-        id="ex1-load-to-unload",
-    ),
-    pytest.param(
-        ODV_GRID_EX1, (6, 1), (0, 1),
-        [((6,1),-1), ((6,2),SOUTH), ((5,2),WEST), ((4,2),WEST), ((4,1),NORTH), ((3,1),WEST), ((2,1),WEST), ((2,0),NORTH), ((1,0),WEST), ((0,0),WEST), ((0,1),SOUTH)],
-        id="ex1-unload-to-load",
-    ),
-    # --- EX2 ---
-    # ODV_GRID_EX2 = ["X###X", "L###U", "X###X"] — no directional tiles, corner cells
-    # are only walls on the border, so interior diagonals remain valid.
-    pytest.param(
-        ODV_GRID_EX2, (0, 1), (4, 1),
-        # Cardinals-first: straight east across row 1 preferred over equal-length diagonal zigzag
-        [((0,1),-1), ((1,1),EAST), ((2,1),EAST), ((3,1),EAST), ((4,1),EAST)],
-        id="ex2-load-to-unload",
-    ),
-    pytest.param(
-        ODV_GRID_EX2, (4, 1), (0, 1),
-        # Cardinals-first: straight west across row 1
-        [((4,1),-1), ((3,1),WEST), ((2,1),WEST), ((1,1),WEST), ((0,1),WEST)],
-        id="ex2-unload-to-load",
-    ),
-    # --- EX3 (one-way clockwise loop) ---
-    # ODV_GRID_EX3 = ["X#>#X", "L#X#U", "X#<#X"] — col 2 is EAST_ONLY top, WEST_ONLY
-    # bottom; diagonals past those tiles are blocked.
-    pytest.param(
-        ODV_GRID_EX3, (0, 1), (4, 1),
-        [((0,1),-1), ((1,1),EAST), ((1,0),NORTH), ((2,0),EAST), ((3,0),EAST), ((3,1),SOUTH), ((4,1),EAST)],
-        id="ex3-load-to-unload",
-    ),
-    pytest.param(
-        ODV_GRID_EX3, (4, 1), (0, 1),
-        [((4,1),-1), ((3,1),WEST), ((3,2),SOUTH), ((2,2),WEST), ((1,2),WEST), ((1,1),NORTH), ((0,1),WEST)],
-        id="ex3-unload-to-load",
-    ),
-]
+def _make_ac(layout, base_duty=45, motor_x_angle=400, motor_y_angle=400, clock_ms=0):
+    """Build an AxisController with mock motors over the given layout."""
+    grid = Grid(layout)
+    motor_x = MagicMock()
+    motor_x.angle.return_value = motor_x_angle
+    motor_y = MagicMock()
+    motor_y.angle.return_value = motor_y_angle
+    clock = _make_clock(clock_ms)
+    ac = AxisController(motor_x, motor_y, grid, base_duty, _clock=clock)
+    return ac, motor_x, motor_y, clock
 
 
-@pytest.mark.parametrize("grid,start_tile,end_tile,expected_path", production_bfs_tests)
-def test_bfs_production_grids(grid, start_tile, end_tile, expected_path):
-    helper = RunODVMotors(MagicMock(), 80, grid)
-    result = helper._bfs_path_to_grid_tile(start_tile, end_tile)
-    check.equal(result, expected_path)
+# --- 2a: zero joystick, both axes already stopped → dc(0) called via ramp ---
+
+def test_zero_joystick_first_tick_no_active_ramp():
+    # prev_duty starts at 0; _ramp_stop_axis returns early without calling dc.
+    ac, mx, my, _ = _make_ac(["L###U"])
+    ac.tick(VirtualJoystick(0, 0))
+    mx.dc.assert_not_called()
+    my.dc.assert_not_called()
+
+
+def test_zero_joystick_after_ramp_duration_calls_dc_zero():
+    # First drive X active, then go idle; advance clock past _STOP_RAMP_MS.
+    ac, mx, my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    # Drive east to record prev_duty_x = 45
+    ac.tick(VirtualJoystick(+1, 0))
+    mx.dc.assert_called_with(+45)
+    # Now zero joystick; clock still at 0 — ramp starts
+    ac.tick(VirtualJoystick(0, 0))
+    # Clock past ramp duration
+    clock.time.return_value = 200
+    ac.tick(VirtualJoystick(0, 0))
+    # Last call on motor_x must be dc(0)
+    last_x = mx.dc.call_args_list[-1]
+    check.equal(last_x.args[0], 0)
+
+
+# --- 2b: joystick (+1, 0) in clear space ---
+
+def test_joystick_x_only_clear_space():
+    # motor_x should get dc(+45); motor_y should not be driven (prev_duty 0 → no dc)
+    ac, mx, my, _ = _make_ac(["L###U"])
+    ac.tick(VirtualJoystick(+1, 0))
+    mx.dc.assert_called_with(+45)
+    my.dc.assert_not_called()
+
+
+# --- 2c: joystick (+1, +1) in clear space → 45 * 71 // 100 = 31 ---
+
+def test_diagonal_joystick_speed_compensation():
+    ac, mx, my, _ = _make_ac(["L###U"])
+    ac.tick(VirtualJoystick(+1, +1))
+    check.equal(45 * 71 // 100, 31)  # sanity: formula gives 31
+    mx.dc.assert_called_with(+31)
+    my.dc.assert_called_with(+31)
+
+
+# --- 2d: joystick (+1, 0) blocked by east grid edge → ramp path on X ---
+
+def test_joystick_x_blocked_first_tick_ramp_decay():
+    # Cart at tile (0,0) centre in a 1-tile grid ["LXU"]; east is blocked.
+    # But ["LXU"] is 1-row x 3-cols; cart at (400, 400), step east → X wall.
+    # Use a tighter approach: cart near east edge of a 1-col grid.
+    # ["L#U"] has cols 0,1,2. Cart at (1680, 400): east face = 2000, grid east = 2400.
+    # Step east 40 → east face 2040, still inside. Use ["LU"] instead (1 open col each).
+    # Simpler: put cart very close to east grid edge so the lookahead exits bounds.
+    # Grid ["L#U"]: n_cols=3, east_bound=2400. Cart at (2080, 400): east face=2400,
+    # flush — dc(0) on first tick because _aabb_hits_wall sees R > bound on step.
+    # Actually use cart position where east face + 40 > 2400: cx=2080, R=2400, step=40 → R=2440 > 2400.
+    ac, mx, my, clock = _make_ac(["L#U"], motor_x_angle=2080, motor_y_angle=400)
+    # Drive one tick first so prev_duty is set
+    ac.tick(VirtualJoystick(+1, 0))
+    # propose_step returns (0,0) because east face 2400+40 > 2400 → blocked
+    # So first tick already goes to ramp path; prev_duty=0 initially → no dc call
+    # Let's instead start with an active state by driving in clear space first
+    # then move to a blocked position.
+    ac2, mx2, my2, clock2 = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    # Tick east while clear
+    ac2.tick(VirtualJoystick(+1, 0))
+    mx2.dc.assert_called_with(+45)
+    # Now simulate motor moved to blocked position (near east edge of 5-col grid, east=4000)
+    # Cart at 3680: east face = 4000, step 40 → 4040 > 4000 → blocked
+    mx2.motor_x = MagicMock()
+    mx2.motor_x.angle.return_value = 3680
+    ac2.motor_x = mx2.motor_x
+    clock2.time.return_value = 0
+    ac2.tick(VirtualJoystick(+1, 0))
+    # Ramp started; elapsed=0, factor=100, duty applied = 45 * 100 // 100 = 45 — same as before.
+    # Advance to mid-ramp: elapsed=100ms, factor=(200-100)*100//200=50
+    clock2.time.return_value = 100
+    ac2.tick(VirtualJoystick(+1, 0))
+    mid_call = mx2.motor_x.dc.call_args_list[-1]
+    mid_value = mid_call.args[0]
+    check.is_true(0 < mid_value < 45, f"mid-ramp value {mid_value} not in (0, 45)")
+
+
+# --- 2e: ramp completion → dc(0) after _STOP_RAMP_MS elapsed ---
+
+def test_ramp_completion_calls_dc_zero():
+    ac, mx, my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    # Drive east to set prev_duty_x
+    ac.tick(VirtualJoystick(+1, 0))
+    # Move to blocked position (near east edge)
+    mx.angle.return_value = 3680
+    # First stop tick: start ramp
+    clock.time.return_value = 0
+    ac.tick(VirtualJoystick(+1, 0))
+    # Advance past ramp duration
+    clock.time.return_value = 200
+    ac.tick(VirtualJoystick(+1, 0))
+    last_call = mx.dc.call_args_list[-1]
+    check.equal(last_call.args[0], 0)
+
+
+# --- 2f: deg_pos() returns (motor_x.angle(), motor_y.angle()) ---
+
+def test_deg_pos():
+    ac, mx, my, _ = _make_ac(["L###U"], motor_x_angle=1234, motor_y_angle=5678)
+    check.equal(ac.deg_pos(), (1234, 5678))
+
+
+# --- Task 3: HomingRoutine ---
+
+def test_homing_call_sequence_default_grid():
+    """DEFAULT grid: unload_tile = (4, 0). Legacy parking:
+       motor_y final = 0 + 80; motor_x final = 4*800 + 400 = 3600.
+    """
+    grid = Grid(DEFAULT)
+    motor_x = MagicMock()
+    motor_y = MagicMock()
+    h = HomingRoutine(motor_x, motor_y, grid)
+    h.run()
+
+    # Y stalled north first
+    motor_y.run_until_stalled.assert_called_once_with(-200, duty_limit=45)
+    motor_y.reset_angle.assert_called_once_with(0)  # uy * 800 = 0
+    motor_y.run_angle.assert_called_once_with(1400, 80)
+
+    # Then X stalled east
+    motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
+    motor_x.reset_angle.assert_called_once_with(4 * 800 + 720)  # ux*800 + 720
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)  # centre on U
+
+
+def test_homing_uses_unload_tile_from_grid():
+    """EX3 grid has unload at (4, 1)."""
+    grid = Grid(EX3)
+    check.equal(grid.unload_tile, (4, 1))
+    motor_x = MagicMock()
+    motor_y = MagicMock()
+    HomingRoutine(motor_x, motor_y, grid).run()
+
+    motor_y.reset_angle.assert_called_once_with(1 * 800)  # uy=1
+    motor_x.reset_angle.assert_called_once_with(4 * 800 + 720)
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)
+
+
+def test_homing_order_y_then_x():
+    """Y stall+reset+back-off must happen before X stall+reset+centre."""
+    grid = Grid(DEFAULT)
+    motor_x = MagicMock()
+    motor_y = MagicMock()
+    parent = MagicMock()
+    parent.attach_mock(motor_x, 'x')
+    parent.attach_mock(motor_y, 'y')
+
+    HomingRoutine(motor_x, motor_y, grid).run()
+
+    names = [c[0] for c in parent.mock_calls]
+    # Only care about the high-level ordering of Y vs X actions
+    y_idx = names.index('y.run_until_stalled')
+    x_idx = names.index('x.run_until_stalled')
+    check.less(y_idx, x_idx)
+    y_reset_idx = names.index('y.reset_angle')
+    x_reset_idx = names.index('x.reset_angle')
+    check.less(y_reset_idx, x_reset_idx)
+
+
+# --- Task 4: Planner ---
+
+EX2 = ["X###X", "L###U", "X###X"]
+
+
+def test_planner_same_tile_returns_single_waypoint():
+    g = Grid(EX2)
+    check.equal(Planner(g).plan((0, 1), (0, 1)), ((0, 1),))
+
+
+def test_planner_ex2_straight_east():
+    g = Grid(EX2)
+    check.equal(Planner(g).plan((0, 1), (4, 1)), ((0, 1), (4, 1)))
+
+
+def test_planner_default_l_to_u():
+    g = Grid(DEFAULT)
+    # L at (0,0), U at (4,0). Corner-cut pass replaces the (3,2) E->N corner
+    # with (2,2): from (2,2) the cart can safely cut NE toward (3,0). The
+    # (1,2) S->E corner is kept because cutting via (1,1) would try to enter
+    # '<' at (2,1) eastbound. The (3,0) N->E corner is kept because cutting
+    # via (3,1) would drive the cart into 'X' at (4,1).
+    result = Planner(g).plan((0, 0), (4, 0))
+    check.equal(result, ((0, 0), (1, 0), (1, 2), (2, 2), (3, 0), (4, 0)))
+
+
+def test_planner_corner_cut_skipped_when_barrier_intervenes():
+    # Corner-cut from (1,1) into (3,2) SE would cross '<' at (2,1) eastbound
+    # -> the cut must be rejected and (1,2) retained as the S->E turn point.
+    g = Grid(DEFAULT)
+    p = Planner(g)
+    check.is_false(p._safe_diagonal((1, 1), (3, 2)),
+                   "SE cut through '<' at (2,1) should be rejected")
+
+
+def test_planner_corner_cut_taken_when_safe():
+    g = Grid(DEFAULT)
+    p = Planner(g)
+    check.is_true(p._safe_diagonal((2, 2), (3, 0)),
+                  "NE cut (2,2)->(3,0) should be safe")
+
+
+def test_planner_corner_cut_skipped_when_wall_blocks():
+    # Cutting (3,0) N->E corner via (3,1) would route cart through 'X' at
+    # (4,1). AABB sweep rejects it.
+    g = Grid(DEFAULT)
+    p = Planner(g)
+    check.is_false(p._safe_diagonal((3, 1), (4, 0)),
+                   "NE cut (3,1)->(4,0) should fail due to 'X' at (4,1)")
+
+
+def test_planner_default_u_to_l():
+    g = Grid(DEFAULT)
+    # Westbound through '<' is the arrow direction — allowed.
+    # Direct west all the way, compressed to endpoints only.
+    result = Planner(g).plan((4, 0), (0, 0))
+    check.equal(result, ((4, 0), (0, 0)))
+
+
+def test_planner_ex3_l_to_u():
+    g = Grid(EX3)
+    # (2,1)=X in the middle blocks the straight shot. Path goes north
+    # through '>' (eastbound allowed), east, then south to U.
+    result = Planner(g).plan((0, 1), (4, 1))
+    check.equal(result, ((0, 1), (1, 1), (1, 0), (3, 0), (3, 1), (4, 1)))
+
+
+def test_planner_unreachable_returns_empty():
+    # A grid fully walled off between start and goal.
+    walled = ["LX#U"]
+    g = Grid(walled)
+    check.equal(Planner(g).plan((0, 0), (3, 0)), ())
+
+
+def test_planner_eastbound_into_west_only_blocked():
+    # '<' blocks eastbound entry; must detour.
+    # Simple 2-row grid: eastbound direct is blocked by '<' at (2,0),
+    # detour south available.
+    layout = ["L#<#U", "#####"]
+    g = Grid(layout)
+    result = Planner(g).plan((0, 0), (4, 0))
+    # Must go south to escape '<'; can't enter (2,0) eastbound.
+    check.is_true((1, 1) in result or (2, 1) in result,
+                  f"expected detour through row 1, got {result}")
+
+
+def test_planner_westbound_into_east_only_blocked():
+    # '>' blocks westbound entry from east; must detour.
+    layout = ["L#>#U", "#####"]
+    g = Grid(layout)
+    result = Planner(g).plan((4, 0), (0, 0))
+    # Westbound from (3,0) to (2,0)='>' is blocked.
+    check.is_true(len(result) > 2, f"expected detour, got {result}")
+
+
+# --- Task 5: AutoDriver ---
+
+def _mock_remote(pressed=()):
+    remote = MagicMock()
+    remote.buttons.pressed.return_value = pressed
+    return remote
+
+
+def _mock_ac(cx=0, cy=0):
+    ac = MagicMock()
+    ac.deg_pos.return_value = (cx, cy)
+    return ac
+
+
+def test_autodriver_start_journey_plans_and_resets_index():
+    g = Grid(["L#U"])
+    planner = Planner(g)
+    ac = _mock_ac()
+    ad = AutoDriver(g, planner, ac)
+    ad.i = 99  # pretend we had a prior journey
+    ad.start_journey(g.load_tile, g.unload_tile)
+    check.equal(ad.i, 0)
+    check.is_true(len(ad.waypoints) >= 2)
+    check.equal(ad.waypoints[0], g.load_tile)
+    check.equal(ad.waypoints[-1], g.unload_tile)
+
+
+def test_autodriver_yields_on_remote_press():
+    g = Grid(["L#U"])
+    ac = _mock_ac(400, 400)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+
+    remote = _mock_remote(pressed=["Button.CENTER"])
+    check.equal(ad.tick(remote), 'yielded')
+    ac.tick.assert_not_called()
+
+
+def test_autodriver_emits_joystick_toward_next_waypoint():
+    # L at (0,0), U at (2,0). Cart at (0,0) centre = (400, 400).
+    # Expected next waypoint is (2,0); joystick = (+1, 0).
+    g = Grid(["L#U"])
+    ac = _mock_ac(400, 400)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+
+    result = ad.tick(_mock_remote())
+    check.is_none(result)
+    ac.tick.assert_called_once()
+    vj = ac.tick.call_args.args[0]
+    check.equal(vj.ax, +1)
+    check.equal(vj.ay, 0)
+
+
+def test_autodriver_advances_index_when_near_waypoint():
+    # Two-waypoint path L(0,0) -> U(2,0). Cart placed within aim-switch
+    # tolerance of (2,0) centre = (2000, 400). Within 160° on both axes.
+    g = Grid(["L#U"])
+    ac = _mock_ac(1900, 450)  # |Δ|=(100, 50), within 160
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+    # Waypoints: ((0,0), (2,0)). Index 0 targets (2,0). When we arrive,
+    # i goes to 1 which == len-1 -> end.
+    check.equal(ad.tick(_mock_remote()), 'reached_unload')
+
+
+def test_autodriver_reports_reached_load():
+    g = Grid(["L#U"])
+    ac = _mock_ac(400, 400)  # at load-tile centre
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.unload_tile, g.load_tile)
+    check.equal(ad.tick(_mock_remote()), 'reached_load')
+
+
+def test_autodriver_unreachable_returns_reached_end():
+    # Goal surrounded by walls -> empty plan.
+    g = Grid(["LX#U"])
+    ac = _mock_ac(400, 400)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey((0, 0), (3, 0))
+    check.equal(ad.waypoints, ())
+    check.equal(ad.tick(_mock_remote()), 'reached_end')
+
+
+def test_autodriver_diagonal_aim():
+    # Multi-waypoint journey where the next waypoint requires a diagonal
+    # joystick. DEFAULT plan from L has waypoints including (2,2); place
+    # cart at (1,2) centre so the next aim is SE toward (2,2).
+    g = Grid(DEFAULT)
+    ac = _mock_ac(400, 400)  # at L
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+    # First real tick: cart at L centre, target waypoint (1,0) center=(1200,400)
+    # -> joystick (+1, 0).
+    ad.tick(_mock_remote())
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (+1, 0))
+
+    # Now move cart to (1,0) centre to cross aim-switch; next tick should
+    # advance and emit joystick toward (1,2) -> pure south (0, +1).
+    ac.deg_pos.return_value = (1200, 400)
+    ad.tick(_mock_remote())
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, +1))
+
+
+# --- Task 6: drive-mode enum + IdleTimeout ---
+
+def test_drive_mode_enum_distinct_values():
+    check.equal(MANUAL, 0)
+    check.equal(HYBRID, 1)
+    check.equal(AUTO, 2)
+
+
+def test_idle_timeout_not_fired_after_reset():
+    clock = MagicMock()
+    clock.time.return_value = 0
+    t = IdleTimeout(30, _clock=clock)
+    check.is_false(t.fired())
+    # advance below threshold
+    clock.time.return_value = 29_000
+    check.is_false(t.fired())
+
+
+def test_idle_timeout_fires_after_interval():
+    clock = MagicMock()
+    clock.time.return_value = 0
+    t = IdleTimeout(30, _clock=clock)
+    clock.time.return_value = 30_000
+    check.is_true(t.fired())
+
+
+def test_idle_timeout_reset_extends_deadline():
+    clock = MagicMock()
+    clock.time.return_value = 0
+    t = IdleTimeout(30, _clock=clock)
+    clock.time.return_value = 25_000
+    t.reset()
+    # 20s after reset -> 45_000 total, but reset anchors to 25_000
+    clock.time.return_value = 45_000
+    check.is_false(t.fired())
+    clock.time.return_value = 55_000  # 30s after reset
+    check.is_true(t.fired())
+
+
+# --- Task 7: RunODVMotors ---
+
+
+def _make_rom(layout=None, pressed=(), motor_x_angle=400, motor_y_angle=400):
+    if layout is None:
+        layout = DEFAULT
+    efc = MagicMock()
+    mx = MagicMock()
+    my = MagicMock()
+    mx.angle.return_value = motor_x_angle
+    my.angle.return_value = motor_y_angle
+    rem = MagicMock()
+    rem.buttons.pressed.return_value = pressed
+    clock = MagicMock()
+    clock.time.return_value = 0
+    rom = RunODVMotors(efc, 45, layout,
+                       _motors=(mx, my), _remote=rem, _clock=clock)
+    return rom, mx, my, rem
+
+
+def test_rom_init_builds_stack():
+    rom, mx, my, _ = _make_rom()
+    check.is_instance(rom.grid, Grid)
+    check.is_instance(rom.planner, Planner)
+    check.is_instance(rom.axis_controller, AxisController)
+    check.is_instance(rom.auto_driver, AutoDriver)
+    check.is_instance(rom.homing_routine, HomingRoutine)
+    check.is_instance(rom.idle_timeout, IdleTimeout)  # HYBRID default
+    check.is_false(rom.has_load)
+    check.is_false(rom.mh_is_homed)
+    # supports_homing=True, supports_flip=False
+    check.is_true(rom.mh_supports_homing)
+    check.is_false(rom.mh_supports_flip)
+    # Constructor calls stop on both motors
+    mx.stop.assert_called_once()
+    my.stop.assert_called_once()
+
+
+def test_rom_stop_motors_stops_both():
+    rom, mx, my, _ = _make_rom()
+    mx.stop.reset_mock()
+    my.stop.reset_mock()
+    rom.stop_motors()
+    mx.stop.assert_called_once()
+    my.stop.assert_called_once()
+
+
+def test_rom_home_and_unload_delegates_sets_state():
+    rom, mx, my, _ = _make_rom()
+    rom.has_load = True
+    rom.home_and_unload()
+    # Delegated to HomingRoutine.run()
+    my.run_until_stalled.assert_called_once()
+    mx.run_until_stalled.assert_called_once()
+    check.is_false(rom.has_load)
+    check.is_true(rom.mh_is_homed)
+
+
+def test_rom_reset_homing_clears_is_homed():
+    rom, _, _, _ = _make_rom()
+    rom.set_is_homed()
+    rom.reset_homing()
+    check.is_false(rom.mh_is_homed)
+
+
+def _stub_axis_controller(rom, cx=1200, cy=1200):
+    """Replace axis_controller with a MagicMock whose deg_pos() returns (cx, cy)."""
+    ac = MagicMock()
+    ac.deg_pos.return_value = (cx, cy)
+    rom.axis_controller = ac
+    return ac
+
+
+def test_rom_handle_remote_press_empty_stops():
+    rom, _, _, _ = _make_rom(pressed=())
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, 0))
+
+
+def test_rom_handle_remote_press_left_plus_north():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, -1))
+
+
+def test_rom_handle_remote_press_right_plus_east():
+    rom, _, _, _ = _make_rom(pressed=[Button.RIGHT_PLUS])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (+1, 0))
+
+
+def test_rom_handle_remote_press_diagonal_ne():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS, Button.RIGHT_PLUS])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (+1, -1))
+
+
+def test_rom_handle_remote_press_center_button_stops():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (0, 0))
+
+
+def test_rom_handle_remote_press_resets_idle_timeout():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS])
+    _stub_axis_controller(rom)
+    rom.idle_timeout = MagicMock()
+    rom.handle_remote_press()
+    rom.idle_timeout.reset.assert_called_once()
+
+
+def test_rom_handle_remote_press_remote_disabled_returns():
+    rom, _, _, _ = _make_rom(pressed=[Button.LEFT_PLUS])
+    rom.mh__remote_disabled = True
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    ac.tick.assert_not_called()
+
+
+def test_rom_handle_remote_press_at_unload_east_triggers_home():
+    # Place cart at U tile centre; pressing east triggers home_and_unload.
+    rom, mx, my, _ = _make_rom(pressed=[Button.RIGHT_PLUS])
+    _stub_axis_controller(rom, *cen(4, 0))
+    rom.has_load = True
+    rom.handle_remote_press()
+    # home_and_unload ran -> motors stalled and state updated
+    my.run_until_stalled.assert_called_once()
+    mx.run_until_stalled.assert_called_once()
+    check.is_false(rom.has_load)
+    check.is_true(rom.mh_is_homed)
+
+
+def test_rom_handle_remote_press_at_load_west_triggers_load():
+    # Place cart at L tile centre; pressing west triggers _do_load_.
+    rom, mx, _, _ = _make_rom(pressed=[Button.RIGHT_MINUS])
+    _stub_axis_controller(rom, *cen(0, 0))
+    rom.handle_remote_press()
+    check.is_true(rom.has_load)
+    # Two run_target calls: dip and return
+    check.equal(mx.run_target.call_count, 2)
+
+
+def test_rom_auto_load_requires_homed():
+    rom, _, _, _ = _make_rom()
+    rom.auto_driver = MagicMock()
+    rom.auto_load()
+    rom.auto_driver.start_journey.assert_not_called()
+
+
+def test_rom_auto_unload_requires_has_load():
+    rom, _, _, _ = _make_rom()
+    rom.set_is_homed()
+    rom.auto_driver = MagicMock()
+    rom.auto_unload()
+    rom.auto_driver.start_journey.assert_not_called()
+
+
+def test_rom_auto_load_journey_loop_completes():
+    rom, mx, _, _ = _make_rom(motor_x_angle=cen(4, 0)[0], motor_y_angle=cen(4, 0)[1])
+    rom.set_is_homed()
+    ad = MagicMock()
+    ad.tick.side_effect = [None, None, 'reached_load']
+    rom.auto_driver = ad
+    rom.auto_load()
+    ad.start_journey.assert_called_once_with((4, 0), rom.grid.load_tile)
+    check.equal(ad.tick.call_count, 3)
+    check.is_true(rom.has_load)
+    # _do_load_ called after journey
+    check.equal(mx.run_target.call_count, 2)
+
+
+def test_rom_auto_load_journey_yields_on_interrupt():
+    rom, mx, my, _ = _make_rom(motor_x_angle=cen(4, 0)[0], motor_y_angle=cen(4, 0)[1])
+    rom.set_is_homed()
+    rom.enable_auto_drive()
+    ad = MagicMock()
+    ad.tick.side_effect = [None, 'yielded']
+    rom.auto_driver = ad
+    rom.auto_load()
+    check.is_false(rom.mh_auto_drive)  # disable_auto_drive called
+    check.is_false(rom.has_load)       # no load on yield
+
+
+def test_rom_auto_unload_journey_completes_then_homes():
+    rom, mx, my, _ = _make_rom(motor_x_angle=cen(0, 0)[0], motor_y_angle=cen(0, 0)[1])
+    rom.set_is_homed()
+    rom.has_load = True
+    ad = MagicMock()
+    ad.tick.side_effect = ['reached_unload']
+    rom.auto_driver = ad
+    rom.auto_unload()
+    ad.start_journey.assert_called_once_with((0, 0), rom.grid.unload_tile)
+    # home_and_unload ran
+    my.run_until_stalled.assert_called_once()
+    check.is_false(rom.has_load)
+    check.is_true(rom.mh_is_homed)
