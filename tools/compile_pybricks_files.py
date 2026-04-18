@@ -7,6 +7,7 @@ Usage (from project root):
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
@@ -75,7 +76,25 @@ def _extract_sections(path: Path) -> dict[str, str]:
     return {m: ''.join(lines[s + 1:e]) for m, (s, e) in pairs.items()}
 
 
-def _compile_one(vehicle: str) -> Path:
+def _build_tag() -> str:
+    """Return '<short-sha>[-dirty] @ YYYY-MM-DD HH:MM' for the current tree."""
+    try:
+        sha = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'], cwd=PROJECT_ROOT
+        ).decode().strip()
+    except Exception:
+        sha = 'nogit'
+    try:
+        dirty = subprocess.run(
+            ['git', 'diff', '--quiet'], cwd=PROJECT_ROOT
+        ).returncode != 0
+    except Exception:
+        dirty = False
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M')
+    return f'{sha}{"-dirty" if dirty else ""} @ {ts}'
+
+
+def _compile_one(vehicle: str, build_tag: str) -> Path:
     print(f'Compiling {vehicle}')
 
     base_path = MODULES_DIR / 'lego_vehicle_timer_base.py'
@@ -90,6 +109,9 @@ def _compile_one(vehicle: str) -> Path:
     new_content = new_content.replace('# VEHICLE_SECTION',  sections['MODULE'])
     new_content = new_content.replace(
         'drive_motors = MotorHelper(False, False)', sections['DRIVE_SETUP']
+    )
+    new_content = new_content.replace(
+        "__BUILD__ = 'dev'", f"__BUILD__ = '{build_tag}'"
     )
 
     out_path = OUT_DIR / f'lego_vehicle_timer_{vehicle}.py'
@@ -111,8 +133,10 @@ def _run_ruff() -> None:
 
 
 def main() -> None:
+    tag = _build_tag()
+    print(f'Build tag: {tag}')
     for vehicle in VEHICLES:
-        _compile_one(vehicle)
+        _compile_one(vehicle, tag)
     _run_ruff()
 
 

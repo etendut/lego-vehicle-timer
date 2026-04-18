@@ -19,7 +19,8 @@ if TYPE_CHECKING:
 
 # IMPORT_SECTION
 
-print('Version 3.0.0')
+__BUILD__ = 'dev'  # replaced at compile time with git hash + timestamp
+print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
 ##################################################################################

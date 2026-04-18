@@ -53,3 +53,15 @@ def test_compiled_file_defines_main(vehicle, _class_name):
     assert callable(getattr(module, 'main', None)), (
         f'compiled {vehicle} file is missing top-level main()'
     )
+
+
+@pytest.mark.parametrize('vehicle,_class_name', VEHICLES)
+def test_compiled_file_has_build_tag(vehicle, _class_name):
+    """Compile tool must replace the 'dev' placeholder with a real git+timestamp
+    tag so each rig flash is traceable to exact source state."""
+    path = COMPILED_DIR / f'lego_vehicle_timer_{vehicle}.py'
+    text = path.read_text()
+    assert "__BUILD__ = 'dev'" not in text, (
+        f'{vehicle}: build tag was not substituted at compile time'
+    )
+    assert "__BUILD__ = '" in text, f'{vehicle}: missing __BUILD__ assignment'
