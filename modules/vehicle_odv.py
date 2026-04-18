@@ -123,7 +123,9 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
         print("--")
         print(dir_to_str(direction), tl_type, tr_type, br_type, bl_type)
 
-    if tl_type == WALL or tr_type == WALL or br_type == WALL or bl_type == WALL:
+    if direction == NORTH and (tl_type == WALL or tr_type == WALL):
+        can_move = False
+    elif direction != NORTH and (tl_type == WALL or tr_type == WALL or br_type == WALL or bl_type == WALL):
         can_move = False
     elif direction in (EAST, NORTH_EAST, SOUTH_EAST) and (tr_type == WEST_ONLY_TRACK or br_type == WEST_ONLY_TRACK):
         can_move = False
@@ -327,10 +329,9 @@ class RunODVMotors(MotorHelper):
 
     def _can_move_in_direction_(self, direction: int) -> tuple[bool, bool, bool]:
         # Centre the box in X on the fine position so the right edge doesn't overflow
-        # into the adjacent coarse tile. Offset Y by +1 so the top edge isn't flush
-        # with fine_y, giving _GEAR_RATIO_TO_GRID more northward travel.
+        # into the adjacent coarse tile. Offset Y by +1 for northward travel margin.
         fine_x, fine_y = self.last_fine_grid_position
-        cart = ODVBox((fine_x - _ODV_SIZE // 2, fine_y + 1), _ODV_SIZE, _ODV_SIZE)
+        cart = ODVBox((fine_x - _ODV_SIZE // 2, fine_y + 1), _ODV_SIZE, _ODV_SIZE - 1)
 
         # print("Cart", cart)
 

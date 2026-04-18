@@ -18,11 +18,15 @@ LT = '<'  # WEST_ONLY
 RT = '>'  # EAST_ONLY
 
 can_move_tests = [
-    # --- Rule 1: any corner on WALL → block ---
-    pytest.param(NORTH, W, T, T, T, False, id="wall-tl"),
-    pytest.param(NORTH, T, W, T, T, False, id="wall-tr"),
-    pytest.param(NORTH, T, T, W, T, False, id="wall-br"),
-    pytest.param(NORTH, T, T, T, W, False, id="wall-bl"),
+    # --- Rule 1: WALL — NORTH uses leading edge (tl/tr) only ---
+    pytest.param(NORTH, W, T, T, T, False, id="wall-tl-north"),
+    pytest.param(NORTH, T, W, T, T, False, id="wall-tr-north"),
+    pytest.param(NORTH, T, T, W, T, True,  id="wall-br-north-trailing"),
+    pytest.param(NORTH, T, T, T, W, True,  id="wall-bl-north-trailing"),
+    # --- WALL — other directions block on any corner ---
+    pytest.param(EAST,  W, T, T, T, False, id="wall-tl-east"),
+    pytest.param(SOUTH, T, T, W, T, False, id="wall-br-south"),
+    pytest.param(WEST,  T, T, T, W, False, id="wall-bl-west"),
 
     # --- Rule 2: < blocks EAST/NE/SE on leading edge (tr/br) only ---
     pytest.param(EAST,  T,  LT, T,  T,  False, id="lt-tr-east"),
