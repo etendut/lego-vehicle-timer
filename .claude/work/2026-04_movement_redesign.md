@@ -47,10 +47,50 @@ python -m pytest tests/
 The user will run on Opus for Task 1 (geometry-heavy) and on Sonnet
 for the rest. Opus will review each Sonnet diff before commit.
 
-Work happens in `modules/vehicle_odv.py` unless stated — the compile
-tool expects all ODV code between `# MODULE_START` / `# MODULE_END`
-markers. New support modules are possible but add splice-tool work;
-avoid unless a task explicitly calls for one.
+### New-file strategy
+
+All redesign work lands in **new files**, leaving the legacy runtime
+untouched until the cutover:
+
+- `modules/vehicle_odv_v2.py` — new ODV module. Tasks 1–7 add to
+  this file; no edits to `modules/vehicle_odv.py`. Copy the four
+  splice-marker pairs (`# IMPORTS_START/END`, `# VARS_START/END`,
+  `# MODULE_START/END`, `# DRIVE_SETUP_START/END`) from the old
+  file but populate them only with new code.
+- `tests/test_vehicle_odv_v2.py` — new test module. Tasks 1–7 add
+  tests here; no edits to `tests/test_vehicle_odv.py`.
+
+The compile tool does **not** compile `vehicle_odv_v2.py` during
+tasks 1–7 — nothing ships to the hub until the cutover. Tests run
+against the new file directly via import.
+
+The shared base `modules/lego_vehicle_timer_base.py` is **not
+modified** during tasks 1–7; any base-class changes move to
+post-cutover (see new task ordering below).
+
+**Task renumbering under the new-file strategy:**
+
+| # | Task |
+|---|------|
+| 1 | `Grid` class with `propose_step` → `vehicle_odv_v2.py` |
+| 2 | `VirtualJoystick` + `AxisController` → `vehicle_odv_v2.py` |
+| 3 | `HomingRoutine` → `vehicle_odv_v2.py` |
+| 4 | `Planner` (4-dir BFS) → `vehicle_odv_v2.py` |
+| 5 | `AutoDriver` → `vehicle_odv_v2.py` |
+| 6 | Drive-mode enum + `IdleTimeout` → `vehicle_odv_v2.py` |
+| 7 | `RunODVMotors` built from the new stack → `vehicle_odv_v2.py` (replaces the old "wire RunODVMotors" step) |
+| 8 | **Cutover**: delete `modules/vehicle_odv.py` + `tests/test_vehicle_odv.py`; rename `*_v2.py` → canonical; run compile + full test suite; smoke-test on rig |
+| 9 | Strip `CountdownTimer` of ODV-specific bits + fix `FINAL_20_SECS` bug (post-cutover; this was the original Task 7 but can only land safely once the new runtime is canonical) |
+| 10 | Compile-tool guards + compiled-file test/lint (unchanged) |
+
+The per-task detail sections below are written against the original
+numbering but apply mechanically to the new file. Where a task's
+"Files" section references `modules/vehicle_odv.py`, read it as
+`modules/vehicle_odv_v2.py` for tasks 1–7. Where it references
+`tests/test_vehicle_odv.py`, read it as `tests/test_vehicle_odv_v2.py`.
+The original Task 9 "remove old code" is fully absorbed into the
+Task 8 cutover (deleting one file removes all legacy symbols at
+once).
 
 ---
 
