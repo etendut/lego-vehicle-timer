@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from modules.vehicle_odv_v2 import (
     Grid, VirtualJoystick, AxisController, HomingRoutine, Planner, AutoDriver,
+    IdleTimeout, MANUAL, HYBRID, AUTO,
 )
 
 DEFAULT = ["L#<#U", "X#<#X", "X###X"]
@@ -475,3 +476,42 @@ def test_autodriver_diagonal_aim():
     ad.tick(_mock_remote())
     vj = ac.tick.call_args.args[0]
     check.equal((vj.ax, vj.ay), (0, +1))
+
+
+# --- Task 6: drive-mode enum + IdleTimeout ---
+
+def test_drive_mode_enum_distinct_values():
+    check.equal(MANUAL, 0)
+    check.equal(HYBRID, 1)
+    check.equal(AUTO, 2)
+
+
+def test_idle_timeout_not_fired_after_reset():
+    clock = MagicMock()
+    clock.time.return_value = 0
+    t = IdleTimeout(30, _clock=clock)
+    check.is_false(t.fired())
+    # advance below threshold
+    clock.time.return_value = 29_000
+    check.is_false(t.fired())
+
+
+def test_idle_timeout_fires_after_interval():
+    clock = MagicMock()
+    clock.time.return_value = 0
+    t = IdleTimeout(30, _clock=clock)
+    clock.time.return_value = 30_000
+    check.is_true(t.fired())
+
+
+def test_idle_timeout_reset_extends_deadline():
+    clock = MagicMock()
+    clock.time.return_value = 0
+    t = IdleTimeout(30, _clock=clock)
+    clock.time.return_value = 25_000
+    t.reset()
+    # 20s after reset -> 45_000 total, but reset anchors to 25_000
+    clock.time.return_value = 45_000
+    check.is_false(t.fired())
+    clock.time.return_value = 55_000  # 30s after reset
+    check.is_true(t.fired())

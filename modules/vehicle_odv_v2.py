@@ -30,6 +30,13 @@ _AIM_SWITCH_DEG = const(160)
 _HOMING_MOTOR_ROT_SPEED = const(200)
 _HOMING_DUTY = const(45)
 _MAX_MOTOR_ROT_SPEED = const(1400)
+
+MANUAL = const(0)
+HYBRID = const(1)
+AUTO = const(2)
+
+DRIVE_MODE = HYBRID
+IDLE_TIMEOUT_SECS = const(30)
 # VARS_END
 
 # MODULE_START
@@ -456,6 +463,23 @@ class AutoDriver:
         if last == self.grid.unload_tile:
             return 'reached_unload'
         return 'reached_end'
+
+
+class IdleTimeout:
+    def __init__(self, seconds, _clock=None):
+        self._interval_ms = seconds * 1000
+        if _clock is None:
+            if StopWatch is None:
+                raise RuntimeError("StopWatch unavailable; pass _clock explicitly")
+            _clock = StopWatch()
+        self._clock = _clock
+        self._last_reset_ms = self._clock.time()
+
+    def reset(self):
+        self._last_reset_ms = self._clock.time()
+
+    def fired(self):
+        return (self._clock.time() - self._last_reset_ms) >= self._interval_ms
 
 
 class HomingRoutine:
