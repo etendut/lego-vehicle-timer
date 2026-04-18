@@ -15,4 +15,4 @@ All Claude-related files live under `.claude/`:
 - `.claude/PLAN.md` — active implementation plan; read this at the start of every session and update task statuses as work completes.
 
 ## Active plan summary
-See `.claude/PLAN.md` for full details. All 4 ODV improvement tasks are complete.
+See `.claude/PLAN.md` for full details. All 4 ODV improvement tasks are complete, plus subsequent remote control fixes (box centering, one-way tile wall-on-edge semantics, diagonal support).

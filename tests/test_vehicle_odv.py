@@ -24,21 +24,25 @@ can_move_tests = [
     pytest.param(NORTH, T, T, W, T, False, id="wall-br"),
     pytest.param(NORTH, T, T, T, W, False, id="wall-bl"),
 
-    # --- Rule 2: < wall on west edge — blocks WEST/NW/SW; N/S/E allowed ---
-    pytest.param(WEST,  LT, T,  T,  LT, False, id="lt-west-blocked"),
-    pytest.param(WEST,  T,  LT, LT, T,  False, id="lt-west-blocked-2"),
+    # --- Rule 2: < blocks EAST/NE/SE on leading edge (tr/br) only ---
+    pytest.param(EAST,  T,  LT, T,  T,  False, id="lt-tr-east"),
+    pytest.param(EAST,  T,  T,  LT, T,  False, id="lt-br-east"),
     pytest.param(EAST,  LT, T,  T,  T,  True,  id="lt-tl-east-allowed"),
     pytest.param(EAST,  T,  T,  T,  LT, True,  id="lt-bl-east-allowed"),
     pytest.param(NORTH, T,  LT, T,  T,  True,  id="lt-tr-north-allowed"),
     pytest.param(SOUTH, T,  T,  LT, T,  True,  id="lt-br-south-allowed"),
+    pytest.param(WEST,  LT, T,  T,  LT, True,  id="lt-west-allowed"),
+    pytest.param(WEST,  T,  LT, LT, T,  True,  id="lt-west-allowed-2"),
 
-    # --- Rule 3: > wall on east edge — blocks EAST/NE/SE; N/S/W allowed ---
-    pytest.param(EAST,  RT, T,  T,  RT, False, id="rt-east-blocked"),
-    pytest.param(EAST,  T,  RT, RT, T,  False, id="rt-east-blocked-2"),
-    pytest.param(WEST,  RT, T,  T,  T,  True,  id="rt-tl-west-allowed"),
-    pytest.param(WEST,  T,  T,  T,  RT, True,  id="rt-bl-west-allowed"),
+    # --- Rule 3: > blocks WEST/NW/SW on leading edge (tl/bl) only ---
+    pytest.param(WEST,  RT, T,  T,  T,  False, id="rt-tl-west"),
+    pytest.param(WEST,  T,  T,  T,  RT, False, id="rt-bl-west"),
+    pytest.param(WEST,  T,  RT, T,  T,  True,  id="rt-tr-west-allowed"),
+    pytest.param(WEST,  T,  T,  RT, T,  True,  id="rt-br-west-allowed"),
     pytest.param(NORTH, T,  RT, T,  T,  True,  id="rt-tr-north-allowed"),
     pytest.param(SOUTH, T,  T,  RT, T,  True,  id="rt-br-south-allowed"),
+    pytest.param(EAST,  RT, T,  T,  RT, True,  id="rt-east-allowed"),
+    pytest.param(EAST,  T,  RT, RT, T,  True,  id="rt-east-allowed-2"),
 
     # --- Rule 4: any corner on UNLOAD and direction == NORTH → block ---
     pytest.param(NORTH, U, T, T, T, False, id="unload-north-tl"),
