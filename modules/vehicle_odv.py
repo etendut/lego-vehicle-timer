@@ -491,7 +491,8 @@ class RunODVMotors(MotorHelper):
             print('getting path to load')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.load_tile)
-        self._navigate_grid_tile_path(path)
+        if not self._navigate_grid_tile_path(path):
+            return
         self._do_load_()
 
     def auto_unload(self):
@@ -503,7 +504,8 @@ class RunODVMotors(MotorHelper):
             print('getting path to unload')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
-        self._navigate_grid_tile_path(path)
+        if not self._navigate_grid_tile_path(path):
+            return
         self.home_and_unload()
 
     @staticmethod

@@ -285,7 +285,111 @@ commits to:
 
 ---
 
-## 6. Files touched by the movement system
+## 6. State diagrams
+
+### 6.1 Countdown timer states
+
+Defined in `lego_vehicle_timer_base.py:187-192`. Driven by `CountdownTimer`
+and the main loop in `main()`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> UNKNOWN: __init__
+    UNKNOWN --> READY: reset()\n(called at startup)
+    READY --> ACTIVE: CENTER button\n→ __start_countdown__()
+    ACTIVE --> FINAL_MINUTE: remaining < 60s
+    FINAL_MINUTE --> FINAL_20_SECS: remaining < 20s\n(see note)
+    FINAL_20_SECS --> ENDED: remaining ≤ 0
+    FINAL_MINUTE --> ENDED: remaining ≤ 0
+    ACTIVE --> ENDED: remaining ≤ 0\n(shouldn't occur in practice)
+    ENDED --> READY: reset sequence\n(c,c,c on remote)
+    FINAL_MINUTE --> READY: reset sequence
+    FINAL_20_SECS --> READY: reset sequence
+    ACTIVE --> READY: reset sequence
+    ENDED --> [*]: battery check fails\n→ flash error loop
+```
+
+**Note — FINAL_20_SECS is unreachable as written.** In `has_time_remaining()`
+(`lego_vehicle_timer_base.py:242-254`), the two guarded `if` blocks are
+sequential, not `elif`. When remaining < 20s, the `< 20s` branch sets
+`_FINAL_20_SECS`, then the `< 60s` branch immediately overwrites it with
+`_FINAL_MINUTE`. The LED in the last 20s flashes as `_FINAL_MINUTE`
+(orange 500/250), not the faster `_FINAL_20_SECS` (orange 200/100). The
+diagram shows the intended transition; call out whether the redesign keeps
+the bug or reorders the checks.
+
+### 6.2 Auto ↔ manual drive transitions
+
+Driven by `MotorHelper.mh_auto_drive` and `mh_is_homed`, and by the main
+loop in `lego_vehicle_timer_base.py:492-533`. Three configs produce three
+behaviours:
+
+| Config | `REMOTE_DISABLED` | `ODV_AUTO_DRIVE_TIMEOUT_SECS` |
+|---|---|---|
+| Full manual | False | 0 |
+| Hybrid      | False | > 0 (e.g. 30) |
+| Full auto   | True  | 0 |
+
+```mermaid
+stateDiagram-v2
+    [*] --> NOT_HOMED: startup\nmh_is_homed=False\nmh_auto_drive=False
+
+    NOT_HOMED --> HOMING: main loop\ncalls home_and_unload()
+    HOMING --> HOMED_MANUAL: set_is_homed()\n(stall walls, reset angles)
+
+    state HOMED_MANUAL {
+        [*] --> RemoteIdle
+        RemoteIdle --> RemoteDriving: button pressed\n→ _move_in_direction_\n(motor.dc)
+        RemoteDriving --> RemoteIdle: buttons released\nor can_move=False\n→ stop_motors()
+        RemoteDriving --> Loading: at LOAD + WEST\n→ _do_load_()
+        RemoteDriving --> Homing: at UNLOAD + EAST\n→ home_and_unload()
+        Loading --> RemoteIdle
+        Homing --> RemoteIdle
+    }
+
+    HOMED_MANUAL --> HOMED_AUTO: enable_auto_drive()\ntriggered by:\n• full-auto: mh_is_homed\n• hybrid: idle timeout
+
+    state HOMED_AUTO {
+        [*] --> PlanningUnload: auto_unload()\n(if has_load)
+        PlanningUnload --> RunningUnload: BFS returns path\n→ _navigate_grid_tile_path
+        RunningUnload --> HomingAuto: reach UNLOAD\n→ home_and_unload()
+        HomingAuto --> PlanningLoad
+        PlanningLoad --> RunningLoad: auto_load()\n→ BFS + navigate
+        RunningLoad --> DoingLoad: _do_load_()\n(has_load=True)
+        DoingLoad --> PlanningUnload
+    }
+
+    HOMED_AUTO --> HOMED_MANUAL: any button pressed\nduring _navigate_grid_tile_path\n→ disable_auto_drive()\n+ stop_motors()\n+ reset_time_since_last_remote_press()
+
+    HOMED_MANUAL --> NOT_HOMED: countdown ENDED\n→ reset_homing()\n(reset_is_homed)
+    HOMED_AUTO --> NOT_HOMED: countdown ENDED
+```
+
+**Key transitions to note for the redesign:**
+
+1. **Auto enable is polled, not evented.** Main loop checks every tick
+   whether to call `enable_auto_drive()`. Two triggers: full-auto (homed +
+   remote disabled) or hybrid (idle timeout fired).
+2. **Auto → manual hand-off has a debounce trick.** After
+   `_navigate_grid_tile_path` returns False (button interrupt), the main loop
+   calls `reset_time_since_last_remote_press()` so the hybrid timeout doesn't
+   immediately re-fire and re-enable auto on the next tick.
+3. **Homing is re-entered on timer reset.** When the countdown goes
+   `ENDED`, `reset_homing()` unsets `mh_is_homed`, so the next countdown
+   start forces re-homing. Auto mode will re-enable after the next home.
+4. **Remote-press detection is coarse.** `_navigate_grid_tile_path` checks
+   `remote.buttons.pressed()` only between tiles — not during a single
+   `_navigate_to_grid_tile` call. A button press during a straight run is
+   latency-bound on arrival at the next tile.
+5. **LOAD/UNLOAD actions are available in both modes.** In manual, driving
+   into LOAD with WEST pressed or UNLOAD with EAST pressed triggers the
+   action. In auto, the BFS plan always ends on LOAD or UNLOAD and the
+   action runs unconditionally. Mode-specific wiring of the same underlying
+   `_do_load_` / `home_and_unload`.
+
+---
+
+## 7. Files touched by the movement system
 
 Anything the redesign has to consider:
 

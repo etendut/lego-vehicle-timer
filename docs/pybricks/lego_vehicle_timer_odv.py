@@ -930,7 +930,8 @@ class RunODVMotors(MotorHelper):
             print('getting path to load')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.load_tile)
-        self._navigate_grid_tile_path(path)
+        if not self._navigate_grid_tile_path(path):
+            return
         self._do_load_()
 
     def auto_unload(self):
@@ -942,7 +943,8 @@ class RunODVMotors(MotorHelper):
             print('getting path to unload')
         tile = self._get_grid_tile_position_from_fine_xy_(self._get_fine_grid_position_(), True)
         path = self._bfs_path_to_grid_tile(tile, self.unload_tile)
-        self._navigate_grid_tile_path(path)
+        if not self._navigate_grid_tile_path(path):
+            return
         self.home_and_unload()
 
     @staticmethod
@@ -1149,10 +1151,11 @@ def main():
                     # Hybrid: if a button press interrupted auto, reset the idle timer so auto
                     # doesn't re-enable immediately on the next loop iteration
                     if not drive_motors.mh_auto_drive:
+                        countdown_timer.__start_countdown__()
                         countdown_timer.reset_time_since_last_remote_press()
 
             # if there is no remote, then there is no point in a countdown
-            if countdown_timer.has_time_remaining() or REMOTE_DISABLED or drive_motors.mh_auto_drive:
+            if countdown_timer.has_time_remaining() or REMOTE_DISABLED or drive_motors.mh_auto_drive or drive_motors.mh_is_homed:
                 if drive_motors.mh_supports_homing and not drive_motors.mh_is_homed:
                     drive_motors.home_and_unload()
                 if drive_motors.mh_supports_flip:
@@ -1162,7 +1165,6 @@ def main():
             else:
                 drive_motors.stop_motors()
                 if drive_motors.mh_supports_homing:
-                #     drive_motors.auto_unload()
                     drive_motors.reset_homing()
 
             countdown_timer.show_status()
