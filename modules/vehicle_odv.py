@@ -125,9 +125,9 @@ def can_move_in_direction_by_type(direction: int, tl_type: str, tr_type: str, br
 
     if tl_type == WALL or tr_type == WALL or br_type == WALL or bl_type == WALL:
         can_move = False
-    elif (tl_type == WEST_ONLY_TRACK or tr_type == WEST_ONLY_TRACK or br_type == WEST_ONLY_TRACK or bl_type == WEST_ONLY_TRACK) and direction != WEST:
+    elif (tl_type == WEST_ONLY_TRACK or tr_type == WEST_ONLY_TRACK or br_type == WEST_ONLY_TRACK or bl_type == WEST_ONLY_TRACK) and direction == EAST:
         can_move = False
-    elif (tl_type == EAST_ONLY_TRACK or tr_type == EAST_ONLY_TRACK or br_type == EAST_ONLY_TRACK or bl_type == EAST_ONLY_TRACK) and direction != EAST:
+    elif (tl_type == EAST_ONLY_TRACK or tr_type == EAST_ONLY_TRACK or br_type == EAST_ONLY_TRACK or bl_type == EAST_ONLY_TRACK) and direction == WEST:
         can_move = False
     elif (tl_type == UNLOAD or tr_type == UNLOAD or br_type == UNLOAD or bl_type == UNLOAD) and direction == NORTH:
         can_move = False
@@ -162,7 +162,6 @@ class ODVBox:
         self.top_right: tuple[int, int]
         self.bottom_right: tuple[int, int]
         self.bottom_left: tuple[int, int]
-        self.upper_left: tuple[int, int]
         self._update_dimensions_(top_left, width, height)
 
     def _update_dimensions_(self, top_left: tuple[int, int], width: int, height: int):
@@ -175,7 +174,7 @@ class ODVBox:
 
     def buffer(self, buffer: int):
         new_tl = (self.top_left[0] - buffer, self.top_left[1] - buffer)
-        self._update_dimensions_(new_tl, (self.width + buffer), (self.height + buffer))
+        self._update_dimensions_(new_tl, (self.width + 2 * buffer), (self.height + 2 * buffer))
 
     def __str__(self):
         return f"[{self.top_left}, {self.top_right}]\n[{self.bottom_left}, {self.bottom_right}]"
@@ -331,10 +330,10 @@ class RunODVMotors(MotorHelper):
         # if direction not in [_NORTH, _NORTH_EAST, _EAST, _SOUTH_EAST, _SOUTH, _SOUTH_WEST, _WEST, _NORTH_WEST]:
             return False, False, False
 
-        # work out cart dimensions
-        cart = ODVBox(self.last_fine_grid_position, _ODV_SIZE, _ODV_SIZE)
-        # shrink the cart to make moving smoother
-        cart.buffer(-1)
+        # Centre the box in X on the fine position so the right edge doesn't overflow
+        # into the adjacent coarse tile. Y stays at fine_y (cart hangs downward).
+        fine_x, fine_y = self.last_fine_grid_position
+        cart = ODVBox((fine_x - _ODV_SIZE // 2, fine_y), _ODV_SIZE, _ODV_SIZE)
 
         # print("Cart", cart)
 
@@ -344,21 +343,6 @@ class RunODVMotors(MotorHelper):
         bl_type = self._get_grid_tile_type_from_fine_xy_(position_from_direction(cart.bottom_left, direction), False)
 
         return can_move_in_direction_by_type(direction, tl_type, tr_type, br_type, bl_type)
-
-    def _can_move_in_direction_from_tile_(self, coarse_position: tuple[int, int], direction: int) -> tuple[
-        bool, bool, bool]:
-        ex_type = self._get_grid_tile_type_from_coarse_xy_(coarse_position)
-        new_type = self._get_grid_tile_type_from_coarse_xy_(position_from_direction(coarse_position, direction))
-        can_move, can_load, can_unload =False, False, False
-        if direction == NORTH:
-            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, new_type, new_type, ex_type, ex_type)
-        if direction == EAST:
-            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, ex_type, new_type, new_type, ex_type)
-        if direction == SOUTH:
-            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, ex_type, ex_type, new_type, new_type)
-        if direction == WEST:
-            can_move, can_load, can_unload= can_move_in_direction_by_type(direction, new_type, ex_type, ex_type, new_type)
-        return can_move, can_load, can_unload
 
     def _get_fine_grid_position_(self) -> tuple[int, int]:
 

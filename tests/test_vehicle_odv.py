@@ -24,23 +24,21 @@ can_move_tests = [
     pytest.param(NORTH, T, T, W, T, False, id="wall-br"),
     pytest.param(NORTH, T, T, T, W, False, id="wall-bl"),
 
-    # --- Rule 2: any corner on < and direction != WEST → block ---
+    # --- Rule 2: any corner on < blocks EAST only; N/S/W allowed ---
     pytest.param(EAST,  LT, T,  T,  T,  False, id="lt-tl-east"),
-    pytest.param(NORTH, T,  LT, T,  T,  False, id="lt-tr-north"),
-    pytest.param(SOUTH, T,  T,  LT, T,  False, id="lt-br-south"),
     pytest.param(EAST,  T,  T,  T,  LT, False, id="lt-bl-east"),
-    # < allowed when moving WEST
-    pytest.param(WEST, LT, T,  T,  LT, True,  id="lt-west-allowed"),
-    pytest.param(WEST, T,  LT, LT, T,  True,  id="lt-west-allowed-2"),
+    pytest.param(NORTH, T,  LT, T,  T,  True,  id="lt-tr-north-allowed"),
+    pytest.param(SOUTH, T,  T,  LT, T,  True,  id="lt-br-south-allowed"),
+    pytest.param(WEST,  LT, T,  T,  LT, True,  id="lt-west-allowed"),
+    pytest.param(WEST,  T,  LT, LT, T,  True,  id="lt-west-allowed-2"),
 
-    # --- Rule 3: any corner on > and direction != EAST → block ---
+    # --- Rule 3: any corner on > blocks WEST only; N/S/E allowed ---
     pytest.param(WEST,  RT, T,  T,  T,  False, id="rt-tl-west"),
-    pytest.param(NORTH, T,  RT, T,  T,  False, id="rt-tr-north"),
-    pytest.param(SOUTH, T,  T,  RT, T,  False, id="rt-br-south"),
     pytest.param(WEST,  T,  T,  T,  RT, False, id="rt-bl-west"),
-    # > allowed when moving EAST
-    pytest.param(EAST, RT, T,  T,  RT, True,  id="rt-east-allowed"),
-    pytest.param(EAST, T,  RT, RT, T,  True,  id="rt-east-allowed-2"),
+    pytest.param(NORTH, T,  RT, T,  T,  True,  id="rt-tr-north-allowed"),
+    pytest.param(SOUTH, T,  T,  RT, T,  True,  id="rt-br-south-allowed"),
+    pytest.param(EAST,  RT, T,  T,  RT, True,  id="rt-east-allowed"),
+    pytest.param(EAST,  T,  RT, RT, T,  True,  id="rt-east-allowed-2"),
 
     # --- Rule 4: any corner on UNLOAD and direction == NORTH → block ---
     pytest.param(NORTH, U, T, T, T, False, id="unload-north-tl"),
