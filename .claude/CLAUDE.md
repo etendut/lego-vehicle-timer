@@ -1,7 +1,16 @@
 # CLAUDE.md — lego-vehicle-timer
 
+## Visibility
+**This repo is public.** Everything committed here — code, `.claude/analysis/`, `.claude/work/`, `.claude/CLAUDE.md`, `.claude/settings*.json`, commit messages — is world-readable on GitHub. Be deliberate about what lands in a commit:
+
+- **Never commit** user context, session UUIDs, verbatim user quotes that weren't meant for publication, credentials, or anything in `~/.claude/` that the harness would normally keep private.
+- **Memory stays at the harness default path** (`~/.claude/projects/<slug>/memory/`), never under `.claude/memory/` — enforced via `.gitignore`.
+- Project artifacts like design docs and implementation plans under `.claude/analysis/` and `.claude/work/` are fine to commit, but write them as if an outside reader will see them (no session-internal UUIDs, no quotes attributing off-hand remarks, no personal aside).
+
 ## Project context
 PyBricks LEGO robot project targeting a **LEGO Technic Hub** (MicroPython/PyBricks). Memory is tight — avoid patterns that allocate on hot paths.
+
+The carts live inside a **GBC (Great Ball Contraption)** — a stopped cart stalls the ball flow, so "keep moving" is a product constraint, not a preference. The `IDLE_TIMEOUT_SECS = 20` auto-drive takeover exists for this reason. For any multi-cart work, "both carts frozen" is a hard failure — design for asymmetry. Racing between carts is **human-adjudicated**; do not add software race / winner / scoring logic unless asked.
 
 ## Working style
 - Ask clarifying questions **one at a time**, not as a list.
@@ -18,8 +27,21 @@ All Claude-related files live under `.claude/`:
 ## Active work
 No active redesign. Branch `v3` is the as-shipped ODV rewrite
 (arcade-style virtual-joystick, AABB-in-tile-grid validation,
-4-direction BFS, explicit `DRIVE_MODE` enum) pending on-rig
-verification.
+4-direction BFS, explicit `DRIVE_MODE` enum). Auto mode is
+rig-verified (2026-04-19); **manual / hybrid mode still needs
+on-rig verification** before any further redesign work.
+
+Future directions (not started; 2026-04-19 exploration):
+- `.claude/analysis/multi_cart_exploration.md` — multi-cart on one
+  grid. Decisions locked: Topology A (one hub / two carts), own
+  L/U per cart, A+B+C crossing resolution. Blocked on manual rig
+  verification.
+- **Partial tile** — a tile where only part is passable (e.g. SE
+  corner, triangle walls). Deferred; not yet explored. Grid-encoding
+  question is the key open design call.
+- **Dynamic maze** — grid that changes during a run. Deferred; not
+  yet explored. Composes naturally with multi-cart (peer cart = moving
+  obstacle reuses the same replan machinery).
 
 Completed work (for historical context):
 - `.claude/work/2026-04_movement_redesign.md` — full ODV rewrite.
