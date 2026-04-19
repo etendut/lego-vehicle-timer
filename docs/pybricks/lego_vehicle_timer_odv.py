@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = 'aca5120-dirty @ 2026-04-19 07:47'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '9de50b6-dirty @ 2026-04-19 07:54'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -68,6 +68,8 @@ _AIM_SWITCH_DEG = const(160)
 _HOMING_MOTOR_ROT_SPEED = const(200)
 _HOMING_DUTY = const(45)
 _MAX_MOTOR_ROT_SPEED = const(1400)
+# Auto-drive uses full duty — the controller knows what it's doing, no human in the loop.
+_AUTO_DRIVE_DUTY = const(100)
 # Rig-measured: at east stall, physical cart center is 80° west of east_wall_deg
 # (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
 _X_EAST_STALL_OFFSET_DEG = const(80)
@@ -85,7 +87,7 @@ IDLE_TIMEOUT_SECS = const(20) # allows robot time to do an unload an load within
 # DRIVE_MODE drives the remote flag: AUTO runs headless; MANUAL/HYBRID require the remote.
 REMOTE_DISABLED = (DRIVE_MODE == AUTO)
 
-ODV_SPEED = const(45)
+ODV_SPEED = const(65)
 ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
 ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
 ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
@@ -693,12 +695,14 @@ class AxisController:
         motor.dc(prev_duty * factor // 100)
         return prev_duty, ramp_start  # prev_duty unchanged during ramp
 
-    def tick(self, vj):
+    def tick(self, vj, duty=None):
         """One control tick. Proposes a lookahead step, clips it via Grid,
-        issues motor.dc per axis. Active→idle transition ramps to zero."""
+        issues motor.dc per axis. Active→idle transition ramps to zero.
+        `duty` overrides base_duty when provided (AutoDriver uses this for full speed)."""
         cx, cy = self.deg_pos()
         both = vj.ax != 0 and vj.ay != 0
-        duty = self.base_duty * _BOTH_AXES_DUTY_NUM // _BOTH_AXES_DUTY_DEN if both else self.base_duty
+        base = duty if duty is not None else self.base_duty
+        duty = base * _BOTH_AXES_DUTY_NUM // _BOTH_AXES_DUTY_DEN if both else base
 
         requested_dx = vj.ax * _LOOKAHEAD_DEG
         requested_dy = vj.ay * _LOOKAHEAD_DEG
@@ -929,7 +933,7 @@ class AutoDriver:
             target = self.grid.tile_center_deg(self.waypoints[self.i + 1])
 
         vj = VirtualJoystick(_aim(target[0] - cx), _aim(target[1] - cy))
-        self.axis_controller.tick(vj)
+        self.axis_controller.tick(vj, duty=_AUTO_DRIVE_DUTY)
         return None
 
     def _end_tag(self):

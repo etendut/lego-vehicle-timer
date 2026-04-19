@@ -430,6 +430,19 @@ def test_autodriver_emits_joystick_toward_next_waypoint():
     check.equal(vj.ay, 0)
 
 
+def test_autodriver_drives_axis_controller_at_full_duty():
+    """AutoDriver runs at 100% duty — manual-mode duty (45%) is only for the remote.
+    Auto-drive 'knows what it's doing' and should use the motor's full capability."""
+    import modules.vehicle_odv as odv
+    g = Grid(["L#U"])
+    ac = _mock_ac(400, 400)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+
+    ad.tick(_mock_remote())
+    check.equal(ac.tick.call_args.kwargs.get('duty'), odv._AUTO_DRIVE_DUTY)
+
+
 def test_autodriver_advances_index_when_near_waypoint():
     # Two-waypoint path L(0,0) -> U(2,0). Cart placed within aim-switch
     # tolerance of (2,0) centre = (2000, 400). Within 160° on both axes.
