@@ -122,6 +122,22 @@ def test_zero_joystick_first_tick_no_active_ramp():
     my.dc.assert_not_called()
 
 
+def test_tick_ramp_ms_override_shortens_decay():
+    """AutoDriver passes ramp_ms=100 (half of manual 200ms) so motor coast past
+    the deadband fits inside the 80° wall-clearance corridor. Rig-measured: at
+    full 200ms ramp + 80% duty the cart bounces off walls; 100ms keeps coast
+    under 80° and preserves smooth deceleration (no hard-stop jerk)."""
+    ac, mx, _my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    ac.tick(VirtualJoystick(+1, 0))  # prime prev_duty_x = 45
+    mx.dc.assert_called_with(+45)
+    # Idle tick with ramp_ms=100; clock at 0 → ramp starts.
+    ac.tick(VirtualJoystick(0, 0), ramp_ms=100)
+    # Advance past 100ms; next idle tick must finalize to dc(0).
+    clock.time.return_value = 100
+    ac.tick(VirtualJoystick(0, 0), ramp_ms=100)
+    check.equal(mx.dc.call_args_list[-1].args[0], 0)
+
+
 def test_zero_joystick_after_ramp_duration_calls_dc_zero():
     # First drive X active, then go idle; advance clock past _STOP_RAMP_MS.
     ac, mx, my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
@@ -430,9 +446,9 @@ def test_autodriver_emits_joystick_toward_next_waypoint():
     check.equal(vj.ay, 0)
 
 
-def test_autodriver_drives_axis_controller_at_full_duty():
-    """AutoDriver runs at 100% duty — manual-mode duty (45%) is only for the remote.
-    Auto-drive 'knows what it's doing' and should use the motor's full capability."""
+def test_autodriver_drives_axis_controller_with_auto_duty_and_ramp():
+    """AutoDriver runs at _AUTO_DRIVE_DUTY with _AUTO_STOP_RAMP_MS for the idle-axis
+    ramp (shorter than manual 200ms so coast fits wall clearance)."""
     import modules.vehicle_odv as odv
     g = Grid(["L#U"])
     ac = _mock_ac(400, 400)
@@ -441,6 +457,27 @@ def test_autodriver_drives_axis_controller_at_full_duty():
 
     ad.tick(_mock_remote())
     check.equal(ac.tick.call_args.kwargs.get('duty'), odv._AUTO_DRIVE_DUTY)
+    check.equal(ac.tick.call_args.kwargs.get('ramp_ms'), odv._AUTO_STOP_RAMP_MS)
+
+
+def test_autodriver_deadband_scales_with_duty_and_ramp():
+    """AutoDriver's _aim deadband is scaled to predicted coast distance at current
+    auto duty + ramp so the motor stops pushing exactly when the remaining coast
+    carries the cart onto the target — no overshoot, no wall bounce.
+    With _AUTO_DRIVE_DUTY=100, _AUTO_STOP_RAMP_MS=100, _MAX_MOTOR_ROT_SPEED=1400:
+    coast = 100 * 1400 * 100 // 200000 = 70°; + _DEADBAND_SAFETY_DEG=10 → 80°."""
+    g = Grid(["L#U#U"])  # L at (0,0), U at (4,0) — clear corridor
+    # Target for the next waypoint is tile center of U = (4*800+400, 400) = (3600, 400).
+    # Y drift 200° is outside both the 80° deadband AND the 160° aim-switch window
+    # so the tick emits a VJ instead of advancing i to the end.
+    ac = _mock_ac(3600 - 50, 400 + 200)
+    ad = AutoDriver(g, Planner(g), ac)
+    ad.start_journey(g.load_tile, g.unload_tile)
+
+    ad.tick(_mock_remote())
+    vj = ac.tick.call_args.args[0]
+    check.equal(vj.ax, 0)   # 50° X drift is inside 80° dynamic deadband
+    check.equal(vj.ay, -1)  # 200° Y drift is outside → push north
 
 
 def test_autodriver_advances_index_when_near_waypoint():

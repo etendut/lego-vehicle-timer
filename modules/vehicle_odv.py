@@ -44,6 +44,10 @@ _HOMING_DUTY = const(45)
 _MAX_MOTOR_ROT_SPEED = const(1400)
 # Auto-drive uses full duty — the controller knows what it's doing, no human in the loop.
 _AUTO_DRIVE_DUTY = const(100)
+# Shorter ramp for auto-drive (100ms vs manual 200ms) keeps coast <80° wall clearance.
+_AUTO_STOP_RAMP_MS = const(100)
+# Extra slack on predicted coast distance — absorbs motor non-linearity / battery sag.
+_DEADBAND_SAFETY_DEG = const(10)
 # Rig-measured: at east stall, physical cart center is 80° west of east_wall_deg
 # (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
 _X_EAST_STALL_OFFSET_DEG = const(80)
@@ -244,7 +248,7 @@ class AxisController:
     def deg_pos(self):
         return (self.motor_x.angle(), self.motor_y.angle())
 
-    def _ramp_stop_axis(self, motor, prev_duty, ramp_start):
+    def _ramp_stop_axis(self, motor, prev_duty, ramp_start, ramp_ms):
         """Run one ramp-stop tick for one axis.
         Returns (new_prev_duty, new_ramp_start)."""
         if prev_duty == 0:
@@ -253,17 +257,18 @@ class AxisController:
         if ramp_start is None:
             ramp_start = now
         elapsed = now - ramp_start
-        if elapsed >= _STOP_RAMP_MS:
+        if elapsed >= ramp_ms:
             motor.dc(0)
             return 0, None
-        factor = (_STOP_RAMP_MS - elapsed) * 100 // _STOP_RAMP_MS
+        factor = (ramp_ms - elapsed) * 100 // ramp_ms
         motor.dc(prev_duty * factor // 100)
         return prev_duty, ramp_start  # prev_duty unchanged during ramp
 
-    def tick(self, vj, duty=None):
+    def tick(self, vj, duty=None, ramp_ms=_STOP_RAMP_MS):
         """One control tick. Proposes a lookahead step, clips it via Grid,
-        issues motor.dc per axis. Active→idle transition ramps to zero.
-        `duty` overrides base_duty when provided (AutoDriver uses this for full speed)."""
+        issues motor.dc per axis. Active→idle transition ramps to zero over
+        `ramp_ms` (manual default 200ms; AutoDriver passes a shorter value so
+        coast stays inside wall clearances). `duty` overrides base_duty."""
         cx, cy = self.deg_pos()
         both = vj.ax != 0 and vj.ay != 0
         base = duty if duty is not None else self.base_duty
@@ -287,7 +292,7 @@ class AxisController:
             self._ramp_start_x = None
         else:
             self._prev_duty_x, self._ramp_start_x = self._ramp_stop_axis(
-                self.motor_x, self._prev_duty_x, self._ramp_start_x
+                self.motor_x, self._prev_duty_x, self._ramp_start_x, ramp_ms
             )
 
         # Y axis
@@ -301,21 +306,29 @@ class AxisController:
             self._ramp_start_y = None
         else:
             self._prev_duty_y, self._ramp_start_y = self._ramp_stop_axis(
-                self.motor_y, self._prev_duty_y, self._ramp_start_y
+                self.motor_y, self._prev_duty_y, self._ramp_start_y, ramp_ms
             )
 
 
 _DIRECTIONS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
 
-def _aim(delta):
-    """Like _sign but with a _LOOKAHEAD_DEG deadband — prevents the idle axis
-    from pulsing on sub-step drift while transiting along the other axis."""
-    if delta > _LOOKAHEAD_DEG:
+def _aim(delta, deadband):
+    """Like _sign but with a deadband — prevents the idle axis from pulsing on
+    sub-step drift, and lets the caller size the deadband to match expected
+    coast distance so the motor stops pushing exactly when remaining coast
+    carries the cart onto the target (no overshoot)."""
+    if delta > deadband:
         return 1
-    if delta < -_LOOKAHEAD_DEG:
+    if delta < -deadband:
         return -1
     return 0
+
+
+def _coast_distance_deg(duty, ramp_ms):
+    """Predicted coast distance for a linear ramp from `duty%` to 0 over
+    `ramp_ms` — half the triangle: (duty/100) * max_speed_degps * (ramp_ms/1000) / 2."""
+    return duty * _MAX_MOTOR_ROT_SPEED * ramp_ms // 200000
 
 
 def _sign(n):
@@ -497,8 +510,9 @@ class AutoDriver:
                 return self._end_tag()
             target = self.grid.tile_center_deg(self.waypoints[self.i + 1])
 
-        vj = VirtualJoystick(_aim(target[0] - cx), _aim(target[1] - cy))
-        self.axis_controller.tick(vj, duty=_AUTO_DRIVE_DUTY)
+        deadband = _coast_distance_deg(_AUTO_DRIVE_DUTY, _AUTO_STOP_RAMP_MS) + _DEADBAND_SAFETY_DEG
+        vj = VirtualJoystick(_aim(target[0] - cx, deadband), _aim(target[1] - cy, deadband))
+        self.axis_controller.tick(vj, duty=_AUTO_DRIVE_DUTY, ramp_ms=_AUTO_STOP_RAMP_MS)
         return None
 
     def _end_tag(self):
