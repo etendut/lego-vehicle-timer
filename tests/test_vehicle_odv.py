@@ -464,11 +464,11 @@ def test_autodriver_deadband_scales_with_duty_and_ramp():
     """AutoDriver's _aim deadband is scaled to predicted coast distance at current
     auto duty + ramp so the motor stops pushing exactly when the remaining coast
     carries the cart onto the target — no overshoot, no wall bounce.
-    With _AUTO_DRIVE_DUTY=100, _AUTO_STOP_RAMP_MS=100, _MAX_MOTOR_ROT_SPEED=1400:
-    coast = 100 * 1400 * 100 // 200000 = 70°; + _DEADBAND_SAFETY_DEG=10 → 80°."""
+    With _AUTO_DRIVE_DUTY=80, _AUTO_STOP_RAMP_MS=100, _MAX_MOTOR_ROT_SPEED=1400:
+    coast = 80 * 1400 * 100 // 200000 = 56°; + _DEADBAND_SAFETY_DEG=10 → 66°."""
     g = Grid(["L#U#U"])  # L at (0,0), U at (4,0) — clear corridor
     # Target for the next waypoint is tile center of U = (4*800+400, 400) = (3600, 400).
-    # Y drift 200° is outside both the 80° deadband AND the 160° aim-switch window
+    # Y drift 200° is outside both the 66° deadband AND the 160° aim-switch window
     # so the tick emits a VJ instead of advancing i to the end.
     ac = _mock_ac(3600 - 50, 400 + 200)
     ad = AutoDriver(g, Planner(g), ac)
@@ -476,7 +476,7 @@ def test_autodriver_deadband_scales_with_duty_and_ramp():
 
     ad.tick(_mock_remote())
     vj = ac.tick.call_args.args[0]
-    check.equal(vj.ax, 0)   # 50° X drift is inside 80° dynamic deadband
+    check.equal(vj.ax, 0)   # 50° X drift is inside 66° dynamic deadband
     check.equal(vj.ay, -1)  # 200° Y drift is outside → push north
 
 

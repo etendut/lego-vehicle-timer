@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '6133535-dirty @ 2026-04-19 08:47'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '80ee152-dirty @ 2026-04-19 08:48'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
