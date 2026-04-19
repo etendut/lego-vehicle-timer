@@ -1,0 +1,8 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# E722 (bare except) is intentional in PyBricks code — MicroPython's exception
+# hierarchy is minimal and hardware init paths need to catch anything.
+ignore = ["E722"]

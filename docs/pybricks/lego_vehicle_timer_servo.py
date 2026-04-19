@@ -23,7 +23,8 @@ from uerrno import ENODEV
 
 
 
-print('Version 2.3.0')
+__BUILD__ = '80ee152-dirty @ 2026-04-19 08:48'  # replaced at compile time with git hash + timestamp
+print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
 ##################################################################################
@@ -33,9 +34,6 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
     3)  # run for (x) minutes, min 1 minute, max up to you. the default of 3 minutes is play tested :).
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
-
-# How many seconds to wait before doing a load/unload automatically. 0 = disabled
-ODV_AUTO_DRIVE_TIMEOUT_SECS: int = const(30)
 
 # for debugging or ODV full auto
 REMOTE_DISABLED = False
@@ -168,6 +166,14 @@ class MotorHelper:
         """All vehicles"""
         pass
 
+    def idle_timed_out(self) -> bool:
+        """ODV only — returns True when auto-drive should engage."""
+        return False
+
+    def reset_idle_timeout(self):
+        """ODV only — call after any activity that should delay auto-drive."""
+        pass
+
 
 ##################################################################################
 # Countdown helper
@@ -219,17 +225,8 @@ class CountdownTimer:
         self.led_flash_sw_time = 0
         self.last_flash_color = None
         self.end_time = 0
-        # remote timing
-        self.remote_buttons_time_out_ms = 0
-        self.reset_time_since_last_remote_press()
         # battery check throttle
         self._battery_check_time = 0
-
-    def reset_time_since_last_remote_press(self):
-        self.remote_buttons_time_out_ms = self.stopwatch.time() + (ODV_AUTO_DRIVE_TIMEOUT_SECS * 1000)
-
-    def remote_button_press_timed_out(self) -> bool:
-        return self.stopwatch.time() > self.remote_buttons_time_out_ms
 
     def has_time_remaining(self):
         """
@@ -254,13 +251,12 @@ class CountdownTimer:
             self.countdown_status = _ENDED
             self.show_status()
             return False
-        # in last 25s slow flash a warning
+        # in last 20s fast flash a warning
         if remaining_time < (1000 * 20):
             self.countdown_status = _FINAL_20_SECS
             self.show_status()
-
-            # in last minute slow flash a warning
-        if remaining_time < (1000 * 60):
+        # in last minute slow flash a warning
+        elif remaining_time < (1000 * 60):
             self.countdown_status = _FINAL_MINUTE
             self.show_status()
 
@@ -281,7 +277,6 @@ class CountdownTimer:
         else:
             print('countdown time reset, press Remote CENTER to restart countdown')
         self.countdown_status = _READY
-        self.reset_time_since_last_remote_press()
 
     def check_remote_buttons(self):
         """
@@ -293,8 +288,6 @@ class CountdownTimer:
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0:
             return
-
-        self.reset_time_since_last_remote_press()
 
         if self.countdown_status == _READY and Button.CENTER in remote_buttons_pressed:
             self.__start_countdown__()
@@ -414,7 +407,7 @@ PROGRAM_RESET_CODE_PRESSED, PROGRAM_RESET_CODE_NOT_PRESSED = code_to_button_pres
 
 
 hub: "CityHub | TechnicHub"
-remote: "Remote"
+remote: "Remote" = None  # type: ignore  # bound by setup_remote(); stays None in headless modes
 
 
 def setup_hub():
@@ -602,8 +595,8 @@ def main():
                     # Full auto: enable immediately once homed, no remote needed
                     if REMOTE_DISABLED and drive_motors.mh_is_homed:
                         drive_motors.enable_auto_drive()
-                    # Hybrid: enable after timeout with no remote activity
-                    elif ODV_AUTO_DRIVE_TIMEOUT_SECS > 0 and countdown_timer.remote_button_press_timed_out():
+                    # Hybrid: enable after idle timeout
+                    elif drive_motors.idle_timed_out():
                         drive_motors.enable_auto_drive()
 
                 if drive_motors.mh_auto_drive and drive_motors.mh_is_homed:
@@ -613,7 +606,7 @@ def main():
                     # doesn't re-enable immediately on the next loop iteration
                     if not drive_motors.mh_auto_drive:
                         countdown_timer.__start_countdown__()
-                        countdown_timer.reset_time_since_last_remote_press()
+                        drive_motors.reset_idle_timeout()
 
             # if there is no remote, then there is no point in a countdown
             if countdown_timer.has_time_remaining() or REMOTE_DISABLED or drive_motors.mh_auto_drive or drive_motors.mh_is_homed:

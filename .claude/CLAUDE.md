@@ -12,7 +12,22 @@ Run `python tools/compile_pybricks_files.py` to regenerate the compiled `lego_ve
 
 ## Project files
 All Claude-related files live under `.claude/`:
-- `.claude/PLAN.md` — active implementation plan; read this at the start of every session and update task statuses as work completes.
+- `.claude/analysis/` — design docs (current-state analyses, architecture write-ups).
+- `.claude/work/` — implementation plans. Active plans live here during work; completed plans stay for historical reference, prefixed `YYYY-MM_`.
 
-## Active plan summary
-See `.claude/PLAN.md` for full details. All 4 ODV improvement tasks are complete, plus subsequent remote control fixes (box centering, one-way tile wall-on-edge semantics, diagonal support).
+## Active work
+No active redesign. Branch `v3` is the as-shipped ODV rewrite
+(arcade-style virtual-joystick, AABB-in-tile-grid validation,
+4-direction BFS, explicit `DRIVE_MODE` enum) pending on-rig
+verification.
+
+Completed work (for historical context):
+- `.claude/work/2026-04_movement_redesign.md` — full ODV rewrite.
+  All 10 tasks landed 2026-04-18. The as-shipped architecture is
+  captured in `.claude/analysis/odv_movement_redesign.md` Part B;
+  read that at the start of any session touching ODV movement.
+- `.claude/work/2026-04_bfs_rewrite.md` — earlier ODV improvement
+  plan (DEBUG flag, rule-based validation, coarse check, BFS with
+  parent-pointer map). Superseded by the movement redesign.
+- `.claude/work/2026-04_home_unload_merge.md` — collapsed the earlier
+  HOME + END tiles into a single `U` (unload) tile.

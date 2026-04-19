@@ -3,3 +3,4 @@ pybricks==3.6.1
 # test dependencies
 pytest
 pytest-check
+ruff
