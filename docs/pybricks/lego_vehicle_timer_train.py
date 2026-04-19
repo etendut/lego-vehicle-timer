@@ -22,7 +22,7 @@ from pybricks.pupdevices import DCMotor, Light
 
 
 
-__BUILD__ = 'e05a194-dirty @ 2026-04-19 08:35'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '6133535-dirty @ 2026-04-19 08:47'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings

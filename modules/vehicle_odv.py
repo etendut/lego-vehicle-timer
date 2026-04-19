@@ -43,7 +43,7 @@ _HOMING_MOTOR_ROT_SPEED = const(200)
 _HOMING_DUTY = const(45)
 _MAX_MOTOR_ROT_SPEED = const(1400)
 # Auto-drive uses full duty — the controller knows what it's doing, no human in the loop.
-_AUTO_DRIVE_DUTY = const(100)
+_AUTO_DRIVE_DUTY = const(80)
 # Shorter ramp for auto-drive (100ms vs manual 200ms) keeps coast <80° wall clearance.
 _AUTO_STOP_RAMP_MS = const(100)
 # Extra slack on predicted coast distance — absorbs motor non-linearity / battery sag.
