@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '80ee152-dirty @ 2026-04-19 08:48'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '97d6ff6-dirty @ 2026-04-27 17:54'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -51,8 +51,8 @@ REMOTE_DISABLED = False
 # battery notes
 # - fresh battery = 1.6V
 # - hub programming often fails below 1.5v
-# - TODO critical level may be too low
-MILLIVOLT_CRITICAL_LEVEL = const(7200) 
+# - hub fails whe batteries at 1.36V so we'll set base to 8400 (1.4v*6)
+MILLIVOLT_CRITICAL_LEVEL = const(8400) 
 
 DEBUG = const(True)
 
