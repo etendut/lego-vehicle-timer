@@ -5,9 +5,9 @@ Usage (from project root):
     python tools/generate_grid_images.py
 
 Output:
-    images/ODV_GRID_DEFAULT.png
-    images/ODV_GRID_EX1.png
-    images/ODV_GRID_EX2.png
+    docs/images/ODV_GRID_DEFAULT.png
+    docs/images/ODV_GRID_EX1.png
+    docs/images/ODV_GRID_EX2.png
 """
 import os
 import sys
@@ -137,7 +137,7 @@ def render_grid(grid: list[str]) -> Image.Image:
 def main() -> None:
     _compile.main()
 
-    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'images')
+    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'docs', 'images')
     os.makedirs(out_dir, exist_ok=True)
 
     for name, grid in GRIDS:
