@@ -21,5 +21,7 @@ except ImportError as ex1:
         print(ex2)
         raise Exception('This program only support Lego City hub and Lego Technic hub')
 
+print(hub.battery.voltage())
+
 while True:
      wait(500)
