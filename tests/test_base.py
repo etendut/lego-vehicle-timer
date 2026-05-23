@@ -364,9 +364,12 @@ class TestCountdownTimer:
 
     # set_hub_and_remote_light
     def test_set_light_same_color_noop(self, mock_hub):
+        # last_hub_remote_color starts as None; passing None again triggers
+        # the early-return guard (None == None is True in Python).
+        # Color.__eq__ returns None in the pybricks stub, so we can't test
+        # the guard with real Color values — use None as the sentinel.
         ct, _ = make_countdown()
-        ct.last_hub_remote_color = Color.GREEN
-        ct.set_hub_and_remote_light(Color.GREEN, False)
+        ct.set_hub_and_remote_light(None, False)  # type: ignore[arg-type]
         mock_hub.light.on.assert_not_called()
 
     def test_set_light_new_color_include_remote_false(self, monkeypatch, mock_hub, mock_remote):
