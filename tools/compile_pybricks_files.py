@@ -7,7 +7,6 @@ Usage (from project root):
 import os
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
@@ -77,24 +76,17 @@ def _extract_sections(path: Path) -> dict[str, str]:
 
 
 def _build_tag() -> str:
-    """Return '<short-sha>' for a clean tree, '<short-sha>-dirty @ YYYY-MM-DD HH:MM' when dirty.
-    Clean builds are stable — same commit always produces the same tag."""
+    """Return '<short-sha>' for the current HEAD.
+
+    Always uses the committed HEAD hash, even when the working tree is dirty.
+    The "-dirty @ timestamp" variant was dropped because it forced a double-commit
+    to land a clean tag: commit code → recompile → commit refreshed tag."""
     try:
-        sha = subprocess.check_output(
+        return subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'], cwd=PROJECT_ROOT
         ).decode().strip()
     except Exception:
-        sha = 'nogit'
-    try:
-        dirty = subprocess.run(
-            ['git', 'diff', '--quiet'], cwd=PROJECT_ROOT
-        ).returncode != 0
-    except Exception:
-        dirty = False
-    if dirty:
-        ts = datetime.now().strftime('%Y-%m-%d %H:%M')
-        return f'{sha}-dirty @ {ts}'
-    return sha
+        return 'nogit'
 
 
 def _compile_one(vehicle: str, build_tag: str) -> Path:
