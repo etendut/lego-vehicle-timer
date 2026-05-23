@@ -22,7 +22,7 @@ from pybricks.pupdevices import DCMotor, Light
 
 
 
-__BUILD__ = 'c4bc729-dirty @ 2026-05-23 13:16'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '0e0ffbd-dirty @ 2026-05-23 13:27'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -623,7 +623,7 @@ def main():
         while True:
             if countdown_timer.should_check_battery() and not hub_battery_ok():
                 error_flash_code.set_error_low_battery()
-                break
+                raise Exception('low battery')
 
             if not _REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
