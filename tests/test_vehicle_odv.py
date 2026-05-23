@@ -108,6 +108,31 @@ def test_boundary_overrun_blocked_north():
     assert g.propose_step(pos, 0, -40) == (0, 0)   # deeper into wall → blocked
 
 
+# --- One-way tile coast-past bug (rig-observed) ---
+# Old check fired only on the single step where the cart's east face crossed
+# bx. Once motor coast pushed the cart east-face past bx, the check no longer
+# fired and further eastbound steps were allowed — cart could drive through
+# the '<' tile in stages. The fix is to block any step whose post-step AABB
+# still straddles the barrier line.
+
+
+def test_propose_step_blocks_eastbound_when_cart_coasted_past_west_barrier():
+    """'<' must keep blocking eastbound as long as the cart's west face is still
+    west of the barrier line (i.e. the AABB still straddles bx), even after
+    coast has carried the east face past bx."""
+    g = Grid(["L#<#U"])
+    # cart east face 20° east of bx=1600 → cx=1300, west=980, east=1620.
+    assert g.propose_step((1300, 400), 40, 0) == (0, 0)
+
+
+def test_propose_step_blocks_westbound_when_cart_coasted_past_east_barrier():
+    """Mirror: '>' must keep blocking westbound while AABB straddles the
+    east-edge barrier, even after coast pushes the west face past it."""
+    g = Grid(["L#>#U"])
+    # '>' at tile 2: bx = 3*800 = 2400. west face 20° west of bx → cx=2700.
+    assert g.propose_step((2700, 400), -40, 0) == (0, 0)
+
+
 def test_boundary_overrun_escape_east():
     """Escape toward centre is allowed when cart is past east boundary."""
     # Legal east edge: cx <= n_cols*800 - 320 = 2080; cart at 2100 is 40° past.

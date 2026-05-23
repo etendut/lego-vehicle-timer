@@ -223,22 +223,27 @@ class Grid:
         if axis == _X:
             half = _HALF
             if d > 0:
-                # Eastbound: check '<' west-edge barriers
-                east_face_before = cx + half
-                east_face_after = east_face_before + d
+                # Eastbound: '<' is one-way west. Block while the cart's AABB
+                # still straddles the barrier line after the step (west face
+                # west of bx AND east face east of bx). Straddle semantics
+                # keep the block live across motor-coast ticks — the cart's
+                # east face may already be past bx by the time the next tick
+                # fires, but as long as the west face hasn't cleared bx we
+                # must still refuse further eastbound motion.
+                new_x_west = (cx - half) + d
+                new_x_east = (cx + half) + d
                 for bx, y_top, y_bottom in self._west_barriers:
                     y_overlap = (cy - half) < y_bottom and (cy + half) > y_top
-                    crossing = east_face_before <= bx and east_face_after > bx
-                    if y_overlap and crossing:
+                    if y_overlap and new_x_west < bx and new_x_east > bx:
                         return False
             elif d < 0:
-                # Westbound: check '>' east-edge barriers
-                west_face_before = cx - half
-                west_face_after = west_face_before + d
+                # Westbound: '>' is one-way east. Mirror — block while AABB
+                # straddles bx after the step.
+                new_x_west = (cx - half) + d
+                new_x_east = (cx + half) + d
                 for bx, y_top, y_bottom in self._east_barriers:
                     y_overlap = (cy - half) < y_bottom and (cy + half) > y_top
-                    crossing = west_face_before >= bx and west_face_after < bx
-                    if y_overlap and crossing:
+                    if y_overlap and new_x_east > bx and new_x_west < bx:
                         return False
 
         return True
