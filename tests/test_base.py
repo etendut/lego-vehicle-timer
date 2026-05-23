@@ -416,37 +416,40 @@ class TestCountdownTimer:
         mock_hub.light.on.assert_called_with(Color.NONE)
 
     # check_remote_buttons
-    def test_check_remote_buttons_disabled_noop(self, monkeypatch, mock_remote):
+    def test_check_remote_buttons_disabled_returns_false(self, monkeypatch, mock_remote):
         monkeypatch.setattr(base, '_REMOTE_DISABLED', True)
         ct, _ = make_countdown()
-        ct.check_remote_buttons()
+        result = ct.check_remote_buttons()
+        assert result is False
         mock_remote.buttons.pressed.assert_not_called()
 
-    def test_check_remote_buttons_no_buttons_noop(self, monkeypatch, mock_remote):
+    def test_check_remote_buttons_no_buttons_returns_false(self, monkeypatch, mock_remote):
         monkeypatch.setattr(base, '_REMOTE_DISABLED', False)
         mock_remote.buttons.pressed.return_value = []
         ct, _ = make_countdown()
-        ct.check_remote_buttons()
+        assert ct.check_remote_buttons() is False
 
-    def test_check_remote_buttons_center_starts_countdown(self, monkeypatch, mock_hub, mock_remote):
+    def test_check_remote_buttons_center_starts_countdown_returns_false(self, monkeypatch, mock_hub, mock_remote):
         monkeypatch.setattr(base, '_REMOTE_DISABLED', False)
         # First call: CENTER → start countdown.
         # Second call (inside wait_for_no_pressed_buttons): nothing pressed.
         mock_remote.buttons.pressed.side_effect = [[Button.CENTER], []]
         ct, _ = make_countdown()
         ct.countdown_status = _READY
-        ct.check_remote_buttons()
+        result = ct.check_remote_buttons()
         assert ct.countdown_status == _ACTIVE
+        assert result is False  # start is not a reset
 
-    def test_check_remote_buttons_reset_code_resets_timer(self, monkeypatch, mock_hub, mock_remote):
+    def test_check_remote_buttons_reset_code_resets_timer_returns_true(self, monkeypatch, mock_hub, mock_remote):
         monkeypatch.setattr(base, '_REMOTE_DISABLED', False)
         # PROGRAM_RESET_CODE_PRESSED for default 'c,c,c' is [LEFT, CENTER, RIGHT]
         reset_buttons = [Button.LEFT, Button.CENTER, Button.RIGHT]
         mock_remote.buttons.pressed.side_effect = [reset_buttons, []]
         ct, _ = make_countdown()
         ct.countdown_status = _ACTIVE  # not _READY → center check won't start a new countdown
-        ct.check_remote_buttons()
+        result = ct.check_remote_buttons()
         assert ct.countdown_status == _READY
+        assert result is True  # caller should reset motor homed state
 
 
 # ── hub_battery_ok ─────────────────────────────────────────────────────────────

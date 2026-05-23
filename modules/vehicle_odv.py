@@ -662,6 +662,7 @@ class RunODVMotors(MotorHelper):
 
     def reset_homing(self):
         self.reset_is_homed()
+        self.disable_auto_drive()
 
     def stop_motors(self):
         self.motor_x.stop()

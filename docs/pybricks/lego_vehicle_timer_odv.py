@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '12405ca'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '90140e4'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -317,16 +317,17 @@ class CountdownTimer:
             print('countdown time reset, press Remote CENTER to restart countdown')
         self.countdown_status = _READY
 
-    def check_remote_buttons(self):
+    def check_remote_buttons(self) -> bool:
         """
-            check countdown time buttons
+        Check countdown time buttons.
+        Returns True if the reset code was pressed (caller should reset motor state).
         """
         if _REMOTE_DISABLED:
-            return
+            return False
 
         remote_buttons_pressed = remote.buttons.pressed()
         if len(remote_buttons_pressed) == 0:
-            return
+            return False
 
         if self.countdown_status == _READY and Button.CENTER in remote_buttons_pressed:
             self.__start_countdown__()
@@ -337,6 +338,9 @@ class CountdownTimer:
                 i in remote_buttons_pressed for i in PROGRAM_RESET_CODE_NOT_PRESSED):
             self.reset()
             wait_for_no_pressed_buttons()
+            return True
+
+        return False
 
     def should_check_battery(self) -> bool:
         if self.stopwatch.time() > self._battery_check_time:
@@ -1092,6 +1096,7 @@ class RunODVMotors(MotorHelper):
 
     def reset_homing(self):
         self.reset_is_homed()
+        self.disable_auto_drive()
 
     def stop_motors(self):
         self.motor_x.stop()
@@ -1258,7 +1263,10 @@ def main():
                 raise Exception('low battery')
 
             if not _REMOTE_DISABLED:
-                countdown_timer.check_remote_buttons()
+                if countdown_timer.check_remote_buttons():
+                    drive_motors.stop_motors()
+                    if drive_motors.mh_supports_homing:
+                        drive_motors.reset_homing()
 
             if drive_motors.mh_supports_homing:
                 if not drive_motors.mh_auto_drive:
