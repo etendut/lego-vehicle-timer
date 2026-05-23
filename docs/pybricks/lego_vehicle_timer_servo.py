@@ -23,35 +23,28 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = '1495e18-dirty @ 2026-05-23 11:38'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '5abb2e2-dirty @ 2026-05-23 11:43'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
 ##################################################################################
 
-# countdown time settings
-COUNTDOWN_LIMIT_MINUTES: int = const(
-    3)  # run for (x) minutes, min 1 minute, max up to you. the default of 3 minutes is play tested :).
-# c = center button, + = + button, - = - button
-COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
+# ── user configuration ────────────────────────────────────────────────────────
+COUNTDOWN_LIMIT_MINUTES: int = const(3)  # run for (x) minutes, min 1 minute, max up to you. the default of 3 minutes is play tested :).
+COUNTDOWN_RESET_CODE         = 'c,c,c'  # c = center button, + = + button, - = - button
 
-# ODV overrides this from DRIVE_MODE, all other modes (servo/train/skid_steer) are FALSE; 
-REMOTE_DISABLED = False
+# ── battery / voltage ─────────────────────────────────────────────────────────
+# fresh battery = 1.6V; hub programming often fails below 1.5V;
+# hub fails when batteries reach ~1.36V so critical level = 1.4V * 6 cells = 8400mV
+MILLIVOLT_CRITICAL_LEVEL = const(8400)
 
-# low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
+REMOTE_DISABLED = False # ODV overrides this from DRIVE_MODE; all other vehicles (servo/train/skid_steer) leave it False
 
-# battery notes
-# - fresh battery = 1.6V, 
-# - hub programming often fails below 1.5v
-# - hub fails whe batteries at 1.36V so we'll set base to 8400 (1.4v*6)
-MILLIVOLT_CRITICAL_LEVEL = const(8400) 
-
-# servo steer settings
-SERVO_STEER_SPEED: int = const(80)  # set between 50 and 100
-SERVO_STEER_TURN_ANGLE: int = const(45)  # angle to turn wheels
-SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = False  # set to True if remote + button cause motor to run backwards
-SERVO_STEER_REVERSE_TURN_MOTOR: bool = False  # set to True if remote + button cause motor to turn wrong way
-
+# ── user configuration ────────────────────────────────────────────────────────
+SERVO_STEER_SPEED: int                = const(80)  # set between 50 and 100
+SERVO_STEER_TURN_ANGLE: int           = const(45)  # angle to turn wheels
+SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = False       # set to True if remote + button cause motor to run backwards
+SERVO_STEER_REVERSE_TURN_MOTOR: bool  = False       # set to True if remote + button cause motor to turn wrong way
 
 
 
