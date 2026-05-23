@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '6071244-dirty @ 2026-05-23 11:36'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '1495e18-dirty @ 2026-05-23 11:38'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -54,62 +54,52 @@ REMOTE_DISABLED = False
 # - hub fails whe batteries at 1.36V so we'll set base to 8400 (1.4v*6)
 MILLIVOLT_CRITICAL_LEVEL = const(8400) 
 
-### ODV constants do not change ###
-## drive modes
+
+# ── drive mode enum (do not change) ──────────────────────────────────────────
 MANUAL = const(0)
 HYBRID = const(1)
-AUTO = const(2)
-## grid patterns
+AUTO   = const(2)
+
+# ── grid patterns ─────────────────────────────────────────────────────────────
 ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
-ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
-ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
-ODV_GRID_EX3 = ["X#>#X", "L#X#U", "X#<#X"]
-###
+ODV_GRID_EX1     = ["###X#XX", "LX###XU", "###X###"]
+ODV_GRID_EX2     = ["X###X", "L###U", "X###X"]
+ODV_GRID_EX3     = ["X#>#X", "L#X#U", "X#<#X"]
 
-### ODV configuration vars ###
-# drive mode, see above modes
-DRIVE_MODE = AUTO
-# timeout secs for HYBRID drive mode
-IDLE_TIMEOUT_SECS = const(20) # allows robot time to do an unload an load within 30s
-# max speed of cart in MANUAL and HYBRID modes
-ODV_SPEED = const(65)
-# grid the ODV is driving on
-ODV_GRID = ODV_GRID_DEFAULT
-###
+# ── user configuration ────────────────────────────────────────────────────────
+DRIVE_MODE        = AUTO
+REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
+IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
+ODV_SPEED         = const(65)  # max speed in MANUAL and HYBRID modes
+ODV_GRID          = ODV_GRID_DEFAULT
 
-### debugging vars ##
-# enable debug logging
-DEBUG = const(True)
-# Flip to True to halt auto_load at tile (3, 0) center for X-offset measurement.
-_CALIBRATE_X_OFFSET = False
+# ── debug / calibration ───────────────────────────────────────────────────────
+DEBUG               = const(True)
+_CALIBRATE_X_OFFSET = False  # halt auto_load at tile (3, 0) center for X-offset measurement
 
+# ── internal tuning (change with caution) ────────────────────────────────────
+_DEG_PER_TILE     = const(800)
+_CART_SIZE_DEG    = const(640)
 
-### internal vars change with extreme caution ####
-
-# DRIVE_MODE drives the remote flag: AUTO runs headless; MANUAL/HYBRID require the remote.
-REMOTE_DISABLED = (DRIVE_MODE == AUTO)
-
-_DEG_PER_TILE = const(800)
-_CART_SIZE_DEG = const(640)
-
-_LOOKAHEAD_DEG = const(40)
-_STOP_RAMP_MS = const(200)
+_LOOKAHEAD_DEG      = const(40)
+_STOP_RAMP_MS       = const(200)
 _BOTH_AXES_DUTY_NUM = const(71)
 _BOTH_AXES_DUTY_DEN = const(100)
-_AIM_SWITCH_DEG = const(160)
+_AIM_SWITCH_DEG     = const(160)
 
 _HOMING_MOTOR_ROT_SPEED = const(200)
-_HOMING_DUTY = const(45)
-_MAX_MOTOR_ROT_SPEED = const(1400)
+_HOMING_DUTY            = const(45)
+_MAX_MOTOR_ROT_SPEED    = const(1400)
 # Auto-drive uses full duty — the controller knows what it's doing, no human in the loop.
-_AUTO_DRIVE_DUTY = const(80)
+_AUTO_DRIVE_DUTY    = const(80)
 # Shorter ramp for auto-drive (100ms vs manual 200ms) keeps coast <80° wall clearance.
-_AUTO_STOP_RAMP_MS = const(100)
+_AUTO_STOP_RAMP_MS  = const(100)
 # Extra slack on predicted coast distance — absorbs motor non-linearity / battery sag.
 _DEADBAND_SAFETY_DEG = const(10)
 # Rig-measured: at east stall, physical cart center is 80° west of east_wall_deg
 # (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
 _X_EAST_STALL_OFFSET_DEG = const(80)
+
 
 
 ##################################################################################
