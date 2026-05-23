@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = 'f456882-dirty @ 2026-05-23 11:30'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '2d53476-dirty @ 2026-05-23 11:33'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -43,13 +43,13 @@ COUNTDOWN_LIMIT_MINUTES: int = const(
 # c = center button, + = + button, - = - button
 COUNTDOWN_RESET_CODE = 'c,c,c'  # left center button, center button, right center button
 
-# for debugging or ODV full auto
+# ODV overrides this from DRIVE_MODE, all other modes (servo/train/skid_steer) are FALSE; 
 REMOTE_DISABLED = False
 
 # low voltage protection in millivolts e.g. 1.2 * 6 * 1000 = 7200mV
 
 # battery notes
-# - fresh battery = 1.6V
+# - fresh battery = 1.6V, 
 # - hub programming often fails below 1.5v
 # - hub fails whe batteries at 1.36V so we'll set base to 8400 (1.4v*6)
 MILLIVOLT_CRITICAL_LEVEL = const(8400) 
