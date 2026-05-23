@@ -31,7 +31,7 @@ LOAD_FILL    = ( 92, 184,  92)   # green
 UNLOAD_FILL  = (224, 120,   0)   # orange
 BORDER       = (  0,   0,   0)
 LABEL_COLOR  = (255, 255, 255)
-ARROW_COLOR  = ( 80,  80,  80)
+ARROW_COLOR  = (200,  40,  40)   # red
 
 TILE_COLORS = {
     '#': TRACK_FILL,
@@ -64,19 +64,34 @@ def _load_font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
+def _rline(draw: ImageDraw.ImageDraw, p1: tuple, p2: tuple, fill: tuple, width: flo) -> None:
+    """Line with round caps — draws the line then circles at both endpoints."""
+    draw.line([p1, p2], fill=fill, width=width)
+    r = width // 2
+    for x, y in (p1, p2):
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=fill)
+
+
 def _draw_arrow(draw: ImageDraw.ImageDraw, px: int, py: int, char: str) -> None:
-    """Draw a filled arrow centred in the tile at pixel origin (px, py)."""
+    """Draw a thin arrow (<- or ->) centred in the tile at pixel origin (px, py).
+    Shaft runs full-width to the tip; two chevron arms branch from the tip."""
     cx = px + TILE // 2
     cy = py + TILE // 2
-    hw = TILE // 4   # half-width of arrow body
-    ah = TILE // 5   # half-height of arrowhead
+    hw = TILE // 3       # half total arrow span
+    aw = TILE // 4       # chevron arm horizontal reach
+    ah = TILE // 4       # chevron arm half-height
+    lw = max(2, TILE // 12)  # line width
 
-    if char == '<':   # pointing left
-        pts = [(cx + hw, cy - ah), (cx - hw, cy), (cx + hw, cy + ah)]
-    else:             # '>' pointing right
-        pts = [(cx - hw, cy - ah), (cx + hw, cy), (cx - hw, cy + ah)]
-
-    draw.polygon(pts, fill=ARROW_COLOR)
+    if char == '<':   # pointing left  (<-)
+        tip_x = cx - hw
+        _rline(draw, (cx + hw, cy), (tip_x, cy),        ARROW_COLOR, lw)  # shaft
+        _rline(draw, (tip_x, cy),   (tip_x + aw, cy - ah), ARROW_COLOR, lw)  # top arm
+        _rline(draw, (tip_x, cy),   (tip_x + aw, cy + ah), ARROW_COLOR, lw)  # bottom arm
+    else:             # pointing right  (->)
+        tip_x = cx + hw
+        _rline(draw, (cx - hw, cy), (tip_x, cy),        ARROW_COLOR, lw)  # shaft
+        _rline(draw, (tip_x, cy),   (tip_x - aw, cy - ah), ARROW_COLOR, lw)  # top arm
+        _rline(draw, (tip_x, cy),   (tip_x - aw, cy + ah), ARROW_COLOR, lw)  # bottom arm
 
 
 def _col_widths(grid: list[str]) -> list[int]:
