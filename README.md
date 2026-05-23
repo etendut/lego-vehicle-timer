@@ -56,7 +56,7 @@ Each vehicle has its own configuration
 
 ### Common
 
-MILLIVOLT*CRITICAL_LEVEL = const(1.2 * 6 \_ 1000) # low voltage protection in millivolts e.g. 7.2V = 7200mV
+`MILLIVOLT_CRITICAL_LEVEL = const(8400)` — low voltage protection in millivolts (1.4V × 6 cells = 8400mV)
 
 #### Countdown time settings
 
@@ -64,8 +64,6 @@ COUNTDOWN_LIMIT_MINUTES = const(3) # run for (x) minutes, min 1 minute, max up t
 tested :).<br>
 c = center button, + = + button, - = - button<br>
 COUNTDOWN_RESET_CODE = 'c,c,c' # left center button, center button, right center button<br>
-
-\_REMOTE_DISABLED = False # headless / debug flag for train, skid_steer, servo (ODV derives this from DRIVE_MODE)
 
 ### Train
 
@@ -111,12 +109,12 @@ with [PyBricks](https://code.pybricks.com/)
 
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
-ODV_SPEED = const(45) # base duty %, set between 40 and 70<br>
+ODV_SPEED = const(65) # base duty %, set between 40 and 70<br>
 IDLE_TIMEOUT_SECS = const(20) # HYBRID-mode idle period before auto-drive engages<br>
 
 #### ODV Drive Modes
 
-`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`. It is the single knob — the ODV module derives `_REMOTE_DISABLED` automatically from it (`AUTO` runs headless; `MANUAL`/`HYBRID` require the remote).
+`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`. It is the single knob — `AUTO` runs headless; `MANUAL`/`HYBRID` require the remote.
 
 | Mode        | `DRIVE_MODE` | Description                                                                                                                                                                       |
 | ----------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
