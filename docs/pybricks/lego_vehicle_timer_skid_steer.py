@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = 'fedc70b'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'cdef979-dirty @ 2026-05-23 17:24'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -302,15 +302,15 @@ class CountdownTimer:
 
     def show_status(self):
         if self.countdown_status == _READY:
-            self.flash_hub_and_remote_light(Color.GREEN, 500, Color.NONE, 500, False)
+            self.flash_hub_and_remote_light(Color.GREEN, 500, Color.NONE, 500, True)
         elif self.countdown_status == _ACTIVE:
             self.set_hub_and_remote_light(Color.GREEN, True)
         elif self.countdown_status == _FINAL_20_SECS:
-            self.flash_hub_and_remote_light(Color.ORANGE, 200, Color.NONE, 100, False)
+            self.flash_hub_and_remote_light(Color.ORANGE, 200, Color.NONE, 100, True)
         elif self.countdown_status == _FINAL_MINUTE:
-            self.flash_hub_and_remote_light(Color.ORANGE, 500, Color.NONE, 250, False)
+            self.flash_hub_and_remote_light(Color.ORANGE, 500, Color.NONE, 250, True)
         elif self.countdown_status == _ENDED:
-            self.set_hub_and_remote_light(Color.ORANGE, False)
+            self.set_hub_and_remote_light(Color.ORANGE, True)
 
     def set_hub_and_remote_light(self, on_color:Color, include_remote:bool):
         """
