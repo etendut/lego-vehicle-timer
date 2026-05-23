@@ -902,3 +902,46 @@ def test_rom_auto_unload_journey_completes_then_homes():
     my.run_until_stalled.assert_called_once()
     check.is_false(rom.has_load)
     check.is_true(rom.mh_is_homed)
+
+
+# --- Block manual movement into the unload tile ---
+
+def test_overlaps_unload_false_when_outside():
+    # Cart at tile-3 centre is safely west of the unload tile.
+    g = Grid(["L#<#U"])
+    assert g._overlaps_unload(*cen(3, 0)) is False
+
+
+def test_overlaps_unload_true_when_at_unload_centre():
+    g = Grid(["L#<#U"])
+    assert g._overlaps_unload(*cen(4, 0)) is True
+
+
+def test_propose_step_block_unload_blocks_eastward_entry():
+    # From tile 3, moving east would overlap the unload tile → blocked.
+    g = Grid(["L#<#U"])
+    result = g.propose_step(cen(3, 0), 500, 0, block_unload=True)
+    check.equal(result, (0, 0))
+
+
+def test_propose_step_default_allows_entry_into_unload():
+    # Without the flag the step is valid (existing behaviour preserved).
+    g = Grid(["L#<#U"])
+    result = g.propose_step(cen(3, 0), 500, 0)
+    check.equal(result, (500, 0))
+
+
+def test_propose_step_block_unload_allows_escape_from_unload():
+    # Cart already at unload centre (placed there by auto-drive) — escape west must succeed.
+    g = Grid(["L#<#U"])
+    result = g.propose_step(cen(4, 0), -500, 0, block_unload=True)
+    check.equal(result, (-500, 0))
+
+
+def test_handle_remote_press_passes_block_unload_to_tick():
+    # Normal movement tick must be called with block_unload=True.
+    rom, _, _, _ = _make_rom(pressed=[Button.RIGHT_PLUS])
+    ac = _stub_axis_controller(rom)
+    rom.handle_remote_press()
+    call_kwargs = ac.tick.call_args.kwargs
+    check.equal(call_kwargs.get('block_unload'), True)
