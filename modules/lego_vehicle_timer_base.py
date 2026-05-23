@@ -47,8 +47,6 @@ MILLIVOLT_CRITICAL_LEVEL = const(8400)
 ##################################################################################
 # ---------Main program below, editing should not be needed -------------
 
-# {Insert drive module here}
-
 class ErrorFlashCodes:
     def __init__(self):
         self.flash_count = 1  # Other errors

@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = '2d53476-dirty @ 2026-05-23 11:33'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '6071244-dirty @ 2026-05-23 11:36'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -57,8 +57,6 @@ SERVO_STEER_REVERSE_TURN_MOTOR: bool = False  # set to True if remote + button c
 
 ##################################################################################
 # ---------Main program below, editing should not be needed -------------
-
-# {Insert drive module here}
 
 class ErrorFlashCodes:
     def __init__(self):
