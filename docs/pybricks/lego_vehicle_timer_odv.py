@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '636ddbe'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '5b5bebc'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -643,9 +643,13 @@ class Grid:
             new_cy = cy + d
 
         if self._aabb_hits_wall(new_cx, new_cy):
-            # Already out-of-bounds? Allow any step that reduces the violation (escape move).
+            # Already out-of-bounds? Allow any step that doesn't worsen the
+            # violation. Strict `<` blocks axes that are independent of the
+            # overrun (e.g. cart past east edge wants to slide north along the
+            # wall — Y step doesn't change east overrun, so use `<=`). Strict
+            # would falsely freeze the cart on the wall corner.
             if self._aabb_hits_wall(cx, cy):
-                return self._boundary_overlap(new_cx, new_cy) < self._boundary_overlap(cx, cy)
+                return self._boundary_overlap(new_cx, new_cy) <= self._boundary_overlap(cx, cy)
             return False
 
         if block_special and self._overlaps_special(new_cx, new_cy):

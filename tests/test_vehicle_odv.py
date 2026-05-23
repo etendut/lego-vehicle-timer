@@ -148,6 +148,23 @@ def test_boundary_overrun_blocked_east():
     assert g.propose_step(pos, 40, 0) == (0, 0)     # deeper into wall → blocked
 
 
+def test_boundary_overrun_allows_y_slide_when_past_east():
+    """Past east edge: Y movement should still be allowed (cart slides along
+    the east wall). Before fix: blocked because escape required strict overlap
+    decrease, but Y step doesn't change east overrun at all."""
+    g = Grid(_OVERRUN_GRID)
+    pos = (2100, 400)  # 20° past east edge
+    assert g.propose_step(pos, 0, -40) == (0, -40)   # north slide OK
+    assert g.propose_step(pos, 0, 40) == (0, 40)     # south slide OK
+
+
+def test_boundary_overrun_ne_press_at_east_edge_keeps_y_axis():
+    """NE press while cart is past east boundary: X blocked (would worsen
+    east overrun), Y still slides north along the wall."""
+    g = Grid(_OVERRUN_GRID)
+    assert g.propose_step((2100, 400), 40, -40) == (0, -40)
+
+
 def test_boundary_overlap_zero_when_legal():
     """_boundary_overlap returns 0 for a position safely inside the grid."""
     g = Grid(_OVERRUN_GRID)
