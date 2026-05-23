@@ -223,6 +223,22 @@ def test_init_light_failure_is_silently_ignored(monkeypatch):
     check.is_none(helper.lights)
 
 
+def test_init_light_failure_on_port_a_when_motor_on_b_is_silently_ignored(monkeypatch):
+    """Motor on B → Light(Port.A) raises → lights stays None, no exception propagates."""
+    call_count = [0]
+
+    def make_dc_motor(port, direction):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise Exception('no motor on A')
+        return MagicMock()
+
+    monkeypatch.setattr(vt, 'DCMotor', make_dc_motor)
+    monkeypatch.setattr(vt, 'Light', lambda port: (_ for _ in ()).throw(Exception('no light')))
+    helper = RunTrainMotor(MagicMock(), MIN_SPEED, MAX_SPEED, STEP, False, False)
+    check.is_none(helper.lights)
+
+
 # --- remote disabled ---
 
 def test_handle_remote_press_remote_disabled_returns_early(monkeypatch):
