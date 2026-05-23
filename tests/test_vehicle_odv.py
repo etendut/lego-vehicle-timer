@@ -811,13 +811,15 @@ def test_rom_handle_remote_press_at_unload_east_triggers_home():
 
 
 def test_rom_handle_remote_press_at_load_west_triggers_load():
-    # Place cart at L tile centre; pressing west triggers _do_load_.
-    rom, mx, _, _ = _make_rom(pressed=[Button.RIGHT_MINUS])
+    # Place cart at L tile centre; pressing west triggers _arrive_at_tile + _do_load_.
+    rom, mx, my, _ = _make_rom(pressed=[Button.RIGHT_MINUS])
     _stub_axis_controller(rom, *cen(0, 0))
     rom.handle_remote_press()
     check.is_true(rom.has_load)
-    # Two run_target calls: dip and return
-    check.equal(mx.run_target.call_count, 2)
+    # Three run_target calls on X: arrival-center, _do_load_ dip, _do_load_ return.
+    check.equal(mx.run_target.call_count, 3)
+    # One run_target on Y: arrival-center only.
+    check.equal(my.run_target.call_count, 1)
 
 
 def test_rom_auto_load_requires_homed():

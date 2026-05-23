@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = 'cdef979-dirty @ 2026-05-23 17:24'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '73a13e1-dirty @ 2026-05-23 17:32'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -1170,11 +1170,11 @@ class RunODVMotors(MotorHelper):
 
         cur = self._current_tile()
         if (ax, ay) == (-1, 0) and cur == self.grid.load_tile:
-            self.axis_controller.tick(VirtualJoystick(0, 0))
+            self._arrive_at_tile(self.grid.load_tile)
             self._do_load_()
             return
         if (ax, ay) == (+1, 0) and cur == self.grid.unload_tile:
-            self.axis_controller.tick(VirtualJoystick(0, 0))
+            self._arrive_at_tile(self.grid.unload_tile)
             self.home_and_unload()
             return
 
@@ -1221,13 +1221,18 @@ class RunODVMotors(MotorHelper):
             if result is not None:
                 if DEBUG:
                     print(result)
-                ex, ey = self.grid.tile_center_deg(goal_tile)
-                self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, ex)
-                self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, ey)
-                self.stop_motors()
-                wait(500)
+                self._arrive_at_tile(goal_tile)
                 return True
             wait(10)
+
+    def _arrive_at_tile(self, tile):
+        """Center cart on tile, stop, then pause 500ms before the caller's
+        load/unload action. Shared by auto-drive arrival and manual load/unload."""
+        ex, ey = self.grid.tile_center_deg(tile)
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, ex)
+        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, ey)
+        self.stop_motors()
+        wait(500)
 
     def auto_load(self):
         if not self.mh_is_homed:

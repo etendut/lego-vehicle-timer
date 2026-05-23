@@ -290,3 +290,77 @@ def test_journey_yields_on_remote_press(compiled):
 
     assert reached is False
     assert rom.mh_auto_drive is False
+
+
+def _install_recording_wait(m, motor_x, motor_y, clock):
+    """Variant of _install_sim_wait that returns the list of wait amounts."""
+    waits: list[int] = []
+
+    def recording_wait(ms):
+        waits.append(ms)
+        motor_x.advance(ms)
+        motor_y.advance(ms)
+        clock.advance(ms)
+
+    m.wait = recording_wait
+    return waits
+
+
+def test_manual_load_centers_y_before_loading(compiled):
+    """Manual load (RIGHT_MINUS at load tile) must center cart on tile before _do_load_
+    runs, mirroring auto-mode arrival. Without centering, Y stays at whatever the cart
+    was at when the button was pressed and the load chute alignment is off."""
+    from pybricks.parameters import Button
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    _install_sim_wait(m, mx, my, clock)
+
+    cx, cy = rom.grid.tile_center_deg(rom.grid.load_tile)
+    mx.reset_angle(cx)
+    my.reset_angle(cy + 100)  # 100° off tile Y-center, still inside tile
+
+    rom._remote.buttons.pressed.return_value = (Button.RIGHT_MINUS,)
+    rom.handle_remote_press()
+
+    assert my.angle() == cy  # centering happened before _do_load_
+    assert rom.has_load is True
+
+
+def test_manual_load_pauses_500ms_before_loading(compiled):
+    """Manual load arrival must wait(500) between centering and _do_load_,
+    same as auto. _do_load_ itself only uses wait(2000)."""
+    from pybricks.parameters import Button
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    waits = _install_recording_wait(m, mx, my, clock)
+
+    cx, cy = rom.grid.tile_center_deg(rom.grid.load_tile)
+    mx.reset_angle(cx)
+    my.reset_angle(cy)
+    rom._remote.buttons.pressed.return_value = (Button.RIGHT_MINUS,)
+
+    rom.handle_remote_press()
+
+    assert 500 in waits  # the arrival pause
+
+
+def test_manual_unload_pauses_500ms_before_home_and_unload(compiled):
+    """Manual unload (RIGHT_PLUS at unload tile) must wait(500) between centering
+    and home_and_unload, same as auto. home_and_unload uses wait(200) and wait(2000)
+    but never wait(500), so 500 is a unique marker for the new arrival pause."""
+    from pybricks.parameters import Button
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    waits = _install_recording_wait(m, mx, my, clock)
+
+    cx, cy = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    mx.reset_angle(cx)
+    my.reset_angle(cy)
+    rom.has_load = True
+    rom._remote.buttons.pressed.return_value = (Button.RIGHT_PLUS,)
+
+    rom.handle_remote_press()
+
+    assert 500 in waits
+    assert rom.mh_is_homed is True
+    assert rom.has_load is False
