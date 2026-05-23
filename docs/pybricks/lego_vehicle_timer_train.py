@@ -22,7 +22,7 @@ from pybricks.pupdevices import DCMotor, Light
 
 
 
-__BUILD__ = '164ed66'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'fedc70b'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -654,7 +654,7 @@ def main():
                         drive_motors.reset_idle_timeout()
 
             # if there is no remote, then there is no point in a countdown
-            if countdown_timer.has_time_remaining() or _REMOTE_DISABLED or drive_motors.mh_auto_drive or drive_motors.mh_is_homed:
+            if countdown_timer.has_time_remaining() or _REMOTE_DISABLED or drive_motors.mh_auto_drive:
                 if drive_motors.mh_supports_homing and not drive_motors.mh_is_homed:
                     drive_motors.home_and_unload()
                 if drive_motors.mh_supports_flip:
