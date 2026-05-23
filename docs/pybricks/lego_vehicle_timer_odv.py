@@ -46,7 +46,7 @@ COUNTDOWN_RESET_CODE         = 'c,c,c'  # c = center button, + = + button, - = -
 # hub fails when batteries reach ~1.36V so critical level = 1.4V * 6 cells = 8400mV
 MILLIVOLT_CRITICAL_LEVEL = const(8400)
 
-REMOTE_DISABLED = False # ODV overrides this from DRIVE_MODE; all other vehicles (servo/train/skid_steer) leave it False
+_REMOTE_DISABLED = False # ODV overrides this from DRIVE_MODE; all other vehicles (servo/train/skid_steer) leave it False
 
 # ── drive mode enum (do not change) ──────────────────────────────────────────
 MANUAL = const(0)
@@ -61,7 +61,7 @@ ODV_GRID_EX3     = ["X#>#X", "L#X#U", "X#<#X"]
 
 # ── user configuration ────────────────────────────────────────────────────────
 DRIVE_MODE        = AUTO
-REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
+_REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
 IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
 ODV_SPEED         = const(65)  # max speed in MANUAL and HYBRID modes
 ODV_GRID          = ODV_GRID_DEFAULT
@@ -128,11 +128,11 @@ class ErrorFlashCodes:
 
         for f in range(self.flash_count):
             hub.light.on(Color.RED)
-            if not REMOTE_DISABLED:
+            if not _REMOTE_DISABLED:
                 remote.light.on(Color.RED)
             wait(350)
             hub.light.on(Color.NONE)
-            if not REMOTE_DISABLED:
+            if not _REMOTE_DISABLED:
                 remote.light.on(Color.NONE)
             wait(350)
         if self.flash_count > 1:
@@ -218,7 +218,7 @@ class MotorHelper:
 ##################################################################################
 
 def wait_for_no_pressed_buttons():
-    if REMOTE_DISABLED:
+    if _REMOTE_DISABLED:
         return
     remote_buttons_pressed = remote.buttons.pressed()
     while remote_buttons_pressed:
@@ -310,7 +310,7 @@ class CountdownTimer:
         self.end_time = self.stopwatch.time() + (COUNTDOWN_LIMIT_MINUTES * 60 * 1000)
 
     def reset(self):
-        if REMOTE_DISABLED:
+        if _REMOTE_DISABLED:
             print('countdown time reset')
         else:
             print('countdown time reset, press Remote CENTER to restart countdown')
@@ -320,7 +320,7 @@ class CountdownTimer:
         """
             check countdown time buttons
         """
-        if REMOTE_DISABLED:
+        if _REMOTE_DISABLED:
             return
 
         remote_buttons_pressed = remote.buttons.pressed()
@@ -372,7 +372,7 @@ class CountdownTimer:
 
         hub.light.on(on_color)
 
-        if include_remote and not REMOTE_DISABLED:
+        if include_remote and not _REMOTE_DISABLED:
             remote.light.on(on_color)
 
     def flash_hub_and_remote_light(self, on_color:Color, on_msec: int, off_color, off_msec: int, include_remote:bool):
@@ -1211,9 +1211,9 @@ def main():
         print("--setup motors")
         drive_motors = RunODVMotors(error_flash_code, ODV_SPEED, ODV_GRID)
 
-        drive_motors.mh__remote_disabled = REMOTE_DISABLED
+        drive_motors.mh__remote_disabled = _REMOTE_DISABLED
 
-        if REMOTE_DISABLED:
+        if _REMOTE_DISABLED:
             print('--no remote')
         else:
             print('--setup remote')
@@ -1231,13 +1231,13 @@ def main():
                 error_flash_code.set_error_low_battery()
                 break
 
-            if not REMOTE_DISABLED:
+            if not _REMOTE_DISABLED:
                 countdown_timer.check_remote_buttons()
 
             if drive_motors.mh_supports_homing:
                 if not drive_motors.mh_auto_drive:
                     # Full auto: enable immediately once homed, no remote needed
-                    if REMOTE_DISABLED and drive_motors.mh_is_homed:
+                    if _REMOTE_DISABLED and drive_motors.mh_is_homed:
                         drive_motors.enable_auto_drive()
                     # Hybrid: enable after idle timeout
                     elif drive_motors.idle_timed_out():
@@ -1253,12 +1253,12 @@ def main():
                         drive_motors.reset_idle_timeout()
 
             # if there is no remote, then there is no point in a countdown
-            if countdown_timer.has_time_remaining() or REMOTE_DISABLED or drive_motors.mh_auto_drive or drive_motors.mh_is_homed:
+            if countdown_timer.has_time_remaining() or _REMOTE_DISABLED or drive_motors.mh_auto_drive or drive_motors.mh_is_homed:
                 if drive_motors.mh_supports_homing and not drive_motors.mh_is_homed:
                     drive_motors.home_and_unload()
                 if drive_motors.mh_supports_flip:
                     drive_motors.handle_flip()
-                if not REMOTE_DISABLED:
+                if not _REMOTE_DISABLED:
                     drive_motors.handle_remote_press()
             else:
                 drive_motors.stop_motors()
@@ -1269,7 +1269,7 @@ def main():
             # add a small delay to keep the loop stable and allow for events to occur
             wait(10)
 
-            if REMOTE_DISABLED and not drive_motors.mh_supports_homing:
+            if _REMOTE_DISABLED and not drive_motors.mh_supports_homing:
                 print("No remote exiting")
                 raise SystemExit
 

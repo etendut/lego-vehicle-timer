@@ -65,7 +65,7 @@ tested :).<br>
 c = center button, + = + button, - = - button<br>
 COUNTDOWN_RESET_CODE = 'c,c,c' # left center button, center button, right center button<br>
 
-REMOTE_DISABLED = False # headless / debug flag for train, skid_steer, servo (ODV derives this from DRIVE_MODE)
+\_REMOTE_DISABLED = False # headless / debug flag for train, skid_steer, servo (ODV derives this from DRIVE_MODE)
 
 ### Train
 
@@ -116,7 +116,7 @@ IDLE_TIMEOUT_SECS = const(20) # HYBRID-mode idle period before auto-drive engage
 
 #### ODV Drive Modes
 
-`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`. It is the single knob — the ODV module derives `REMOTE_DISABLED` automatically from it (`AUTO` runs headless; `MANUAL`/`HYBRID` require the remote).
+`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`. It is the single knob — the ODV module derives `_REMOTE_DISABLED` automatically from it (`AUTO` runs headless; `MANUAL`/`HYBRID` require the remote).
 
 | Mode        | `DRIVE_MODE` | Description                                                                                                                                                                       |
 | ----------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

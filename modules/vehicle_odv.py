@@ -42,7 +42,7 @@ ODV_GRID_EX3     = ["X#>#X", "L#X#U", "X#<#X"]
 
 # ── user configuration ────────────────────────────────────────────────────────
 DRIVE_MODE        = AUTO
-REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
+_REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
 IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
 ODV_SPEED         = const(65)  # max speed in MANUAL and HYBRID modes
 ODV_GRID          = ODV_GRID_DEFAULT

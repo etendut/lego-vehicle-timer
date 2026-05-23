@@ -24,13 +24,13 @@ everywhere):
 - **Axis convention (preserved from existing code):** motor `angle()`
   X grows east, Y grows south. Grid row 0 is north. A tile `(tx, ty)`
   occupies motor-degree rectangle `[tx·800, (tx+1)·800] × [ty·800,
-  (ty+1)·800]`. Its **centre** is `(tx·800 + 400, ty·800 + 400)`.
+(ty+1)·800]`. Its **centre** is `(tx·800 + 400, ty·800 + 400)`.
 - Cart centred at `(cx, cy)` has AABB
   `[cx − 320, cx + 320] × [cy − 320, cy + 320]` with the default
   `_CART_SIZE_DEG`.
 - AABB overlap with a wall rect `[wl, wr] × [wt, wb]` is strict:
   `cart_right > wl AND cart_left < wr AND cart_bottom > wt AND
-  cart_top < wb`. A cart **flush** with a wall edge (e.g.
+cart_top < wb`. A cart **flush** with a wall edge (e.g.
   `cart_right == wl`) does **not** overlap — it's touching, allowed.
 
 ## Execution model
@@ -70,18 +70,18 @@ post-cutover (see new task ordering below).
 
 **Task renumbering under the new-file strategy:**
 
-| # | Task |
-|---|------|
-| 1 | `Grid` class with `propose_step` → `vehicle_odv_v2.py` |
-| 2 | `VirtualJoystick` + `AxisController` → `vehicle_odv_v2.py` |
-| 3 | `HomingRoutine` → `vehicle_odv_v2.py` |
-| 4 | `Planner` (4-dir BFS) → `vehicle_odv_v2.py` |
-| 5 | `AutoDriver` → `vehicle_odv_v2.py` |
-| 6 | Drive-mode enum + `IdleTimeout` → `vehicle_odv_v2.py` |
-| 7 | `RunODVMotors` built from the new stack → `vehicle_odv_v2.py` (replaces the old "wire RunODVMotors" step) |
-| 8 | **Cutover**: delete `modules/vehicle_odv.py` + `tests/test_vehicle_odv.py`; rename `*_v2.py` → canonical; run compile + full test suite; smoke-test on rig |
-| 9 | Strip `CountdownTimer` of ODV-specific bits + fix `FINAL_20_SECS` bug (post-cutover; this was the original Task 7 but can only land safely once the new runtime is canonical) |
-| 10 | Compile-tool guards + compiled-file test/lint (unchanged) |
+| #   | Task                                                                                                                                                                          |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `Grid` class with `propose_step` → `vehicle_odv_v2.py`                                                                                                                        |
+| 2   | `VirtualJoystick` + `AxisController` → `vehicle_odv_v2.py`                                                                                                                    |
+| 3   | `HomingRoutine` → `vehicle_odv_v2.py`                                                                                                                                         |
+| 4   | `Planner` (4-dir BFS) → `vehicle_odv_v2.py`                                                                                                                                   |
+| 5   | `AutoDriver` → `vehicle_odv_v2.py`                                                                                                                                            |
+| 6   | Drive-mode enum + `IdleTimeout` → `vehicle_odv_v2.py`                                                                                                                         |
+| 7   | `RunODVMotors` built from the new stack → `vehicle_odv_v2.py` (replaces the old "wire RunODVMotors" step)                                                                     |
+| 8   | **Cutover**: delete `modules/vehicle_odv.py` + `tests/test_vehicle_odv.py`; rename `*_v2.py` → canonical; run compile + full test suite; smoke-test on rig                    |
+| 9   | Strip `CountdownTimer` of ODV-specific bits + fix `FINAL_20_SECS` bug (post-cutover; this was the original Task 7 but can only land safely once the new runtime is canonical) |
+| 10  | Compile-tool guards + compiled-file test/lint (unchanged)                                                                                                                     |
 
 The per-task detail sections below are written against the original
 numbering but apply mechanically to the new file. Where a task's
@@ -170,9 +170,10 @@ def propose_step(self, deg_pos, d_deg_x, d_deg_y):
 
 Where `_axis_step_legal(cx, cy, d, axis)` returns `True` iff, after
 moving the cart by `d` on the given axis (other axis unchanged):
-  1. The cart AABB at the new position does not overlap any wall rect
-     and does not exit the grid bounds.
-  2. The step does not cross a forbidden edge barrier.
+
+1. The cart AABB at the new position does not overlap any wall rect
+   and does not exit the grid bounds.
+2. The step does not cross a forbidden edge barrier.
 
 ### AABB legality (shared helper)
 
@@ -219,11 +220,13 @@ Y-axis motion never checks barriers.
 ### Barrier segment extents
 
 For a `<` tile at `(tx, ty)`:
+
 - `bx = tx * _DEG_PER_TILE`
 - `y_top = ty * _DEG_PER_TILE`
 - `y_bottom = (ty + 1) * _DEG_PER_TILE`
 
 For a `>` tile at `(tx, ty)`:
+
 - `bx = (tx + 1) * _DEG_PER_TILE`
 - `y_top = ty * _DEG_PER_TILE`
 - `y_bottom = (ty + 1) * _DEG_PER_TILE`
@@ -236,22 +239,22 @@ Tile centre shorthand: `cen(tx, ty) = (tx*800 + 400, ty*800 + 400)`.
 Place each test case in `tests/test_vehicle_odv.py` as a parametrised
 test function. Import `Grid` from `modules.vehicle_odv`.
 
-| # | Grid | Start `deg_pos` | `(d_deg_x, d_deg_y)` | Expect `propose_step` | Reason |
-|---|------|-----------------|----------------------|------------------------|--------|
-| 1 | `["L#U"]` | `cen(0,0) = (400, 400)` | `(+100, 0)` | `(100, 0)` | Clear east, full step |
-| 2 | `["L#U"]` | `(880, 400)` (cart east face = 1200, flush w/ boundary) | `(+10, 0)` | `(0, 0)` | Would exit east grid edge |
-| 3 | `["LXU"]` | `cen(0,0)` | `(+100, 0)` | `(0, 0)` | X tile blocks east step |
-| 4 | `["LXU"]` | `cen(0,0)` | `(0, +100)` | `(0, 0)` | Would exit south grid edge |
-| 5 | `["L#<#U"]` | `cen(1,0) = (1200, 400)` | `(+500, 0)` | `(0, 0)` | `<` at (2,0): cart east face 1520 → 2020 crosses bx=1600 |
-| 6 | `["L#<#U"]` | `cen(2,0) = (2000, 400)` | `(-500, 0)` | `(-500, 0)` | From inside `<`, westbound is allowed (arrow direction) |
-| 7 | `["L#<#U"]` | `cen(3,0) = (2800, 400)` | `(-500, 0)` | `(-500, 0)` | West of the barrier exit — no barrier crossed |
-| 8 | `["L#>#U"]` | `cen(3,0) = (2800, 400)` | `(-500, 0)` | `(0, 0)` | `>` at (2,0): cart west face 2480 → 1980 crosses bx=2400 |
-| 9 | `["L#>#U"]` | `cen(2,0) = (2000, 400)` | `(+500, 0)` | `(+500, 0)` | From inside `>`, eastbound is allowed |
-| 10 | DEFAULT `["L#<#U","X#<#X","X###X"]` | `cen(1,2) = (1200, 2000)` | `(+800, -800)` | `(800, -800)` | Corner-cut (1,2)→(2,1) via diagonal step; no walls or barriers cross (tile (2,1) is `<` but we aren't crossing bx=1600 at east face — check carefully) |
-| 11 | EX3 `["X#>#X","L#X#U","X#<#X"]` | `cen(1,0) = (1200, 400)` | `(+800, +800)` | `(800, 0)` or `(0, 800)` | Diagonal into (2,1)=X blocked per axis; only one axis can advance. (Sub-case: check actual expected output from per-axis independent testing.) |
-| 12 | `["L#U"]` | `(cen(0,0))` | `(0, 0)` | `(0, 0)` | No-op |
-| 13 | `["L#U"]` | `(400, 400)` | `(-400, 0)` | `(0, 0)` | Cart west face 80 → −320; exits grid |
-| 14 | `["L#<#U","X#<#X","X###X"]` — load/unload detection | n/a | n/a | `Grid(DEFAULT).load_tile == (0, 0)` and `.unload_tile == (4, 0)` | Parse correctness |
+| #   | Grid                                                | Start `deg_pos`                                         | `(d_deg_x, d_deg_y)` | Expect `propose_step`                                            | Reason                                                                                                                                                 |
+| --- | --------------------------------------------------- | ------------------------------------------------------- | -------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `["L#U"]`                                           | `cen(0,0) = (400, 400)`                                 | `(+100, 0)`          | `(100, 0)`                                                       | Clear east, full step                                                                                                                                  |
+| 2   | `["L#U"]`                                           | `(880, 400)` (cart east face = 1200, flush w/ boundary) | `(+10, 0)`           | `(0, 0)`                                                         | Would exit east grid edge                                                                                                                              |
+| 3   | `["LXU"]`                                           | `cen(0,0)`                                              | `(+100, 0)`          | `(0, 0)`                                                         | X tile blocks east step                                                                                                                                |
+| 4   | `["LXU"]`                                           | `cen(0,0)`                                              | `(0, +100)`          | `(0, 0)`                                                         | Would exit south grid edge                                                                                                                             |
+| 5   | `["L#<#U"]`                                         | `cen(1,0) = (1200, 400)`                                | `(+500, 0)`          | `(0, 0)`                                                         | `<` at (2,0): cart east face 1520 → 2020 crosses bx=1600                                                                                               |
+| 6   | `["L#<#U"]`                                         | `cen(2,0) = (2000, 400)`                                | `(-500, 0)`          | `(-500, 0)`                                                      | From inside `<`, westbound is allowed (arrow direction)                                                                                                |
+| 7   | `["L#<#U"]`                                         | `cen(3,0) = (2800, 400)`                                | `(-500, 0)`          | `(-500, 0)`                                                      | West of the barrier exit — no barrier crossed                                                                                                          |
+| 8   | `["L#>#U"]`                                         | `cen(3,0) = (2800, 400)`                                | `(-500, 0)`          | `(0, 0)`                                                         | `>` at (2,0): cart west face 2480 → 1980 crosses bx=2400                                                                                               |
+| 9   | `["L#>#U"]`                                         | `cen(2,0) = (2000, 400)`                                | `(+500, 0)`          | `(+500, 0)`                                                      | From inside `>`, eastbound is allowed                                                                                                                  |
+| 10  | DEFAULT `["L#<#U","X#<#X","X###X"]`                 | `cen(1,2) = (1200, 2000)`                               | `(+800, -800)`       | `(800, -800)`                                                    | Corner-cut (1,2)→(2,1) via diagonal step; no walls or barriers cross (tile (2,1) is `<` but we aren't crossing bx=1600 at east face — check carefully) |
+| 11  | EX3 `["X#>#X","L#X#U","X#<#X"]`                     | `cen(1,0) = (1200, 400)`                                | `(+800, +800)`       | `(800, 0)` or `(0, 800)`                                         | Diagonal into (2,1)=X blocked per axis; only one axis can advance. (Sub-case: check actual expected output from per-axis independent testing.)         |
+| 12  | `["L#U"]`                                           | `(cen(0,0))`                                            | `(0, 0)`             | `(0, 0)`                                                         | No-op                                                                                                                                                  |
+| 13  | `["L#U"]`                                           | `(400, 400)`                                            | `(-400, 0)`          | `(0, 0)`                                                         | Cart west face 80 → −320; exits grid                                                                                                                   |
+| 14  | `["L#<#U","X#<#X","X###X"]` — load/unload detection | n/a                                                     | n/a                  | `Grid(DEFAULT).load_tile == (0, 0)` and `.unload_tile == (4, 0)` | Parse correctness                                                                                                                                      |
 
 **Case 10 verification** (corner cut on DEFAULT going NE from (1,2) to (2,1)):
 
@@ -513,9 +516,9 @@ Preserve the existing sequence (see current `home_and_unload`):
    unload tile centre. Actually: the north wall is immediately north
    of U, so the cart's north face is flush with Y=`ty*_DEG_PER_TILE`
    where ty = unload row. With cart centred on U, cart_north =
-   ty*_DEG_PER_TILE + (_DEG_PER_TILE − _CART_SIZE_DEG)/2 = ty*800 + 80.
+   ty*\_DEG_PER_TILE + (\_DEG_PER_TILE − \_CART_SIZE_DEG)/2 = ty*800 + 80.
    At stall, cart_north ≈ ty*800 (cart pushed flush against wall), so
-   cart_center_y = ty*800 + _CART_SIZE_DEG/2 = ty*800 + 320.
+   cart_center_y = ty*800 + \_CART_SIZE_DEG/2 = ty*800 + 320.
    **Verify on-rig** — the existing `reset_angle(unload_tile_angle[1])`
    in `home_and_unload` resets to `unload_tile_y * 800` which is the
    tile origin, not the centre. The new version must preserve whatever
@@ -618,12 +621,12 @@ class Planner:
 
 ### Task 4 tests
 
-| Grid | Start | Goal | Expected waypoints |
-|------|-------|------|--------------------|
+| Grid                                | Start | Goal  | Expected waypoints                                                                                                                                                                                                  |
+| ----------------------------------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | DEFAULT `["L#<#U","X#<#X","X###X"]` | (0,0) | (4,0) | `((0,0),(1,0),(1,2),(3,2),(3,0),(4,0))` — go south to exit the `<` barrier region, east along row 2, then north to U. **Verify by running the BFS mentally; if the actual shortest path differs, update expected.** |
-| DEFAULT | (4,0) | (0,0) | U→L path — expect `((4,0),(3,0),(3,2),(1,2),(1,0),(0,0))`, mirror of above, noting that westbound through `<` at (2,0)/(2,1) is allowed by the arrow. |
-| EX2 `["X###X","L###U","X###X"]` | (0,1) | (4,1) | `((0,1),(4,1))` — straight shot |
-| EX3 `["X#>#X","L#X#U","X#<#X"]` | (0,1) | (4,1) | Clockwise loop through row 0 due to one-ways + (2,1)=X. Expect something like `((0,1),(0,0),(3,0)? or (4,0)?),...` — compute by hand and hard-code. |
+| DEFAULT                             | (4,0) | (0,0) | U→L path — expect `((4,0),(3,0),(3,2),(1,2),(1,0),(0,0))`, mirror of above, noting that westbound through `<` at (2,0)/(2,1) is allowed by the arrow.                                                               |
+| EX2 `["X###X","L###U","X###X"]`     | (0,1) | (4,1) | `((0,1),(4,1))` — straight shot                                                                                                                                                                                     |
+| EX3 `["X#>#X","L#X#U","X#<#X"]`     | (0,1) | (4,1) | Clockwise loop through row 0 due to one-ways + (2,1)=X. Expect something like `((0,1),(0,0),(3,0)? or (4,0)?),...` — compute by hand and hard-code.                                                                 |
 
 For each test, run BFS, print the result during development, and
 bake the known-good output into the expected constants. Do not
@@ -729,6 +732,7 @@ branch logic — Task 8 does that.
 
 - **Modify:** `modules/vehicle_odv.py` — in the `# VARS_START` block,
   add:
+
   ```python
   MANUAL = const(0)
   HYBRID = const(1)
@@ -737,6 +741,7 @@ branch logic — Task 8 does that.
   DRIVE_MODE = HYBRID   # default — mirrors today's hybrid config
   IDLE_TIMEOUT_SECS = const(30)  # used only when DRIVE_MODE == HYBRID
   ```
+
 - **Modify:** `modules/vehicle_odv.py` — add `IdleTimeout` class:
   ```python
   class IdleTimeout:
@@ -748,7 +753,7 @@ branch logic — Task 8 does that.
   Implement with a `StopWatch` or `ticks_ms` delta.
 
 Task 6 does **not** yet remove `ODV_AUTO_DRIVE_TIMEOUT_SECS` or
-`REMOTE_DISABLED` — those are lifted in Task 7/8 during the cutover.
+`_REMOTE_DISABLED` — those are lifted in Task 7/8 during the cutover.
 
 ### Verification
 
