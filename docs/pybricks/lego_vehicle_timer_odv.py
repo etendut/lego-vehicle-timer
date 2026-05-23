@@ -31,7 +31,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '5494caa-dirty @ 2026-05-23 11:01'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'f456882-dirty @ 2026-05-23 11:30'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -54,7 +54,40 @@ REMOTE_DISABLED = False
 # - hub fails whe batteries at 1.36V so we'll set base to 8400 (1.4v*6)
 MILLIVOLT_CRITICAL_LEVEL = const(8400) 
 
+### ODV constants do not change ###
+## drive modes
+MANUAL = const(0)
+HYBRID = const(1)
+AUTO = const(2)
+## grid patterns
+ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
+ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
+ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
+ODV_GRID_EX3 = ["X#>#X", "L#X#U", "X#<#X"]
+###
+
+### ODV configuration vars ###
+# drive mode, see above modes
+DRIVE_MODE = AUTO
+# timeout secs for HYBRID drive mode
+IDLE_TIMEOUT_SECS = const(20) # allows robot time to do an unload an load within 30s
+# max speed of cart in MANUAL and HYBRID modes
+ODV_SPEED = const(65)
+# grid the ODV is driving on
+ODV_GRID = ODV_GRID_DEFAULT
+###
+
+### debugging vars ##
+# enable debug logging
 DEBUG = const(True)
+# Flip to True to halt auto_load at tile (3, 0) center for X-offset measurement.
+_CALIBRATE_X_OFFSET = False
+
+
+### internal vars change with extreme caution ####
+
+# DRIVE_MODE drives the remote flag: AUTO runs headless; MANUAL/HYBRID require the remote.
+REMOTE_DISABLED = (DRIVE_MODE == AUTO)
 
 _DEG_PER_TILE = const(800)
 _CART_SIZE_DEG = const(640)
@@ -77,26 +110,6 @@ _DEADBAND_SAFETY_DEG = const(10)
 # Rig-measured: at east stall, physical cart center is 80° west of east_wall_deg
 # (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
 _X_EAST_STALL_OFFSET_DEG = const(80)
-
-# Flip to True to halt auto_load at tile (3, 0) center for X-offset measurement.
-_CALIBRATE_X_OFFSET = False
-
-MANUAL = const(0)
-HYBRID = const(1)
-AUTO = const(2)
-
-DRIVE_MODE = AUTO
-IDLE_TIMEOUT_SECS = const(20) # allows robot time to do an unload an load within 30s
-
-# DRIVE_MODE drives the remote flag: AUTO runs headless; MANUAL/HYBRID require the remote.
-REMOTE_DISABLED = (DRIVE_MODE == AUTO)
-
-ODV_SPEED = const(65)
-ODV_GRID_DEFAULT = ["L#<#U", "X#<#X", "X###X"]
-ODV_GRID_EX1 = ["###X#XX", "LX###XU", "###X###"]
-ODV_GRID_EX2 = ["X###X", "L###U", "X###X"]
-ODV_GRID_EX3 = ["X#>#X", "L#X#U", "X#<#X"]
-ODV_GRID = ODV_GRID_DEFAULT
 
 
 ##################################################################################
