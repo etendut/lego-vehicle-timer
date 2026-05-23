@@ -1,4 +1,6 @@
 {
   "stubPath": "stubs",
-  "pythonVersion": "3.11"
+  "pythonVersion": "3.11",
+  "exclude": ["docs/pybricks"],
+  "ignore": ["docs/pybricks"]
 }

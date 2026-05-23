@@ -77,7 +77,8 @@ def _extract_sections(path: Path) -> dict[str, str]:
 
 
 def _build_tag() -> str:
-    """Return '<short-sha>[-dirty] @ YYYY-MM-DD HH:MM' for the current tree."""
+    """Return '<short-sha>' for a clean tree, '<short-sha>-dirty @ YYYY-MM-DD HH:MM' when dirty.
+    Clean builds are stable — same commit always produces the same tag."""
     try:
         sha = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'], cwd=PROJECT_ROOT
@@ -90,8 +91,10 @@ def _build_tag() -> str:
         ).returncode != 0
     except Exception:
         dirty = False
-    ts = datetime.now().strftime('%Y-%m-%d %H:%M')
-    return f'{sha}{"-dirty" if dirty else ""} @ {ts}'
+    if dirty:
+        ts = datetime.now().strftime('%Y-%m-%d %H:%M')
+        return f'{sha}-dirty @ {ts}'
+    return sha
 
 
 def _compile_one(vehicle: str, build_tag: str) -> Path:

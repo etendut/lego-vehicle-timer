@@ -49,7 +49,7 @@ GRIDS = [
 ]
 
 
-def _load_font(size: int) -> ImageFont.ImageFont:
+def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     candidates = [
         'arialbd.ttf',
         'arial.ttf',
@@ -64,7 +64,7 @@ def _load_font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _rline(draw: ImageDraw.ImageDraw, p1: tuple, p2: tuple, fill: tuple, width: flo) -> None:
+def _rline(draw: ImageDraw.ImageDraw, p1: tuple, p2: tuple, fill: tuple, width: int) -> None:
     """Line with round caps — draws the line then circles at both endpoints."""
     draw.line([p1, p2], fill=fill, width=width)
     r = width // 2
