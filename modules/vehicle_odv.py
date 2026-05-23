@@ -2,25 +2,22 @@
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Direction
 try:
-    from pybricks.tools import StopWatch, wait
+    from pybricks.tools import StopWatch, wait  # type: ignore[assignment]
 except ImportError:
-    StopWatch = None
-    def wait(time):
-        pass
+    class StopWatch:  # host-side stub for testing
+        def time(self) -> int: return 0
+        def reset(self) -> None: pass
+    def wait(time: int) -> None: pass
 try:
     from uerrno import ENODEV
 except ImportError:
     ENODEV = -99
 # IMPORTS_END
 
-# local var only
 from micropython import const
-def mock_const(val):
-    return val
-# for testing
-if const(12) is None:
-    const = mock_const
-
+if const(0) is None:  # desktop micropython package returns None; swap in a passthrough
+    def const(x):  # type: ignore[assignment]
+        return x
 from .lego_vehicle_timer_base import MotorHelper, ErrorFlashCodes
 from pybricks.parameters import Button
 
@@ -162,6 +159,25 @@ class Grid:
                 return True
         return False
 
+    def _boundary_overlap(self, cx, cy):
+        """Total degree-overlap with grid boundaries (ignores tile walls).
+        Used to permit escape moves when motor coast leaves the cart out-of-bounds."""
+        half = _HALF
+        viol = 0
+        top = cy - half
+        if top < 0:
+            viol -= top
+        bot = cy + half - self.n_rows * _DEG_PER_TILE
+        if bot > 0:
+            viol += bot
+        lft = cx - half
+        if lft < 0:
+            viol -= lft
+        rgt = cx + half - self.n_cols * _DEG_PER_TILE
+        if rgt > 0:
+            viol += rgt
+        return viol
+
     def _axis_step_legal(self, cx, cy, d, axis):
         if axis == _X:
             new_cx = cx + d
@@ -171,6 +187,9 @@ class Grid:
             new_cy = cy + d
 
         if self._aabb_hits_wall(new_cx, new_cy):
+            # Already out-of-bounds? Allow any step that reduces the violation (escape move).
+            if self._aabb_hits_wall(cx, cy):
+                return self._boundary_overlap(new_cx, new_cy) < self._boundary_overlap(cx, cy)
             return False
 
         if axis == _X:
@@ -239,8 +258,6 @@ class AxisController:
         self.grid = grid
         self.base_duty = base_duty
         if _clock is None:
-            if StopWatch is None:
-                raise RuntimeError("StopWatch unavailable; pass _clock explicitly")
             _clock = StopWatch()
         self._clock = _clock
         self._prev_duty_x = 0
@@ -533,8 +550,6 @@ class IdleTimeout:
     def __init__(self, seconds, _clock=None):
         self._interval_ms = seconds * 1000
         if _clock is None:
-            if StopWatch is None:
-                raise RuntimeError("StopWatch unavailable; pass _clock explicitly")
             _clock = StopWatch()
         self._clock = _clock
         self._last_reset_ms = self._clock.time()

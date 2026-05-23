@@ -85,6 +85,65 @@ def test_propose_step(layout, deg_pos, d_deg_x, d_deg_y, expected):
     check.equal(result, expected)
 
 
+# --- Boundary overrun / escape (motor coast past edge) ---
+# _HALF = 320, so legal north edge is cy >= 320 for any grid.
+# Cart at cy=255 is 65° past the north boundary — both ±40 steps land
+# in an illegal position, but the southward step reduces the overlap so
+# the escape logic must allow it while blocking the northward step.
+
+_OVERRUN_GRID = ["L#U"]   # 1 row, 3 cols — simple boundary test surface
+
+
+def test_boundary_overrun_escape_south():
+    """Escape toward centre is allowed when cart is past north boundary."""
+    g = Grid(_OVERRUN_GRID)
+    pos = (400, 255)        # 65° past north edge (legal min = 320)
+    assert g.propose_step(pos, 0, 40) == (0, 40)   # southward escape permitted
+
+
+def test_boundary_overrun_blocked_north():
+    """Moving further into the north boundary is blocked."""
+    g = Grid(_OVERRUN_GRID)
+    pos = (400, 255)
+    assert g.propose_step(pos, 0, -40) == (0, 0)   # deeper into wall → blocked
+
+
+def test_boundary_overrun_escape_east():
+    """Escape toward centre is allowed when cart is past east boundary."""
+    # Legal east edge: cx <= n_cols*800 - 320 = 2080; cart at 2100 is 40° past.
+    g = Grid(_OVERRUN_GRID)
+    pos = (2100, 400)
+    assert g.propose_step(pos, -40, 0) == (-40, 0)  # westward escape permitted
+
+
+def test_boundary_overrun_blocked_east():
+    """Moving further into the east boundary is blocked."""
+    g = Grid(_OVERRUN_GRID)
+    pos = (2100, 400)
+    assert g.propose_step(pos, 40, 0) == (0, 0)     # deeper into wall → blocked
+
+
+def test_boundary_overlap_zero_when_legal():
+    """_boundary_overlap returns 0 for a position safely inside the grid."""
+    g = Grid(_OVERRUN_GRID)
+    assert g._boundary_overlap(400, 400) == 0
+
+
+def test_boundary_overlap_nonzero_past_north():
+    """_boundary_overlap returns the overlap amount when past north edge."""
+    g = Grid(_OVERRUN_GRID)
+    # cy=255: top face = 255-320 = -65, overlap = 65
+    assert g._boundary_overlap(400, 255) == 65
+
+
+def test_boundary_overlap_decreases_on_escape():
+    """Overlap is strictly smaller after an escape step than before."""
+    g = Grid(_OVERRUN_GRID)
+    before = g._boundary_overlap(400, 255)
+    after  = g._boundary_overlap(400, 295)
+    assert after < before
+
+
 def test_case14_load_unload_parse():
     g = Grid(DEFAULT)
     check.equal(g.load_tile, (0, 0))
