@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '0b16796'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'c4bc729-dirty @ 2026-05-23 13:16'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -61,7 +61,7 @@ ODV_GRID_EX2     = ["X###X", "L###U", "X###X"]
 ODV_GRID_EX3     = ["X#>#X", "L#X#U", "X#<#X"]
 
 # ── user configuration ────────────────────────────────────────────────────────
-DRIVE_MODE        = AUTO
+DRIVE_MODE        = MANUAL
 _REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
 IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
 ODV_SPEED         = const(65)  # max speed in MANUAL and HYBRID modes
@@ -590,8 +590,8 @@ class Grid:
         return False
 
     def _boundary_overlap(self, cx, cy):
-        """Total degree-overlap with grid boundaries (ignores tile walls).
-        Used to permit escape moves when motor coast leaves the cart out-of-bounds."""
+        """Total penetration depth into all obstacles (grid boundaries + wall tiles).
+        Used to permit escape moves when motor coast leaves the cart stuck."""
         half = _HALF
         viol = 0
         top = cy - half
@@ -606,6 +606,13 @@ class Grid:
         rgt = cx + half - self.n_cols * _DEG_PER_TILE
         if rgt > 0:
             viol += rgt
+        L = cx - half
+        R = cx + half
+        T = cy - half
+        B = cy + half
+        for wl, wt, wr, wb in self._wall_rects:
+            if R > wl and L < wr and B > wt and T < wb:
+                viol += min(R - wl, wr - L, B - wt, wb - T)
         return viol
 
     def _axis_step_legal(self, cx, cy, d, axis):

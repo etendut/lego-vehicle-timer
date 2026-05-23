@@ -144,6 +144,39 @@ def test_boundary_overlap_decreases_on_escape():
     assert after < before
 
 
+# Wall-tile escape: cart coasted into a wall tile rect (not a grid boundary).
+# Grid: row 1 col 2 is a wall — cart at ~(2*800+400, 400) = (2000, 400) is fine,
+# but if it drifts east past cx=2080 (HALF=320 away from wall left edge at 2400)
+# the right face clips the wall. Must be able to drive west to escape.
+_WALL_ESCAPE_GRID = ["L###U", "##X##"]  # wall tile at (2,1)
+
+
+def test_wall_tile_overrun_escape_west():
+    """Escape westward is allowed when cart is clipped into a wall tile on the east."""
+    g = Grid(_WALL_ESCAPE_GRID)
+    # Wall tile (2,1): wl=1600, wt=800. Cart at row 1 center y=1200.
+    # Right face clips wall when cx + 320 > 1600 → cx > 1280.
+    # Place cart at 1300 (right face = 1620, 20° into wall).
+    pos = (1300, 1200)
+    assert g._aabb_hits_wall(*pos), "setup: position must be in wall"
+    assert g.propose_step(pos, -40, 0) == (-40, 0)   # westward escape permitted
+
+
+def test_wall_tile_overrun_blocked_east():
+    """Driving further into the wall tile is blocked."""
+    g = Grid(_WALL_ESCAPE_GRID)
+    pos = (1300, 1200)
+    assert g.propose_step(pos, 40, 0) == (0, 0)       # deeper into wall → blocked
+
+
+def test_boundary_overlap_includes_wall_tile_penetration():
+    """_boundary_overlap counts wall tile penetration, not just grid edges."""
+    g = Grid(_WALL_ESCAPE_GRID)
+    # At (1300, 1200): right face = 1620, wall left edge = 1600 → 20° penetration
+    assert g._boundary_overlap(1300, 1200) == 20
+    assert g._boundary_overlap(1260, 1200) == 0   # right face = 1580 < 1600, clear
+
+
 def test_case14_load_unload_parse():
     g = Grid(DEFAULT)
     check.equal(g.load_tile, (0, 0))
