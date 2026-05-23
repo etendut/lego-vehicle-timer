@@ -1,4 +1,4 @@
-# Timed train and vehicle program for interactive displays
+# Timed Train, Servo Steer, Skid Steer, and ODV vehicle program for interactive displays
 # Copyright Etendut
 # https://etendut.github.io/lego-vehicle-timer/
 # licence MIT
@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = '0394341 @ 2026-05-23 11:44'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '75cb033 @ 2026-05-23 11:52'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings

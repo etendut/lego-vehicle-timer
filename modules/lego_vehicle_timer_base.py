@@ -1,4 +1,4 @@
-# Timed train and vehicle program for interactive displays
+# Timed Train, Servo Steer, Skid Steer, and ODV vehicle program for interactive displays
 # Copyright Etendut
 # https://etendut.github.io/lego-vehicle-timer/
 # licence MIT
