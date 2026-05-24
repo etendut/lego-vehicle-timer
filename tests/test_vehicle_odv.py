@@ -871,6 +871,39 @@ def test_rom_handle_remote_press_at_load_west_triggers_load():
     check.equal(my.run_target.call_count, 1)
 
 
+def test_rom_handle_remote_press_at_load_west_with_existing_load_skips_recenter():
+    """Already loaded: pressing west at the load tile must NOT re-trigger
+    _arrive_at_tile (which would snap the cart back to load-tile centre and
+    look like 'cart drifting toward the ramp'). Instead it should fall through
+    to a normal drive tick so the user can navigate freely inside the tile."""
+    rom, mx, my, _ = _make_rom(pressed=[Button.RIGHT_MINUS])
+    rom.has_load = True
+    ac = _stub_axis_controller(rom, *cen(0, 0))
+    rom.handle_remote_press()
+    # _arrive_at_tile NOT called → no run_target on either axis
+    mx.run_target.assert_not_called()
+    my.run_target.assert_not_called()
+    # Fell through to normal drive tick — west press
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (-1, 0))
+
+
+def test_rom_handle_remote_press_at_unload_east_without_load_skips_home():
+    """No load to dump: pressing east at the unload tile must NOT re-trigger
+    home_and_unload (which would re-run the stall sequence). Fall through to
+    normal drive instead."""
+    rom, mx, my, _ = _make_rom(pressed=[Button.RIGHT_PLUS])
+    rom.has_load = False
+    ac = _stub_axis_controller(rom, *cen(4, 0))
+    rom.handle_remote_press()
+    # home_and_unload's stall NOT triggered
+    mx.run_until_stalled.assert_not_called()
+    my.run_until_stalled.assert_not_called()
+    # Fell through to normal drive tick — east press
+    vj = ac.tick.call_args.args[0]
+    check.equal((vj.ax, vj.ay), (+1, 0))
+
+
 def test_rom_auto_load_requires_homed():
     rom, _, _, _ = _make_rom()
     rom.auto_driver = MagicMock()

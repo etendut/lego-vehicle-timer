@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '920794f'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '897879a'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -64,7 +64,7 @@ ODV_GRID_EX3     = ["X#>#X", "L#X#U", "X#<#X"]
 DRIVE_MODE        = MANUAL
 _REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
 IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
-ODV_SPEED         = const(65)  # max speed in MANUAL and HYBRID modes
+ODV_SPEED         = const(60)  # note above 60 gets a bit chaotic on full battery. max speed in MANUAL and HYBRID modes
 ODV_GRID          = ODV_GRID_DEFAULT
 
 # ── debug / calibration ───────────────────────────────────────────────────────
@@ -1195,11 +1195,16 @@ class RunODVMotors(MotorHelper):
             return
 
         cur = self._current_tile()
-        if (ax, ay) == (-1, 0) and cur == self.grid.load_tile:
+        # Only trigger load when there's nothing to load and the cart is at L
+        # pressing west. Otherwise (already loaded, or just driving through),
+        # fall through so _arrive_at_tile doesn't snap the cart back to centre
+        # — looks like "drifting toward the ramp" to the operator.
+        if (ax, ay) == (-1, 0) and cur == self.grid.load_tile and not self.has_load:
             self._arrive_at_tile(self.grid.load_tile)
             self._do_load_()
             return
-        if (ax, ay) == (+1, 0) and cur == self.grid.unload_tile:
+        # Same idea for unload: only home_and_unload when there's load to dump.
+        if (ax, ay) == (+1, 0) and cur == self.grid.unload_tile and self.has_load:
             self._arrive_at_tile(self.grid.unload_tile)
             self.home_and_unload()
             return
