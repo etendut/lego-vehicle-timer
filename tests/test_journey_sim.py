@@ -367,3 +367,52 @@ def test_manual_unload_pauses_500ms_before_home_and_unload(compiled):
     assert 500 in waits
     assert rom.mh_is_homed is True
     assert rom.has_load is False
+
+
+def test_manual_west_drive_from_u_reaches_l(compiled):
+    """Starting parked at U and holding west on the remote, the cart must be
+    able to drive across the grid all the way into L. Regression: an over-
+    aggressive block_special check on the manual tick prevented the cart's
+    AABB from ever entering the L/U tile from outside, so the load trigger
+    never fired."""
+    from pybricks.parameters import Button
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    _install_sim_wait(m, mx, my, clock)
+
+    cx, cy = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    mx.reset_angle(cx)
+    my.reset_angle(cy)
+    rom._remote.buttons.pressed.return_value = (Button.RIGHT_MINUS,)
+
+    for _ in range(2000):  # 20s of 10ms ticks — way more than the journey needs
+        rom.handle_remote_press()
+        if rom.grid.deg_to_tile((mx.angle(), my.angle())) == rom.grid.load_tile:
+            return
+        m.wait(10)
+    raise AssertionError(
+        'cart stuck at ({}, {}) — never reached L'.format(mx.angle(), my.angle()))
+
+
+def test_manual_east_drive_from_l_reaches_u(compiled):
+    """Mirror: on a clear-path grid (EX2 has no one-way tiles between L and U),
+    holding east at L with a load must let the cart drive all the way into U.
+    EX2 = ['X###X', 'L###U', 'X###X']."""
+    from pybricks.parameters import Button
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_EX2)
+    _install_sim_wait(m, mx, my, clock)
+
+    cx, cy = rom.grid.tile_center_deg(rom.grid.load_tile)
+    mx.reset_angle(cx)
+    my.reset_angle(cy)
+    rom.has_load = True
+    rom._remote.buttons.pressed.return_value = (Button.RIGHT_PLUS,)
+
+    for _ in range(2000):
+        rom.handle_remote_press()
+        if rom.grid.deg_to_tile((mx.angle(), my.angle())) == rom.grid.unload_tile:
+            return
+        m.wait(10)
+    raise AssertionError(
+        'cart stuck at ({}, {}) — never reached U'.format(mx.angle(), my.angle()))

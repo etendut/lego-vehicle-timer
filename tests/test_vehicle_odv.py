@@ -1000,63 +1000,18 @@ def test_rom_auto_unload_journey_completes_then_homes():
     check.is_true(rom.mh_is_homed)
 
 
-# --- Block manual movement into the load / unload tiles ---
+# --- Manual drive can enter L / U normally (block_special was over-aggressive) ---
 
-def test_overlaps_special_false_when_outside():
-    # Cart at tile-1 centre (a regular corridor tile) overlaps neither special tile.
+def test_propose_step_allows_entry_into_load_tile_from_east():
+    # From tile 1, west press must be able to reach the load tile — the
+    # has_load guard in handle_remote_press is what stops a re-trigger,
+    # not propose_step.
     g = Grid(["L#<#U"])
-    assert g._overlaps_special(*cen(2, 0)) is False
-
-
-def test_overlaps_special_true_when_at_unload_centre():
-    g = Grid(["L#<#U"])
-    assert g._overlaps_special(*cen(4, 0)) is True
-
-
-def test_overlaps_special_true_when_at_load_centre():
-    g = Grid(["L#<#U"])
-    assert g._overlaps_special(*cen(0, 0)) is True
-
-
-def test_propose_step_block_special_blocks_eastward_entry_into_unload():
-    # From tile 3, moving east would overlap the unload tile → blocked.
-    g = Grid(["L#<#U"])
-    result = g.propose_step(cen(3, 0), 500, 0, block_special=True)
-    check.equal(result, (0, 0))
-
-
-def test_propose_step_default_allows_entry_into_unload():
-    # Without the flag the step is valid (existing behaviour preserved).
-    g = Grid(["L#<#U"])
-    result = g.propose_step(cen(3, 0), 500, 0)
-    check.equal(result, (500, 0))
-
-
-def test_propose_step_block_special_allows_escape_from_unload():
-    # Cart already at unload centre (placed there by auto-drive) — escape west must succeed.
-    g = Grid(["L#<#U"])
-    result = g.propose_step(cen(4, 0), -500, 0, block_special=True)
+    result = g.propose_step(cen(1, 0), -500, 0)
     check.equal(result, (-500, 0))
 
 
-def test_propose_step_block_special_blocks_westward_entry_into_load():
-    # From tile 1, moving west would overlap the load tile → blocked.
+def test_propose_step_allows_entry_into_unload_tile_from_west():
     g = Grid(["L#<#U"])
-    result = g.propose_step(cen(1, 0), -500, 0, block_special=True)
-    check.equal(result, (0, 0))
-
-
-def test_propose_step_block_special_allows_escape_from_load():
-    # Cart already at load centre (placed there by auto-drive) — escape east must succeed.
-    g = Grid(["L#<#U"])
-    result = g.propose_step(cen(0, 0), 500, 0, block_special=True)
+    result = g.propose_step(cen(3, 0), 500, 0)
     check.equal(result, (500, 0))
-
-
-def test_handle_remote_press_passes_block_special_to_tick():
-    # Normal movement tick must be called with block_special=True.
-    rom, _, _, _ = _make_rom(pressed=[Button.RIGHT_PLUS])
-    ac = _stub_axis_controller(rom)
-    rom.handle_remote_press()
-    call_kwargs = ac.tick.call_args.kwargs
-    check.equal(call_kwargs.get('block_special'), True)

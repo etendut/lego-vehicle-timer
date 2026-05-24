@@ -185,22 +185,7 @@ class Grid:
                 viol += min(R - wl, wr - L, B - wt, wb - T)
         return viol
 
-    def _overlaps_tile(self, cx, cy, tx, ty):
-        """True if the AABB centred at (cx, cy) overlaps the rectangle of tile (tx, ty)."""
-        half = _HALF
-        tile_l = tx * _DEG_PER_TILE
-        tile_r = tile_l + _DEG_PER_TILE
-        tile_t = ty * _DEG_PER_TILE
-        tile_b = tile_t + _DEG_PER_TILE
-        return (cx + half > tile_l and cx - half < tile_r and
-                cy + half > tile_t and cy - half < tile_b)
-
-    def _overlaps_special(self, cx, cy):
-        """True if the AABB overlaps the load or unload tile (both are off-limits for manual drive)."""
-        return (self._overlaps_tile(cx, cy, *self.unload_tile) or
-                self._overlaps_tile(cx, cy, *self.load_tile))
-
-    def _axis_step_legal(self, cx, cy, d, axis, block_special=False):
+    def _axis_step_legal(self, cx, cy, d, axis):
         if axis == _X:
             new_cx = cx + d
             new_cy = cy
@@ -217,12 +202,6 @@ class Grid:
             if self._aabb_hits_wall(cx, cy):
                 return self._boundary_overlap(new_cx, new_cy) <= self._boundary_overlap(cx, cy)
             return False
-
-        if block_special and self._overlaps_special(new_cx, new_cy):
-            # Allow escape if the cart is already inside a special tile (e.g. after auto-drive),
-            # but block fresh entry from outside.
-            if not self._overlaps_special(cx, cy):
-                return False
 
         if axis == _X:
             half = _HALF
@@ -252,15 +231,12 @@ class Grid:
 
         return True
 
-    def propose_step(self, deg_pos, d_deg_x, d_deg_y, block_special=False):
+    def propose_step(self, deg_pos, d_deg_x, d_deg_y):
         """
         Return (valid_dx, valid_dy): the largest per-axis step no greater in
         magnitude than the requested one that keeps the cart AABB legal.
         Per-axis independent: X is tested alone, Y is tested alone. If an
         axis is blocked, that axis returns 0; the other axis is unaffected.
-
-        block_special: when True, also blocks movement into the load or unload
-        tile (used for manual/hybrid drive; auto-drive passes False).
 
         v1 limitation: combined step is not checked. A diagonal move can
         produce a position where the combined AABB overlaps a wall even if
@@ -272,11 +248,11 @@ class Grid:
         valid_dy = 0
 
         if d_deg_x != 0:
-            if self._axis_step_legal(cx, cy, d_deg_x, _X, block_special):
+            if self._axis_step_legal(cx, cy, d_deg_x, _X):
                 valid_dx = d_deg_x
 
         if d_deg_y != 0:
-            if self._axis_step_legal(cx, cy, d_deg_y, _Y, block_special):
+            if self._axis_step_legal(cx, cy, d_deg_y, _Y):
                 valid_dy = d_deg_y
 
         return valid_dx, valid_dy
@@ -324,18 +300,17 @@ class AxisController:
         motor.dc(prev_duty * factor // 100)
         return prev_duty, ramp_start  # prev_duty unchanged during ramp
 
-    def tick(self, vj, duty=None, ramp_ms=_STOP_RAMP_MS, block_special=False):
+    def tick(self, vj, duty=None, ramp_ms=_STOP_RAMP_MS):
         """One control tick. Proposes a lookahead step, clips it via Grid,
         issues motor.dc per axis. Active→idle transition ramps to zero over
         `ramp_ms` (manual default 200ms; AutoDriver passes a shorter value so
-        coast stays inside wall clearances). `duty` overrides base_duty.
-        `block_special` prevents manual movement into the load or unload tile."""
+        coast stays inside wall clearances). `duty` overrides base_duty."""
         cx, cy = self.deg_pos()
         base = duty if duty is not None else self.base_duty
 
         requested_dx = vj.ax * _LOOKAHEAD_DEG
         requested_dy = vj.ay * _LOOKAHEAD_DEG
-        valid_dx, valid_dy = self.grid.propose_step((cx, cy), requested_dx, requested_dy, block_special)
+        valid_dx, valid_dy = self.grid.propose_step((cx, cy), requested_dx, requested_dy)
 
         # Diagonal duty reduction only applies when BOTH axes actually move.
         # If propose_step blocked one axis (slide-along-wall), the surviving
@@ -773,7 +748,7 @@ class RunODVMotors(MotorHelper):
             self.home_and_unload()
             return
 
-        self.axis_controller.tick(VirtualJoystick(ax, ay), block_special=True)
+        self.axis_controller.tick(VirtualJoystick(ax, ay))
 
     def _do_load_(self):
         if self.has_load:
