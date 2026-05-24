@@ -188,6 +188,13 @@
         width: 16pt;
         text-align: center;
       }
+      /* Tile-PNG legend icons — scaled-down crops of the actual grid render
+         so the colours and arrow style match exactly. */
+      img.trouble-icon {
+        height: 16pt;
+        width: auto;
+        object-fit: contain;
+      }
       .trouble-title {
         font-weight: 700;
         display: block;
@@ -351,14 +358,14 @@
           <div class="steps-col">
             <ul class="trouble">
               <li>
-                <span class="trouble-icon">&#129001;</span>
+                <img class="trouble-icon" src="../images/tile_load.png" alt="Load tile">
                 <span
                   ><strong class="trouble-title">Green tile — Load</strong>This
                   is where the vehicle picks up its cargo.</span
                 >
               </li>
               <li>
-                <span class="trouble-icon">&#129000;</span>
+                <img class="trouble-icon" src="../images/tile_unload.png" alt="Unload tile">
                 <span
                   ><strong class="trouble-title">Orange tile — End</strong>This
                   is where the vehicle drops off its cargo. It also homes itself
@@ -366,7 +373,7 @@
                 >
               </li>
               <li>
-                <span class="trouble-icon">&#129106;</span>
+                <img class="trouble-icon" src="../images/tile_arrow.png" alt="One-way arrow tile">
                 <span
                   ><strong class="trouble-title">Arrow tiles — One way</strong>
                   The vehicle will not drive against the arrow.</span

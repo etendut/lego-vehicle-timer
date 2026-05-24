@@ -26,12 +26,12 @@ PAD         = 6    # px outer padding
 
 # ── colours ───────────────────────────────────────────────────────────────────
 BG           = (255, 255, 255)
-TRACK_FILL   = (208, 208, 208)
-LOAD_FILL    = ( 92, 184,  92)   # green
-UNLOAD_FILL  = (224, 120,   0)   # orange
+TRACK_FILL   = (230, 227, 224)  #	Very Light Bluish Gray	E6E3E0
+LOAD_FILL    = ( 187, 223,  11)   # Lime	BBE90B
+UNLOAD_FILL  = (254, 138,   24)   # Orange	FE8A18
 BORDER       = (  0,   0,   0)
 LABEL_COLOR  = (255, 255, 255)
-ARROW_COLOR  = (200,  40,  40)   # red
+ARROW_COLOR  = (201,  26,  9)   # Red	C91A09
 
 TILE_COLORS = {
     '#': TRACK_FILL,
@@ -46,6 +46,15 @@ GRIDS = [
     ('ODV_GRID_EX1', ODV_GRID_EX1),
     ('ODV_GRID_EX2', ODV_GRID_EX2),
     ('ODV_GRID_EX3', ODV_GRID_EX3),
+]
+
+# Single-tile previews for the docs' grid-legend. Re-uses render_grid so the
+# tile colours and arrow style stay byte-for-byte identical to the full grid
+# PNGs above; HTML scales them down via CSS for inline-icon display.
+SINGLE_TILES = [
+    ('tile_load',   ['L']),
+    ('tile_unload', ['U']),
+    ('tile_arrow',  ['<']),
 ]
 
 
@@ -156,6 +165,12 @@ def main() -> None:
     os.makedirs(out_dir, exist_ok=True)
 
     for name, grid in GRIDS:
+        path = os.path.join(out_dir, f'{name}.png')
+        img  = render_grid(grid)
+        img.save(path)
+        print(f'  {name}.png  {img.size[0]}×{img.size[1]}px')
+
+    for name, grid in SINGLE_TILES:
         path = os.path.join(out_dir, f'{name}.png')
         img  = render_grid(grid)
         img.save(path)
