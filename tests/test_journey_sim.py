@@ -36,6 +36,9 @@ class FakeMotor:
     def stop(self) -> None:
         self._duty = 0
 
+    def brake(self) -> None:
+        self._duty = 0
+
     def reset_angle(self, a: int) -> None:
         self._angle = a
         self._duty = 0

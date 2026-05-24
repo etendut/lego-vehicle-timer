@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = 'edf20a1'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '920794f'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -210,6 +210,7 @@ class CountdownTimer:
         self.last_hub_remote_color = None
         self.last_countdown_message: str = ''
         self.countdown_status: int = _UNKNOWN
+        self._debug_last_logged_status: int = -1  # sentinel so first show_status logs
 
         # Start a timer.
         self.stopwatch = StopWatch()
@@ -274,6 +275,7 @@ class CountdownTimer:
         Check countdown time buttons.
         Returns True if the reset code was pressed (caller should reset motor state).
         """
+        global remote
         if _REMOTE_DISABLED:
             return False
 
@@ -301,6 +303,10 @@ class CountdownTimer:
         return False
 
     def show_status(self):
+        if self.countdown_status != self._debug_last_logged_status:
+            print('SHOW_STATUS status=', self.countdown_status,
+                  'last_color=', self.last_hub_remote_color)
+            self._debug_last_logged_status = self.countdown_status
         if self.countdown_status == _READY:
             self.flash_hub_and_remote_light(Color.GREEN, 500, Color.NONE, 500, True)
         elif self.countdown_status == _ACTIVE:
@@ -577,6 +583,8 @@ def main():
 
         countdown_timer.reset()
         mem_info()
+        # one-shot guards so debug prints fire on each transition, not every tick
+        _main_gate_closed_logged = [False]
         while True:
             if countdown_timer.should_check_battery() and not hub_battery_ok():
                 error_flash_code.set_error_low_battery()
@@ -608,6 +616,7 @@ def main():
 
             # if there is no remote, then there is no point in a countdown
             if countdown_timer.has_time_remaining() or _REMOTE_DISABLED or drive_motors.mh_auto_drive:
+                _main_gate_closed_logged[0] = False  # arm the print for the next close
                 if drive_motors.mh_supports_homing and not drive_motors.mh_is_homed:
                     drive_motors.home_and_unload()
                 if drive_motors.mh_supports_flip:
@@ -615,6 +624,11 @@ def main():
                 if not _REMOTE_DISABLED:
                     drive_motors.handle_remote_press()
             else:
+                if not _main_gate_closed_logged[0]:
+                    print('TIMER ENDED -- gate closed, handle_remote_press NOT called',
+                          'status=', countdown_timer.countdown_status,
+                          'auto_drive=', drive_motors.mh_auto_drive)
+                    _main_gate_closed_logged[0] = True
                 drive_motors.stop_motors()
                 if drive_motors.mh_supports_homing:
                     drive_motors.reset_homing()
