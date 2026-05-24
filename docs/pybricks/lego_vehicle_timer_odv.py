@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '9c5c76e'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'c570b95'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -69,13 +69,9 @@ ODV_SPEED         = const(60)  # note above 60 gets a bit chaotic on full batter
 ODV_GRID          = ODV_GRID_DEFAULT
 AUTO_UNLOAD_ON_TIMER_END = False  # when True, the cart parks at U on natural timer expiry (not on reset-code press)
 
-# ── derived from user configuration (do not edit) ────────────────────────────
-_REMOTE_DISABLED          = (DRIVE_MODE == AUTO)         # AUTO runs headless; MANUAL/HYBRID require the remote
-_AUTO_UNLOAD_ON_TIMER_END = AUTO_UNLOAD_ON_TIMER_END     # base default is False; ODV opts in here
-
 # ── debug / calibration ───────────────────────────────────────────────────────
 DEBUG               = const(True)
-_CALIBRATE_X_OFFSET = False  # halt auto_load at tile (3, 0) center for X-offset measurement
+CALIBRATE_X_OFFSET = False  # halt auto_load at tile (3, 0) center for X-offset measurement
 
 # ── internal tuning (change with caution) ────────────────────────────────────
 _DEG_PER_TILE     = const(800)
@@ -100,6 +96,10 @@ _DEADBAND_SAFETY_DEG = const(10)
 # (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
 _X_EAST_STALL_OFFSET_DEG = const(80)
 
+# ── derived from user configuration (do not edit) ────────────────────────────
+_REMOTE_DISABLED          = (DRIVE_MODE == AUTO)         # AUTO runs headless; MANUAL/HYBRID require the remote
+_AUTO_UNLOAD_ON_TIMER_END = AUTO_UNLOAD_ON_TIMER_END     # base default is False; ODV opts in here
+_CALIBRATE_X_OFFSET = CALIBRATE_X_OFFSET
 
 
 ##################################################################################
