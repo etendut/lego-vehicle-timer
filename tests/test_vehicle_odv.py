@@ -408,13 +408,13 @@ def test_homing_call_sequence_default_grid():
     # Y stalled north first
     motor_y.run_until_stalled.assert_called_once_with(-200, duty_limit=45)
     motor_y.reset_angle.assert_called_once_with(320)  # _HALF = cart center south of N wall
-    # U tile centre Y = 400; return target = 400 - 80 = 320 (same as stall — Y "no-op return")
-    motor_y.run_target.assert_called_once_with(1400, 0 * 800 + 400 - 80)
+    # Y returns all the way to tile-centre (stall is shallow — no short-return).
+    motor_y.run_target.assert_called_once_with(1400, 0 * 800 + 400)
 
     # Then X stalled east — reset to east_wall_deg - 80 (rig-measured stall offset)
     motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
-    # U tile centre X = 3600; return target = 3600 + 80 = 3680 (east-of-centre short)
+    # U tile centre X = 3600; X return target = 3600 + 80 = 3680 (east-of-centre short)
     motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80)
 
 
@@ -427,8 +427,8 @@ def test_homing_uses_unload_tile_from_grid():
     HomingRoutine(motor_x, motor_y, grid).run()
 
     motor_y.reset_angle.assert_called_once_with(320)  # always _HALF (cart at N wall)
-    # uy=1 tile centre Y = 1200; short-of-centre return = 1200 - 80 = 1120
-    motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400 - 80)
+    # uy=1 tile centre Y = 1200; full return to centre (Y stall is too shallow to short).
+    motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400)
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
     motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80)
 

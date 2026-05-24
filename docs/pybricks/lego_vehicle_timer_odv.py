@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '3a55f51'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '5507f85'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -1064,8 +1064,10 @@ class HomingRoutine:
         self.motor_y.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
         wait(200)
         self.motor_y.reset_angle(_HALF)
-        # Return short of centre on the north side (stall was north).
-        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, target_y - _RETURN_OFFSET_DEG)
+        # Y return goes all the way to tile-centre. The stall depth is only
+        # 80° (_HALF below the north wall) so the short-return offset would
+        # cancel the whole return and leave the cart pinned at the wall.
+        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, target_y)
         wait(200)
 
         # Stall X EAST against right wall — also unloads the cart.
