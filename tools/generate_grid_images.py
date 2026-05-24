@@ -19,10 +19,10 @@ from PIL import Image, ImageDraw, ImageFont
 from modules.vehicle_odv import ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2, ODV_GRID_EX3
 
 # ── layout ────────────────────────────────────────────────────────────────────
-TILE        = 36    # px per tile (square)
+TILE        = 72    # px per tile (square) — render at 2x so the HTML scale-down stays crisp on Retina
 TILE_LONG   = round(TILE * 1.15)  # px for Load/Unload tiles (15% longer in X)
-GAP         = 3    # px gap between tiles
-PAD         = 6    # px outer padding
+GAP         = 6    # px gap between tiles
+PAD         = 12   # px outer padding
 
 # ── colours ───────────────────────────────────────────────────────────────────
 BG           = (255, 255, 255)
