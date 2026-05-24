@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '1beebc4'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '1d4eca0'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -64,12 +64,14 @@ ODV_GRID_EX3     = ["X#>#X", "L#X#U", "X#<#X"]
 
 # ── user configuration ────────────────────────────────────────────────────────
 DRIVE_MODE        = MANUAL
-_REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID require the remote
 IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
 ODV_SPEED         = const(60)  # note above 60 gets a bit chaotic on full battery. max speed in MANUAL and HYBRID modes
 ODV_GRID          = ODV_GRID_DEFAULT
 AUTO_UNLOAD_ON_TIMER_END = False  # when True, the cart parks at U on natural timer expiry (not on reset-code press)
-_AUTO_UNLOAD_ON_TIMER_END = AUTO_UNLOAD_ON_TIMER_END  # overrides base default
+
+# ── derived from user configuration (do not edit) ────────────────────────────
+_REMOTE_DISABLED          = (DRIVE_MODE == AUTO)         # AUTO runs headless; MANUAL/HYBRID require the remote
+_AUTO_UNLOAD_ON_TIMER_END = AUTO_UNLOAD_ON_TIMER_END     # base default is False; ODV opts in here
 
 # ── debug / calibration ───────────────────────────────────────────────────────
 DEBUG               = const(True)
