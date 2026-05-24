@@ -73,11 +73,19 @@ class ErrorFlashCodes:
         for f in range(self.flash_count):
             hub.light.on(Color.RED)
             if not _REMOTE_DISABLED:
-                remote.light.on(Color.RED)
+                try:
+                    remote.light.on(Color.RED)
+                except:
+                    # if error is due to missing remote this can fail
+                    pass
             wait(350)
             hub.light.on(Color.NONE)
             if not _REMOTE_DISABLED:
-                remote.light.on(Color.NONE)
+                try:
+                    remote.light.on(Color.NONE)
+                except:
+                    # if error is due to missing remote this can fail
+                    pass
             wait(350)
         if self.flash_count > 1:
             wait(2000)
