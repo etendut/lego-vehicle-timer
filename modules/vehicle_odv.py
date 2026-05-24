@@ -1,6 +1,6 @@
 # IMPORTS_START
 from pybricks.pupdevices import Motor
-from pybricks.parameters import Port, Direction
+from pybricks.parameters import Port, Direction, Stop
 try:
     from pybricks.tools import StopWatch, wait  # type: ignore[assignment]
 except ImportError:
@@ -628,8 +628,11 @@ class HomingRoutine:
         self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED * 3, duty_limit=_HOMING_DUTY)
         wait(2000)
         self.motor_x.reset_angle(east_wall_deg - _X_EAST_STALL_OFFSET_DEG)
-        # Return short of centre on the east side (stall was east).
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x + _RETURN_OFFSET_DEG)
+        # Return short of centre on the east side (stall was east). COAST at
+        # end so the motor doesn't pull back if it overshoots — that pull-back
+        # was the "quick jump east" the operator saw after the west return.
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x + _RETURN_OFFSET_DEG,
+                                 then=Stop.COAST)
         wait(200)
 
 
@@ -773,8 +776,11 @@ class RunODVMotors(MotorHelper):
                   ') dip to', target_x - _LOAD_DIP_DEG)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _LOAD_DIP_DEG)
         wait(2000)
-        # Return short of centre on the west side (dip was west).
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _RETURN_OFFSET_DEG)
+        # Return short of centre on the west side (dip was west). COAST at the
+        # end so the motor doesn't pull back if it overshoots the target — the
+        # "quick jump west" the operator was seeing after the east return.
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _RETURN_OFFSET_DEG,
+                                 then=Stop.COAST)
         self.has_load = True
         if DEBUG:
             print('_do_load_ done pos=(', self.motor_x.angle(), self.motor_y.angle(), ')')

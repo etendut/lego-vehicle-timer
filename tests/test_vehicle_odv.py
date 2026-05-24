@@ -2,7 +2,7 @@ import pytest
 from pytest_check import check
 from unittest.mock import MagicMock
 
-from pybricks.parameters import Button
+from pybricks.parameters import Button, Stop
 
 from modules.vehicle_odv import (
     Grid, VirtualJoystick, AxisController, HomingRoutine, Planner, AutoDriver,
@@ -414,8 +414,9 @@ def test_homing_call_sequence_default_grid():
     # Then X stalled east — reset to east_wall_deg - 80 (rig-measured stall offset)
     motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
-    # U tile centre X = 3600; X return target = 3600 + 80 = 3680 (east-of-centre short)
-    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80)
+    # U tile centre X = 3600; X return target = 3600 + 80 = 3680, COAST after
+    # so the motor doesn't snap back if it overshoots.
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80, then=Stop.COAST)
 
 
 def test_homing_uses_unload_tile_from_grid():
@@ -430,7 +431,7 @@ def test_homing_uses_unload_tile_from_grid():
     # uy=1 tile centre Y = 1200; full return to centre (Y stall is too shallow to short).
     motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400)
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
-    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80)
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80, then=Stop.COAST)
 
 
 def test_homing_order_y_then_x():
