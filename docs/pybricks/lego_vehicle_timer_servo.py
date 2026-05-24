@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = 'c570b95'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'c140e7b'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -45,8 +45,8 @@ _AUTO_UNLOAD_ON_TIMER_END = False # ODV opts in via AUTO_UNLOAD_ON_TIMER_END; no
 # ── user configuration ────────────────────────────────────────────────────────
 SERVO_STEER_SPEED: int                = const(80)  # set between 50 and 100
 SERVO_STEER_TURN_ANGLE: int           = const(45)  # angle to turn wheels
-SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = False       # set to True if remote + button cause motor to run backwards
-SERVO_STEER_REVERSE_TURN_MOTOR: bool  = False       # set to True if remote + button cause motor to turn wrong way
+SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = const(False)  # set to True if remote + button cause motor to run backwards
+SERVO_STEER_REVERSE_TURN_MOTOR: bool  = const(False)  # set to True if remote + button cause motor to turn wrong way
 
 
 

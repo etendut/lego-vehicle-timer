@@ -22,7 +22,7 @@ from pybricks.pupdevices import DCMotor, Light
 
 
 
-__BUILD__ = 'c570b95'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'c140e7b'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -45,8 +45,8 @@ _AUTO_UNLOAD_ON_TIMER_END = False # ODV opts in via AUTO_UNLOAD_ON_TIMER_END; no
 TRAIN_MOTOR_SPEED_STEP: int  = const(10)  # the amount each button press changes the train speed
 TRAIN_MOTOR_MIN_SPEED: int   = const(30)  # lowest speed the train will go set between 30 and 100
 TRAIN_MOTOR_MAX_SPEED: int   = const(80)  # set between 80 and 100
-TRAIN_REVERSE_MOTOR_1: bool  = False       # set to True if remote + button cause motor to run backwards
-TRAIN_REVERSE_MOTOR_2: bool  = True        # only used if a second train motor is on Port B
+TRAIN_REVERSE_MOTOR_1: bool  = const(False)  # set to True if remote + button cause motor to run backwards
+TRAIN_REVERSE_MOTOR_2: bool  = const(True)   # only used if a second train motor is on Port B
 
 
 

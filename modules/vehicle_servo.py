@@ -18,8 +18,8 @@ from uerrno import ENODEV
 # ── user configuration ────────────────────────────────────────────────────────
 SERVO_STEER_SPEED: int                = const(80)  # set between 50 and 100
 SERVO_STEER_TURN_ANGLE: int           = const(45)  # angle to turn wheels
-SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = False       # set to True if remote + button cause motor to run backwards
-SERVO_STEER_REVERSE_TURN_MOTOR: bool  = False       # set to True if remote + button cause motor to turn wrong way
+SERVO_STEER_REVERSE_DRIVE_MOTOR: bool = const(False)  # set to True if remote + button cause motor to run backwards
+SERVO_STEER_REVERSE_TURN_MOTOR: bool  = const(False)  # set to True if remote + button cause motor to turn wrong way
 
 # VARS_END
 # MODULE_START

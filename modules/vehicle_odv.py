@@ -38,15 +38,15 @@ ODV_GRID_EX2     = ["X###X", "L###U", "X###X"]
 ODV_GRID_EX3     = ["X#>#X", "L#X#U", "X#<#X"]
 
 # ── user configuration ────────────────────────────────────────────────────────
-DRIVE_MODE        = MANUAL
+DRIVE_MODE        = const(MANUAL)
 IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
 ODV_SPEED         = const(60)  # note above 60 gets a bit chaotic on full battery. max speed in MANUAL and HYBRID modes
 ODV_GRID          = ODV_GRID_DEFAULT
-AUTO_UNLOAD_ON_TIMER_END = False  # when True, the cart parks at U on natural timer expiry (not on reset-code press)
+AUTO_UNLOAD_ON_TIMER_END = const(True)  # when True, the cart parks at U on natural timer expiry (not on reset-code press)
 
 # ── debug / calibration ───────────────────────────────────────────────────────
-DEBUG               = const(True)
-CALIBRATE_X_OFFSET = False  # halt auto_load at tile (3, 0) center for X-offset measurement
+DEBUG               = const(False)
+CALIBRATE_X_OFFSET = const(False)  # halt auto_load at tile (3, 0) center for X-offset measurement
 
 # ── internal tuning (change with caution) ────────────────────────────────────
 _DEG_PER_TILE     = const(800)

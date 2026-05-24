@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = 'c570b95'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'c140e7b'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -44,9 +44,9 @@ _AUTO_UNLOAD_ON_TIMER_END = False # ODV opts in via AUTO_UNLOAD_ON_TIMER_END; no
 
 # ── user configuration ────────────────────────────────────────────────────────
 SKID_STEER_SPEED: int                  = const(80)  # set between 50 and 100
-SKID_STEER_SWAP_MOTOR_SIDES: bool      = False       # set to True if Left/Right remote buttons are backwards
-SKID_STEER_REVERSE_LEFT_MOTOR: bool    = False       # set to True if remote + button cause motor to run backwards
-SKID_STEER_REVERSE_RIGHT_MOTOR: bool   = False       # set to True if remote + button cause motor to run backwards
+SKID_STEER_SWAP_MOTOR_SIDES: bool      = const(False)  # set to True if Left/Right remote buttons are backwards
+SKID_STEER_REVERSE_LEFT_MOTOR: bool    = const(False)  # set to True if remote + button cause motor to run backwards
+SKID_STEER_REVERSE_RIGHT_MOTOR: bool   = const(False)  # set to True if remote + button cause motor to run backwards
 
 
 

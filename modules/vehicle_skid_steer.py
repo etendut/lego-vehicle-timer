@@ -19,9 +19,9 @@ from uerrno import ENODEV
 
 # ── user configuration ────────────────────────────────────────────────────────
 SKID_STEER_SPEED: int                  = const(80)  # set between 50 and 100
-SKID_STEER_SWAP_MOTOR_SIDES: bool      = False       # set to True if Left/Right remote buttons are backwards
-SKID_STEER_REVERSE_LEFT_MOTOR: bool    = False       # set to True if remote + button cause motor to run backwards
-SKID_STEER_REVERSE_RIGHT_MOTOR: bool   = False       # set to True if remote + button cause motor to run backwards
+SKID_STEER_SWAP_MOTOR_SIDES: bool      = const(False)  # set to True if Left/Right remote buttons are backwards
+SKID_STEER_REVERSE_LEFT_MOTOR: bool    = const(False)  # set to True if remote + button cause motor to run backwards
+SKID_STEER_REVERSE_RIGHT_MOTOR: bool   = const(False)  # set to True if remote + button cause motor to run backwards
 
 # VARS_END
 # MODULE_START
