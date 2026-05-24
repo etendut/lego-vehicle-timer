@@ -394,9 +394,10 @@ def test_deg_pos():
 # --- Task 3: HomingRoutine ---
 
 def test_homing_call_sequence_default_grid():
-    """DEFAULT grid: unload_tile = (4, 0). Cart-center frame parking:
-       at N-stall motor_y = _HALF (320); at E-stall motor_x = n_cols*800 - _HALF (3680);
-       run_target lands cart center on U's tile center (3600, 400).
+    """DEFAULT grid: unload_tile = (4, 0). Stall positions land at the walls
+    (Y=_HALF=320, X=n_cols*800-80=3920). The run_target after each stall stops
+    SHORT of tile-center by _RETURN_OFFSET_DEG=80 on the stall side, so the
+    operator sees a smaller 'jump back' at the end of homing.
     """
     grid = Grid(DEFAULT)
     motor_x = MagicMock()
@@ -407,12 +408,14 @@ def test_homing_call_sequence_default_grid():
     # Y stalled north first
     motor_y.run_until_stalled.assert_called_once_with(-200, duty_limit=45)
     motor_y.reset_angle.assert_called_once_with(320)  # _HALF = cart center south of N wall
-    motor_y.run_target.assert_called_once_with(1400, 0 * 800 + 400)  # U tile center Y
+    # U tile centre Y = 400; return target = 400 - 80 = 320 (same as stall — Y "no-op return")
+    motor_y.run_target.assert_called_once_with(1400, 0 * 800 + 400 - 80)
 
     # Then X stalled east — reset to east_wall_deg - 80 (rig-measured stall offset)
     motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
-    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)  # U tile center X
+    # U tile centre X = 3600; return target = 3600 + 80 = 3680 (east-of-centre short)
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80)
 
 
 def test_homing_uses_unload_tile_from_grid():
@@ -424,9 +427,10 @@ def test_homing_uses_unload_tile_from_grid():
     HomingRoutine(motor_x, motor_y, grid).run()
 
     motor_y.reset_angle.assert_called_once_with(320)  # always _HALF (cart at N wall)
-    motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400)  # uy=1 tile center
+    # uy=1 tile centre Y = 1200; short-of-centre return = 1200 - 80 = 1120
+    motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400 - 80)
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
-    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400)
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80)
 
 
 def test_homing_order_y_then_x():

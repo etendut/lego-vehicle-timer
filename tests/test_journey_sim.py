@@ -173,9 +173,10 @@ def test_journey_load_to_unload_on_default_grid(compiled):
     assert final_tile == rom.grid.unload_tile
 
 
-def test_homing_parks_on_unload_tile_center(compiled):
-    """HomingRoutine must land the cart at U's tile center in the grid frame,
-    so the AABB collision model doesn't see the cart wedged in the N/E walls."""
+def test_homing_parks_short_of_unload_tile_center(compiled):
+    """HomingRoutine returns SHORT of U's tile centre by _RETURN_OFFSET_DEG (80)
+    on the stall side of each axis — reduces the visible 'jump back' the
+    operator sees at the end of homing without changing stall depth."""
     m = compiled
     layout = m.ODV_GRID_DEFAULT
     rom, mx, my, clock = _build_rom(m, layout)
@@ -183,8 +184,10 @@ def test_homing_parks_on_unload_tile_center(compiled):
 
     rom.homing_routine.run()
 
-    expected = rom.grid.tile_center_deg(rom.grid.unload_tile)
-    assert (mx.angle(), my.angle()) == expected
+    cx, cy = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    # Y stall is north → cart parks 80° north of centre. X stall is east →
+    # cart parks 80° east of centre.
+    assert (mx.angle(), my.angle()) == (cx + 80, cy - 80)
 
 
 def test_journey_from_homed_position_reaches_load(compiled):
@@ -443,7 +446,8 @@ def test_park_at_unload_from_mid_grid_when_homed_reaches_u(compiled):
 def test_park_at_unload_when_not_homed_falls_back_to_stall(compiled):
     """When mh_is_homed=False the encoder isn't trusted, so park_at_unload
     must skip the planner journey and go straight to home_and_unload's
-    physical stall. Cart still ends at U with the encoder freshly calibrated."""
+    physical stall. Cart ends short of U centre (per _RETURN_OFFSET_DEG),
+    still inside the U tile, with the encoder freshly calibrated."""
     m = compiled
     rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
     _install_sim_wait(m, mx, my, clock)
@@ -454,6 +458,6 @@ def test_park_at_unload_when_not_homed_falls_back_to_stall(compiled):
 
     rom.park_at_unload()
 
-    expected = rom.grid.tile_center_deg(rom.grid.unload_tile)
-    assert (mx.angle(), my.angle()) == expected
+    cx, cy = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    assert (mx.angle(), my.angle()) == (cx + 80, cy - 80)
     assert rom.mh_is_homed is True

@@ -70,6 +70,10 @@ _DEADBAND_SAFETY_DEG = const(10)
 # Rig-measured: at east stall, physical cart center is 80° west of east_wall_deg
 # (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
 _X_EAST_STALL_OFFSET_DEG = const(80)
+# After a load dip / unload stall, return short of tile-center by this much
+# instead of all the way back. Reduces the visible "jump back" the operator
+# sees at the end of the routine without changing the dip / stall depth.
+_RETURN_OFFSET_DEG       = const(80)
 
 # ── derived from user configuration (do not edit) ────────────────────────────
 _REMOTE_DISABLED          = (DRIVE_MODE == AUTO)         # AUTO runs headless; MANUAL/HYBRID require the remote
@@ -614,14 +618,16 @@ class HomingRoutine:
         self.motor_y.run_until_stalled(-_HOMING_MOTOR_ROT_SPEED, duty_limit=_HOMING_DUTY)
         wait(200)
         self.motor_y.reset_angle(_HALF)
-        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, target_y)
+        # Return short of centre on the north side (stall was north).
+        self.motor_y.run_target(_MAX_MOTOR_ROT_SPEED, target_y - _RETURN_OFFSET_DEG)
         wait(200)
 
         # Stall X EAST against right wall — also unloads the cart.
         self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED * 3, duty_limit=_HOMING_DUTY)
         wait(2000)
         self.motor_x.reset_angle(east_wall_deg - _X_EAST_STALL_OFFSET_DEG)
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x)
+        # Return short of centre on the east side (stall was east).
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x + _RETURN_OFFSET_DEG)
         wait(200)
 
 
@@ -765,7 +771,8 @@ class RunODVMotors(MotorHelper):
                   ') dip to', target_x - _LOAD_DIP_DEG)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _LOAD_DIP_DEG)
         wait(2000)
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x)
+        # Return short of centre on the west side (dip was west).
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _RETURN_OFFSET_DEG)
         self.has_load = True
         if DEBUG:
             print('_do_load_ done pos=(', self.motor_x.angle(), self.motor_y.angle(), ')')
