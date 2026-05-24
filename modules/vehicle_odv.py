@@ -832,6 +832,15 @@ class RunODVMotors(MotorHelper):
         if self._drive_auto_journey(self.grid.unload_tile):
             self.home_and_unload()
 
+    def park_at_unload(self):
+        """Timer-end auto-park at U. If the encoder is calibrated, navigate via
+        the planner so we respect '<' / '>' barriers. Otherwise skip the
+        journey — home_and_unload's physical stall works from any position
+        regardless of encoder state."""
+        if self.mh_is_homed:
+            self._drive_auto_journey(self.grid.unload_tile)
+        self.home_and_unload()
+
 # MODULE_END
 
 # DRIVE_SETUP_START

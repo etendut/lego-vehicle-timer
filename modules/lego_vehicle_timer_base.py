@@ -100,6 +100,10 @@ class MotorHelper:
         """ODV only"""
         pass
 
+    def park_at_unload(self):
+        """ODV only — timer-end auto-park at the unload tile."""
+        pass
+
     def reset_homing(self):
         """ODV only"""
         pass
@@ -532,12 +536,15 @@ def main():
                           'auto_drive=', drive_motors.mh_auto_drive)
                     _main_gate_closed_logged[0] = True
                     # opt-in: when the countdown ran out naturally (not a user
-                    # reset), park the cart at U via the homing routine so the
-                    # rig is ready to resume on the next countdown start.
+                    # reset), park the cart at U so the rig is ready to resume
+                    # on the next countdown start. ODV's park_at_unload uses
+                    # the planner when the encoder is calibrated (respects
+                    # one-way barriers) and falls back to home_and_unload's
+                    # stall routine otherwise.
                     if (_AUTO_UNLOAD_ON_TIMER_END
                             and drive_motors.mh_supports_homing
                             and countdown_timer.countdown_status == _ENDED):
-                        drive_motors.home_and_unload()
+                        drive_motors.park_at_unload()
                 drive_motors.stop_motors()
                 if drive_motors.mh_supports_homing:
                     drive_motors.reset_homing()

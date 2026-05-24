@@ -551,10 +551,10 @@ class TestMain:
         with pytest.raises(SystemExit):
             base.main()
 
-    def test_auto_unload_on_natural_timer_end_calls_home_and_unload(
+    def test_auto_unload_on_natural_timer_end_calls_park_at_unload(
             self, monkeypatch, mock_hub, mock_remote):
         """When _AUTO_UNLOAD_ON_TIMER_END=True and the countdown reaches _ENDED
-        on its own, the main loop must call drive_motors.home_and_unload on the
+        on its own, the main loop must call drive_motors.park_at_unload on the
         first gate-close iteration so the cart parks at U for the next session."""
         from pybricks.tools import StopWatch
         mock_hub.battery.voltage.return_value = 9_000
@@ -570,7 +570,7 @@ class TestMain:
         mock_remote.buttons.pressed.return_value = ()
 
         helper = MotorHelper(False, True)  # supports_homing=True
-        helper.home_and_unload = MagicMock(side_effect=SystemExit('home_and_unload fired'))
+        helper.park_at_unload = MagicMock(side_effect=SystemExit('park_at_unload fired'))
         monkeypatch.setattr(base, 'MotorHelper', lambda *a, **kw: helper)
 
         # Force the very first gate-close iteration to see status=_ENDED.
@@ -578,14 +578,14 @@ class TestMain:
             self.countdown_status = _ENDED
         monkeypatch.setattr(base.CountdownTimer, 'reset', fake_reset)
 
-        with pytest.raises(SystemExit, match='home_and_unload fired'):
+        with pytest.raises(SystemExit, match='park_at_unload fired'):
             base.main()
-        helper.home_and_unload.assert_called_once()
+        helper.park_at_unload.assert_called_once()
 
     def test_auto_unload_does_not_fire_on_user_reset(
             self, monkeypatch, mock_hub, mock_remote):
         """Reset-code press lands on status=_READY (not _ENDED). Even with
-        the flag on, home_and_unload must NOT fire — the user is starting a
+        the flag on, park_at_unload must NOT fire — the user is starting a
         new session, not finishing one."""
         from pybricks.tools import StopWatch
         mock_hub.battery.voltage.return_value = 9_000
@@ -601,7 +601,7 @@ class TestMain:
         mock_remote.buttons.pressed.return_value = ()
 
         helper = MotorHelper(False, True)
-        helper.home_and_unload = MagicMock()
+        helper.park_at_unload = MagicMock()
         helper.stop_motors = MagicMock(side_effect=SystemExit('stop_motors fired'))
         monkeypatch.setattr(base, 'MotorHelper', lambda *a, **kw: helper)
         # Default reset() leaves status=_READY, so the auto-unload condition
@@ -609,4 +609,4 @@ class TestMain:
 
         with pytest.raises(SystemExit, match='stop_motors fired'):
             base.main()
-        helper.home_and_unload.assert_not_called()
+        helper.park_at_unload.assert_not_called()

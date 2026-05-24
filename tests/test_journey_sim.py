@@ -416,3 +416,44 @@ def test_manual_east_drive_from_l_reaches_u(compiled):
         m.wait(10)
     raise AssertionError(
         'cart stuck at ({}, {}) — never reached U'.format(mx.angle(), my.angle()))
+
+
+def test_park_at_unload_from_mid_grid_when_homed_reaches_u(compiled):
+    """park_at_unload (timer-end auto-park) must navigate via the planner when
+    the cart is homed, so it respects '<' one-way barriers instead of stall-
+    forcing through them. End state: cart at U, has_load cleared, homed."""
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    _install_sim_wait(m, mx, my, clock)
+
+    # Cart parked mid-grid with calibrated encoder and a load to dump.
+    cx, cy = rom.grid.tile_center_deg((2, 2))
+    mx.reset_angle(cx)
+    my.reset_angle(cy)
+    rom.mh_is_homed = True
+    rom.has_load = True
+
+    rom.park_at_unload()
+
+    assert rom.grid.deg_to_tile((mx.angle(), my.angle())) == rom.grid.unload_tile
+    assert rom.has_load is False
+    assert rom.mh_is_homed is True
+
+
+def test_park_at_unload_when_not_homed_falls_back_to_stall(compiled):
+    """When mh_is_homed=False the encoder isn't trusted, so park_at_unload
+    must skip the planner journey and go straight to home_and_unload's
+    physical stall. Cart still ends at U with the encoder freshly calibrated."""
+    m = compiled
+    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
+    _install_sim_wait(m, mx, my, clock)
+
+    # Cart somewhere; mh_is_homed left at the default False.
+    mx.reset_angle(1500)
+    my.reset_angle(1500)
+
+    rom.park_at_unload()
+
+    expected = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    assert (mx.angle(), my.angle()) == expected
+    assert rom.mh_is_homed is True
