@@ -43,6 +43,8 @@ _REMOTE_DISABLED   = (DRIVE_MODE == AUTO)  # AUTO runs headless; MANUAL/HYBRID r
 IDLE_TIMEOUT_SECS = const(20)  # HYBRID only: seconds idle before auto-drive engages
 ODV_SPEED         = const(60)  # note above 60 gets a bit chaotic on full battery. max speed in MANUAL and HYBRID modes
 ODV_GRID          = ODV_GRID_DEFAULT
+AUTO_UNLOAD_ON_TIMER_END = False  # when True, the cart parks at U on natural timer expiry (not on reset-code press)
+_AUTO_UNLOAD_ON_TIMER_END = AUTO_UNLOAD_ON_TIMER_END  # overrides base default
 
 # ── debug / calibration ───────────────────────────────────────────────────────
 DEBUG               = const(True)

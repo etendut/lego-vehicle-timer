@@ -23,7 +23,7 @@ from uerrno import ENODEV
 
 
 
-__BUILD__ = 'df7e638'  # replaced at compile time with git hash + timestamp
+__BUILD__ = '1beebc4'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -40,6 +40,7 @@ COUNTDOWN_RESET_CODE         = 'c,c,c'  # c = center button, + = + button, - = -
 MILLIVOLT_CRITICAL_LEVEL = const(8400)
 
 _REMOTE_DISABLED = False # ODV overrides this from DRIVE_MODE; all other vehicles (servo/train/skid_steer) leave it False
+_AUTO_UNLOAD_ON_TIMER_END = False # ODV opts in via AUTO_UNLOAD_ON_TIMER_END; non-homing vehicles leave it False
 
 # ── user configuration ────────────────────────────────────────────────────────
 SERVO_STEER_SPEED: int                = const(80)  # set between 50 and 100
@@ -630,6 +631,13 @@ def main():
                           'status=', countdown_timer.countdown_status,
                           'auto_drive=', drive_motors.mh_auto_drive)
                     _main_gate_closed_logged[0] = True
+                    # opt-in: when the countdown ran out naturally (not a user
+                    # reset), park the cart at U via the homing routine so the
+                    # rig is ready to resume on the next countdown start.
+                    if (_AUTO_UNLOAD_ON_TIMER_END
+                            and drive_motors.mh_supports_homing
+                            and countdown_timer.countdown_status == _ENDED):
+                        drive_motors.home_and_unload()
                 drive_motors.stop_motors()
                 if drive_motors.mh_supports_homing:
                     drive_motors.reset_homing()
