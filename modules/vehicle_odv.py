@@ -351,6 +351,13 @@ class AxisController:
             self.motor_x.dc(-duty)
             self._prev_duty_x = -duty
             self._ramp_start_x = None
+        elif requested_dx != 0:
+            # User pressing into an obstacle — brake hard, don't ramp.
+            # The ramp keeps the motor driving at decreasing duty for ramp_ms,
+            # which on fresh batteries lets the cart coast past walls/edges.
+            self.motor_x.brake()
+            self._prev_duty_x = 0
+            self._ramp_start_x = None
         else:
             self._prev_duty_x, self._ramp_start_x = self._ramp_stop_axis(
                 self.motor_x, self._prev_duty_x, self._ramp_start_x, ramp_ms
@@ -364,6 +371,10 @@ class AxisController:
         elif valid_dy < 0:
             self.motor_y.dc(-duty)
             self._prev_duty_y = -duty
+            self._ramp_start_y = None
+        elif requested_dy != 0:
+            self.motor_y.brake()
+            self._prev_duty_y = 0
             self._ramp_start_y = None
         else:
             self._prev_duty_y, self._ramp_start_y = self._ramp_stop_axis(

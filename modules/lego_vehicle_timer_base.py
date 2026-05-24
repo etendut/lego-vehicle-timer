@@ -263,6 +263,7 @@ class CountdownTimer:
         Check countdown time buttons.
         Returns True if the reset code was pressed (caller should reset motor state).
         """
+        global remote
         if _REMOTE_DISABLED:
             return False
 

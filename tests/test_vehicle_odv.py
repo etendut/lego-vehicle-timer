@@ -288,6 +288,33 @@ def test_zero_joystick_after_ramp_duration_calls_dc_zero():
     check.equal(last_x.args[0], 0)
 
 
+def test_tick_blocked_by_wall_brakes_immediately():
+    """When propose_step returns valid=0 because the cart hit a wall while the
+    user IS pressing (requested_dx != 0), the motor must brake hard — not ramp.
+    Ramping continues to drive the motor at decreasing duty for ramp_ms, which
+    lets fresh-battery momentum coast the cart past the wall/edge."""
+    # Grid east edge at 3*800 = 2400. cart east face at 2400 (cx=2080) → step
+    # +40 would push east face to 2440, blocked by boundary check.
+    ac, mx, _my, _ = _make_ac(["L#U"], motor_x_angle=2080, motor_y_angle=400)
+    ac.tick(VirtualJoystick(+1, 0))  # request east — but blocked
+    mx.brake.assert_called_once()
+    # dc(positive) must NOT have been issued (would drive into the wall)
+    for call in mx.dc.call_args_list:
+        check.greater_equal(0, abs(call.args[0]) if call.args else 0,
+                             "dc called with non-zero while blocked")
+
+
+def test_tick_released_still_ramps_smoothly():
+    """When user releases (requested_dx == 0), the smooth ramp must still kick
+    in — only obstacle-blocking should brake hard."""
+    ac, mx, _my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    ac.tick(VirtualJoystick(+1, 0))
+    mx.dc.assert_called_with(+45)
+    # User releases (request=0). Ramp should start, NOT brake.
+    ac.tick(VirtualJoystick(0, 0))
+    mx.brake.assert_not_called()
+
+
 # --- 2b: joystick (+1, 0) in clear space ---
 
 def test_joystick_x_only_clear_space():
@@ -310,59 +337,39 @@ def test_diagonal_joystick_speed_compensation():
 
 # --- 2d: joystick (+1, 0) blocked by east grid edge → ramp path on X ---
 
-def test_joystick_x_blocked_first_tick_ramp_decay():
-    # Cart at tile (0,0) centre in a 1-tile grid ["LXU"]; east is blocked.
-    # But ["LXU"] is 1-row x 3-cols; cart at (400, 400), step east → X wall.
-    # Use a tighter approach: cart near east edge of a 1-col grid.
-    # ["L#U"] has cols 0,1,2. Cart at (1680, 400): east face = 2000, grid east = 2400.
-    # Step east 40 → east face 2040, still inside. Use ["LU"] instead (1 open col each).
-    # Simpler: put cart very close to east grid edge so the lookahead exits bounds.
-    # Grid ["L#U"]: n_cols=3, east_bound=2400. Cart at (2080, 400): east face=2400,
-    # flush — dc(0) on first tick because _aabb_hits_wall sees R > bound on step.
-    # Actually use cart position where east face + 40 > 2400: cx=2080, R=2400, step=40 → R=2440 > 2400.
-    ac, mx, my, clock = _make_ac(["L#U"], motor_x_angle=2080, motor_y_angle=400)
-    # Drive one tick first so prev_duty is set
+def test_joystick_x_blocked_brakes_immediately_no_ramp_decay():
+    """Holding east into the wall must brake the X motor at once. The old code
+    ramped from prev_duty down over ramp_ms, which on fresh batteries let the
+    cart coast clean past the wall before the ramp finished."""
+    ac, mx, _my, _ = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    ac.tick(VirtualJoystick(+1, 0))      # prev_duty_x = 45
+    mx.dc.assert_called_with(+45)
+    # Cart now at the east edge: cx=3680, east face = 4000 (grid east), step
+    # +40 would push east face past 4000 → blocked.
+    mx.angle.return_value = 3680
     ac.tick(VirtualJoystick(+1, 0))
-    # propose_step returns (0,0) because east face 2400+40 > 2400 → blocked
-    # So first tick already goes to ramp path; prev_duty=0 initially → no dc call
-    # Let's instead start with an active state by driving in clear space first
-    # then move to a blocked position.
-    ac2, mx2, my2, clock2 = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
-    # Tick east while clear
-    ac2.tick(VirtualJoystick(+1, 0))
-    mx2.dc.assert_called_with(+45)
-    # Now simulate motor moved to blocked position (near east edge of 5-col grid, east=4000)
-    # Cart at 3680: east face = 4000, step 40 → 4040 > 4000 → blocked
-    mx2.motor_x = MagicMock()
-    mx2.motor_x.angle.return_value = 3680
-    ac2.motor_x = mx2.motor_x
-    clock2.time.return_value = 0
-    ac2.tick(VirtualJoystick(+1, 0))
-    # Ramp started; elapsed=0, factor=100, duty applied = 45 * 100 // 100 = 45 — same as before.
-    # Advance to mid-ramp: elapsed=100ms, factor=(200-100)*100//200=50
-    clock2.time.return_value = 100
-    ac2.tick(VirtualJoystick(+1, 0))
-    mid_call = mx2.motor_x.dc.call_args_list[-1]
-    mid_value = mid_call.args[0]
-    check.is_true(0 < mid_value < 45, f"mid-ramp value {mid_value} not in (0, 45)")
+    mx.brake.assert_called_once()
+    # No mid-ramp dc(<45) calls — last dc was the +45 from the open-space tick.
+    check.equal(mx.dc.call_args_list[-1].args[0], +45)
 
 
-# --- 2e: ramp completion → dc(0) after _STOP_RAMP_MS elapsed ---
+# --- 2e: released (request=0) still ramps to zero over _STOP_RAMP_MS ---
 
 def test_ramp_completion_calls_dc_zero():
-    ac, mx, my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    """Releasing the button (request=0) goes through the smooth ramp path and
+    finishes with dc(0). Brake-on-block did NOT change the released-axis flow."""
+    ac, mx, _my, clock = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
     # Drive east to set prev_duty_x
     ac.tick(VirtualJoystick(+1, 0))
-    # Move to blocked position (near east edge)
-    mx.angle.return_value = 3680
-    # First stop tick: start ramp
+    # Release: ramp starts
     clock.time.return_value = 0
-    ac.tick(VirtualJoystick(+1, 0))
-    # Advance past ramp duration
+    ac.tick(VirtualJoystick(0, 0))
+    # Past ramp duration → finalize to dc(0)
     clock.time.return_value = 200
-    ac.tick(VirtualJoystick(+1, 0))
+    ac.tick(VirtualJoystick(0, 0))
     last_call = mx.dc.call_args_list[-1]
     check.equal(last_call.args[0], 0)
+    mx.brake.assert_not_called()
 
 
 # --- 2f: deg_pos() returns (motor_x.angle(), motor_y.angle()) ---
