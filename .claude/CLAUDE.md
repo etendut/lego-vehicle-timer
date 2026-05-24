@@ -17,7 +17,7 @@ The carts live inside a **GBC (Great Ball Contraption)** — a stopped cart stal
 - Implement and commit **each task separately** — stop after each task and wait for the user to commit before moving to the next.
 
 ## After modifying any `modules/vehicle_*.py`
-Run `python tools/compile_pybricks_files.py` to regenerate the compiled `lego_vehicle_timer_*.py` files, then `python -m pytest tests/`.
+Run `python tools/compile_pybricks_files.py` to regenerate the compiled `lego_vehicle_timer_*.py` files, then `python -m pytest tests/`. The pre-commit hook in `.githooks/pre-commit` will recompile automatically when committing changes to `modules/vehicle_*.py`, `modules/lego_vehicle_timer_base.py`, or the compile tool — enable once per clone with `git config core.hooksPath .githooks`.
 
 ## Project files
 All Claude-related files live under `.claude/`:
