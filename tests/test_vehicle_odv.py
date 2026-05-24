@@ -395,10 +395,9 @@ def test_deg_pos():
 
 def test_homing_call_sequence_default_grid():
     """DEFAULT grid: unload_tile = (4, 0). Stall positions land at the walls
-    (Y=_HALF=320, X=n_cols*800-80=3920). The run_target after each stall stops
-    SHORT of tile-center by _RETURN_OFFSET_DEG=80 on the stall side, so the
-    operator sees a smaller 'jump back' at the end of homing.
-    """
+    (Y=_HALF=320, X=n_cols*800-80=3920). The run_target after each stall
+    returns to the exact tile centre. X return uses then=Stop.COAST so the
+    motor doesn't snap back on PID overshoot."""
     grid = Grid(DEFAULT)
     motor_x = MagicMock()
     motor_y = MagicMock()
@@ -408,15 +407,12 @@ def test_homing_call_sequence_default_grid():
     # Y stalled north first
     motor_y.run_until_stalled.assert_called_once_with(-200, duty_limit=45)
     motor_y.reset_angle.assert_called_once_with(320)  # _HALF = cart center south of N wall
-    # Y returns all the way to tile-centre (stall is shallow — no short-return).
     motor_y.run_target.assert_called_once_with(1400, 0 * 800 + 400)
 
     # Then X stalled east — reset to east_wall_deg - 80 (rig-measured stall offset)
     motor_x.run_until_stalled.assert_called_once_with(600, duty_limit=45)  # 200*3
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
-    # U tile centre X = 3600; X return target = 3600 + 80 = 3680, COAST after
-    # so the motor doesn't snap back if it overshoots.
-    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80, then=Stop.COAST)
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400, then=Stop.COAST)
 
 
 def test_homing_uses_unload_tile_from_grid():
@@ -428,10 +424,9 @@ def test_homing_uses_unload_tile_from_grid():
     HomingRoutine(motor_x, motor_y, grid).run()
 
     motor_y.reset_angle.assert_called_once_with(320)  # always _HALF (cart at N wall)
-    # uy=1 tile centre Y = 1200; full return to centre (Y stall is too shallow to short).
     motor_y.run_target.assert_called_once_with(1400, 1 * 800 + 400)
     motor_x.reset_angle.assert_called_once_with(5 * 800 - 80)
-    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400 + 80, then=Stop.COAST)
+    motor_x.run_target.assert_called_once_with(1400, 4 * 800 + 400, then=Stop.COAST)
 
 
 def test_homing_order_y_then_x():
@@ -779,6 +774,56 @@ def test_rom_stop_motors_stops_both():
     rom.stop_motors()
     mx.stop.assert_called_once()
     my.stop.assert_called_once()
+
+
+def test_rom_stop_motors_clears_axis_controller_ramp_state():
+    """`stop_motors` is the canonical "cart at rest" call. After it, the next
+    idle `tick(VJ(0,0))` must not re-engage the motor with a stale prev_duty
+    left over from a pre-routine east/west drive."""
+    rom, _, _, _ = _make_rom()
+    rom.axis_controller._prev_duty_x = 60
+    rom.axis_controller._prev_duty_y = -45
+    rom.axis_controller._ramp_start_x = 1234
+    rom.axis_controller._ramp_start_y = 5678
+    rom.stop_motors()
+    check.equal(rom.axis_controller._prev_duty_x, 0)
+    check.equal(rom.axis_controller._prev_duty_y, 0)
+    check.is_none(rom.axis_controller._ramp_start_x)
+    check.is_none(rom.axis_controller._ramp_start_y)
+
+
+def test_axis_controller_reset_ramp_state_clears_all_fields():
+    """Direct unit test on the new method."""
+    ac, _mx, _my, _ = _make_ac(["L###U"])
+    ac._prev_duty_x = 60
+    ac._prev_duty_y = -45
+    ac._ramp_start_x = 100
+    ac._ramp_start_y = 200
+    ac.reset_ramp_state()
+    check.equal(ac._prev_duty_x, 0)
+    check.equal(ac._prev_duty_y, 0)
+    check.is_none(ac._ramp_start_x)
+    check.is_none(ac._ramp_start_y)
+
+
+def test_tick_after_reset_ramp_state_does_not_command_motor():
+    """Regression guard for the stale-prev_duty east-jerk bug. After
+    reset_ramp_state, the next tick(VJ(0,0)) must NOT issue motor.dc — the
+    early-return in _ramp_stop_axis (`if prev_duty == 0: return`) should fire."""
+    ac, mx, my, _ = _make_ac(["L###U"], motor_x_angle=400, motor_y_angle=400)
+    # Pretend the cart was driving east before a routine took over.
+    ac._prev_duty_x = 60
+    ac._prev_duty_y = 60
+    ac.reset_ramp_state()
+    mx.dc.reset_mock()
+    my.dc.reset_mock()
+    mx.brake.reset_mock()
+    my.brake.reset_mock()
+    ac.tick(VirtualJoystick(0, 0))
+    mx.dc.assert_not_called()
+    my.dc.assert_not_called()
+    mx.brake.assert_not_called()
+    my.brake.assert_not_called()
 
 
 def test_rom_home_and_unload_delegates_sets_state():

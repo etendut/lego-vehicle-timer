@@ -32,7 +32,7 @@ except ImportError:
     ENODEV = -99
 
 
-__BUILD__ = '502a7aa'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'a67d348'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -95,10 +95,6 @@ _DEADBAND_SAFETY_DEG = const(10)
 # Rig-measured: at east stall, physical cart center is 80° west of east_wall_deg
 # (mechanical slack in the X drive — Y stall is clean to the wall, X is not).
 _X_EAST_STALL_OFFSET_DEG = const(80)
-# After a load dip / unload stall, return short of tile-center by this much
-# instead of all the way back. Reduces the visible "jump back" the operator
-# sees at the end of the routine without changing the dip / stall depth.
-_RETURN_OFFSET_DEG       = const(80)
 
 # ── derived from user configuration (do not edit) ────────────────────────────
 _REMOTE_DISABLED          = (DRIVE_MODE == AUTO)         # AUTO runs headless; MANUAL/HYBRID require the remote
@@ -746,6 +742,16 @@ class AxisController:
     def deg_pos(self):
         return (self.motor_x.angle(), self.motor_y.angle())
 
+    def reset_ramp_state(self):
+        """Clear prev_duty / ramp_start so the next idle tick(VJ(0,0)) takes
+        the early-return in _ramp_stop_axis instead of re-engaging the motor
+        with stale duty. Call after motors are stopped by means other than
+        tick (run_target, run_until_stalled, motor.stop)."""
+        self._prev_duty_x = 0
+        self._prev_duty_y = 0
+        self._ramp_start_x = None
+        self._ramp_start_y = None
+
     def _ramp_stop_axis(self, motor, prev_duty, ramp_start, ramp_ms):
         """Run one ramp-stop tick for one axis.
         Returns (new_prev_duty, new_ramp_start)."""
@@ -1082,11 +1088,11 @@ class HomingRoutine:
         self.motor_x.run_until_stalled(_HOMING_MOTOR_ROT_SPEED * 3, duty_limit=_HOMING_DUTY)
         wait(2000)
         self.motor_x.reset_angle(east_wall_deg - _X_EAST_STALL_OFFSET_DEG)
-        # Return short of centre on the east side (stall was east). COAST at
-        # end so the motor doesn't pull back if it overshoots — that pull-back
-        # was the "quick jump east" the operator saw after the west return.
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x + _RETURN_OFFSET_DEG,
-                                 then=Stop.COAST)
+        # Return to U tile centre. COAST at end so the motor doesn't snap
+        # back if PID overshoots; the stale-prev_duty east-jerk that used
+        # to show up here is now killed by stop_motors() → reset_ramp_state
+        # in RunODVMotors.
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x, then=Stop.COAST)
         wait(200)
 
 
@@ -1160,6 +1166,10 @@ class RunODVMotors(MotorHelper):
     def stop_motors(self):
         self.motor_x.stop()
         self.motor_y.stop()
+        # Drop the AxisController's ramp state so the next idle tick(VJ(0,0))
+        # doesn't re-engage the motor with stale prev_duty from before the
+        # routine that just stopped the cart (homing, _do_load_, etc.).
+        self.axis_controller.reset_ramp_state()
 
     def idle_timed_out(self):
         if self.idle_timeout is None:
@@ -1230,11 +1240,10 @@ class RunODVMotors(MotorHelper):
                   ') dip to', target_x - _LOAD_DIP_DEG)
         self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _LOAD_DIP_DEG)
         wait(2000)
-        # Return short of centre on the west side (dip was west). COAST at the
-        # end so the motor doesn't pull back if it overshoots the target — the
-        # "quick jump west" the operator was seeing after the east return.
-        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x - _RETURN_OFFSET_DEG,
-                                 then=Stop.COAST)
+        # Return to L tile centre. COAST at end so PID overshoot doesn't snap
+        # back; the stale-prev_duty west-jerk that used to show up here is
+        # now killed by stop_motors() → reset_ramp_state in RunODVMotors.
+        self.motor_x.run_target(_MAX_MOTOR_ROT_SPEED, target_x, then=Stop.COAST)
         self.has_load = True
         if DEBUG:
             print('_do_load_ done pos=(', self.motor_x.angle(), self.motor_y.angle(), ')')

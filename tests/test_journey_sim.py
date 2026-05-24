@@ -173,24 +173,12 @@ def test_journey_load_to_unload_on_default_grid(compiled):
     assert final_tile == rom.grid.unload_tile
 
 
-def test_homing_returns_y_to_unload_tile_center(compiled):
-    """Regression: with a global _RETURN_OFFSET_DEG=80 the Y stall return
-    cancelled out entirely (Y stall depth is only 80°), leaving the cart
-    pinned against the top wall at cy=320. Y must return to tile centre."""
-    m = compiled
-    rom, mx, my, clock = _build_rom(m, m.ODV_GRID_DEFAULT)
-    _install_sim_wait(m, mx, my, clock)
-
-    rom.homing_routine.run()
-
-    expected_cy = rom.grid.tile_center_deg(rom.grid.unload_tile)[1]
-    assert my.angle() == expected_cy
-
-
-def test_homing_parks_short_of_unload_tile_center_on_x_only(compiled):
-    """HomingRoutine returns Y all the way to U tile centre but parks X short
-    by _RETURN_OFFSET_DEG (80°) east of centre — the X stall's 320° return is
-    where the visible 'jump back' shows up, not the 80° Y return."""
+def test_homing_parks_at_unload_tile_center(compiled):
+    """HomingRoutine returns both X and Y all the way to U tile centre.
+    The earlier `_RETURN_OFFSET_DEG` short-return was reverted because it
+    didn't address the rig-observed "east jerk" (root cause was stale
+    `_prev_duty_x` in AxisController carrying over from the pre-routine
+    drive ticks; the real fix lives in `reset_ramp_state`)."""
     m = compiled
     layout = m.ODV_GRID_DEFAULT
     rom, mx, my, clock = _build_rom(m, layout)
@@ -198,8 +186,8 @@ def test_homing_parks_short_of_unload_tile_center_on_x_only(compiled):
 
     rom.homing_routine.run()
 
-    cx, cy = rom.grid.tile_center_deg(rom.grid.unload_tile)
-    assert (mx.angle(), my.angle()) == (cx + 80, cy)
+    expected = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    assert (mx.angle(), my.angle()) == expected
 
 
 def test_journey_from_homed_position_reaches_load(compiled):
@@ -470,7 +458,6 @@ def test_park_at_unload_when_not_homed_falls_back_to_stall(compiled):
 
     rom.park_at_unload()
 
-    cx, cy = rom.grid.tile_center_deg(rom.grid.unload_tile)
-    # X parks short (cx + 80); Y returns all the way to centre.
-    assert (mx.angle(), my.angle()) == (cx + 80, cy)
+    expected = rom.grid.tile_center_deg(rom.grid.unload_tile)
+    assert (mx.angle(), my.angle()) == expected
     assert rom.mh_is_homed is True
