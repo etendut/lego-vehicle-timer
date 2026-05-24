@@ -22,7 +22,7 @@ from pybricks.pupdevices import DCMotor, Light
 
 
 
-__BUILD__ = 'c7931be'  # replaced at compile time with git hash + timestamp
+__BUILD__ = 'df7e638'  # replaced at compile time with git hash + timestamp
 print('Version 3.0.0 build', __BUILD__)
 ##################################################################################
 #  Settings
@@ -33,7 +33,8 @@ COUNTDOWN_LIMIT_MINUTES: int = const(3)  # run for (x) minutes, min 1 minute, ma
 COUNTDOWN_RESET_CODE         = 'c,c,c'  # c = center button, + = + button, - = - button
 
 # ── battery / voltage ─────────────────────────────────────────────────────────
-# fresh battery = 1.6V; hub programming often fails below 1.5V;
+# fresh battery = 1.6V; 
+# hub programming often fails below 9.3v (~1.5Vx6);
 # hub fails when batteries reach ~1.36V so critical level = 1.4V * 6 cells = 8400mV
 MILLIVOLT_CRITICAL_LEVEL = const(8400)
 
