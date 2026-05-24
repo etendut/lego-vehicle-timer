@@ -331,13 +331,17 @@ class AxisController:
         coast stays inside wall clearances). `duty` overrides base_duty.
         `block_special` prevents manual movement into the load or unload tile."""
         cx, cy = self.deg_pos()
-        both = vj.ax != 0 and vj.ay != 0
         base = duty if duty is not None else self.base_duty
-        duty = base * _BOTH_AXES_DUTY_NUM // _BOTH_AXES_DUTY_DEN if both else base
 
         requested_dx = vj.ax * _LOOKAHEAD_DEG
         requested_dy = vj.ay * _LOOKAHEAD_DEG
         valid_dx, valid_dy = self.grid.propose_step((cx, cy), requested_dx, requested_dy, block_special)
+
+        # Diagonal duty reduction only applies when BOTH axes actually move.
+        # If propose_step blocked one axis (slide-along-wall), the surviving
+        # axis runs at full base_duty — otherwise sliding feels sluggish.
+        both_moving = valid_dx != 0 and valid_dy != 0
+        duty = base * _BOTH_AXES_DUTY_NUM // _BOTH_AXES_DUTY_DEN if both_moving else base
 
         if DEBUG and (valid_dx != requested_dx or valid_dy != requested_dy):
             print('clip pos=(', cx, cy, ') req=(', requested_dx, requested_dy, ') valid=(', valid_dx, valid_dy, ')')

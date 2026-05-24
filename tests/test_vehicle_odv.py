@@ -315,6 +315,18 @@ def test_tick_released_still_ramps_smoothly():
     mx.brake.assert_not_called()
 
 
+def test_tick_slide_along_wall_uses_full_duty_on_unblocked_axis():
+    """NE press at east edge: X is blocked → brake; Y is free → the duty
+    reduction for diagonals (71%) should NOT apply, because only one axis is
+    actually moving. Otherwise sliding along a wall would feel weak."""
+    # cx=3680: east face = 4000, step +40 → 4040 > grid east (4000) → blocked.
+    # cy=400 in a 1-row 5-col grid → step -40 → new_cy=360, north face=40, OK.
+    ac, mx, my, _ = _make_ac(["L###U"], motor_x_angle=3680, motor_y_angle=400)
+    ac.tick(VirtualJoystick(+1, -1))   # NE press
+    mx.brake.assert_called_once()        # X blocked → brake
+    my.dc.assert_called_with(-45)        # Y at full base_duty, not 45*71//100=31
+
+
 # --- 2b: joystick (+1, 0) in clear space ---
 
 def test_joystick_x_only_clear_space():
