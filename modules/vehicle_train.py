@@ -12,13 +12,13 @@ from pybricks.pupdevices import DCMotor, Light
 
 # IMPORTS_END
 # VARS_START
-# Train mode settings
-TRAIN_MOTOR_SPEED_STEP: int = const(10)  # the amount each button press changes the train speed
-TRAIN_MOTOR_MIN_SPEED: int = const(30)  # lowest speed the train will go set between 30 and 100
-TRAIN_MOTOR_MAX_SPEED: int = const(80)  # set between 80 and 100
-TRAIN_REVERSE_MOTOR_1: bool = False  # set to True if remote + button cause motor to run backwards
-TRAIN_REVERSE_MOTOR_2: bool = True  # only used if a second train motor is on Port B
 
+# ── user configuration ────────────────────────────────────────────────────────
+TRAIN_MOTOR_SPEED_STEP: int  = const(10)  # the amount each button press changes the train speed
+TRAIN_MOTOR_MIN_SPEED: int   = const(30)  # lowest speed the train will go set between 30 and 100
+TRAIN_MOTOR_MAX_SPEED: int   = const(80)  # set between 80 and 100
+TRAIN_REVERSE_MOTOR_1: bool  = const(False)  # set to True if remote + button cause motor to run backwards
+TRAIN_REVERSE_MOTOR_2: bool  = const(True)   # only used if a second train motor is on Port B
 
 # VARS_END
 # MODULE_START

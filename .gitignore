@@ -160,3 +160,7 @@ cython_debug/
 #.idea/
 /.idea/*
 wip/*
+
+# Public repo: keep Claude memory at the harness default path, not in-repo.
+.claude/memory/
+.claude/settings.local.json

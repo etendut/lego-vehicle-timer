@@ -1,0 +1,20 @@
+#!/bin/sh
+# pre-commit: auto-recompile docs/pybricks/*.py whenever a staged change could
+# affect the compiled output, then stage the result so it lands in the SAME
+# commit as the source change. Saves the manual
+# "edit modules/ → forget to run tools/compile_pybricks_files.py" cycle.
+#
+# Enable on a fresh clone:   git config core.hooksPath .githooks
+# Bypass for a single commit: git commit --no-verify
+set -e
+
+# Triggers: vehicle source, base, compile tool itself.
+if ! git diff --cached --name-only | grep -qE '^(modules/vehicle_.*\.py|modules/lego_vehicle_timer_base\.py|tools/compile_pybricks_files\.py)$'; then
+    exit 0
+fi
+
+echo "pre-commit: recompiling docs/pybricks/*.py …"
+python tools/compile_pybricks_files.py
+
+# Stage whatever the compile produced (no-op if nothing changed).
+git add docs/pybricks/*.py

@@ -1,0 +1,2 @@
+# Git hooks must use LF endings so sh.exe on Windows can parse the shebang.
+.githooks/* text eol=lf

@@ -56,7 +56,7 @@ Each vehicle has its own configuration
 
 ### Common
 
-MILLIVOLT*CRITICAL_LEVEL = const(1.2 * 6 \_ 1000) # low voltage protection in millivolts e.g. 7.2V = 7200mV
+`MILLIVOLT_CRITICAL_LEVEL = const(8400)` — low voltage protection in millivolts (1.4V × 6 cells = 8400mV)
 
 #### Countdown time settings
 
@@ -64,8 +64,6 @@ COUNTDOWN_LIMIT_MINUTES = const(3) # run for (x) minutes, min 1 minute, max up t
 tested :).<br>
 c = center button, + = + button, - = - button<br>
 COUNTDOWN_RESET_CODE = 'c,c,c' # left center button, center button, right center button<br>
-
-REMOTE_DISABLED = False # for debugging or ODV full auto
 
 ### Train
 
@@ -111,22 +109,25 @@ with [PyBricks](https://code.pybricks.com/)
 
 Expects a Servo motor on Port A and a Servo motor on Port C<br>
 
-ODV_SPEED: int = const(45) # set between 40 and 70<br>
+ODV_SPEED = const(65) # base duty %, set between 40 and 70<br>
+IDLE_TIMEOUT_SECS = const(20) # HYBRID-mode idle period before auto-drive engages<br>
 
 #### ODV Drive Modes
 
-| Mode        | `REMOTE_DISABLED` | `ODV_AUTO_DRIVE_TIMEOUT_SECS` | Description                                                                                                                                                               |
-| ----------- | ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Full manual | `False`           | `0`                           | Remote controls the vehicle only; no automatic movement                                                                                                                   |
-| Hybrid      | `False`           | `30`                          | Remote controls the vehicle; after 30 seconds of no input the vehicle starts automatic load/unload cycles. Any button press hands control back and restarts the 30s timer |
-| Full auto   | `True`            | `0`                           | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete                                                                               |
+`DRIVE_MODE` is an ODV-local enum with three values: `MANUAL`, `HYBRID`, `AUTO`. It is the single knob — `AUTO` runs headless; `MANUAL`/`HYBRID` require the remote.
+
+| Mode        | `DRIVE_MODE` | Description                                                                                                                                                                       |
+| ----------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full manual | `MANUAL`     | Remote controls the vehicle only; no automatic movement                                                                                                                           |
+| Hybrid      | `HYBRID`     | Remote controls the vehicle; after `IDLE_TIMEOUT_SECS` with no input the vehicle starts automatic load/unload cycles. Any button press yields control back and restarts the timer |
+| Full auto   | `AUTO`       | No remote required; vehicle runs automatic load/unload cycles as soon as homing is complete                                                                                       |
 
 ODV_GRID = [] grid tiles specified in a list
 
 X = obstacle, L = Load, U = Unload/End (homing wall NORTH and EAST), # = grid tile, < = one-way left, > = one-way right
 
 **Default**<br>
-ODV_GRID = `["L##<U", "X#X#X", "X###X"]`<br>
+ODV_GRID = `["L#<#U", "X#<#X", "X###X"]`<br>
 <img src="docs/images/ODV_GRID_DEFAULT.png" alt="Grid default" />
 
 **Example 1**<br>
@@ -144,7 +145,59 @@ L→U travels top (eastward through `>`), U→L travels bottom (westward through
 
 ## Releases
 
-### Version 2.2.0 (current)
+### Version 3.0.0 (current)
+
+**ODV vehicle rewrite** — a new movement system built around a tile-grid
+map of your track. Configure the grid as a list of strings; the cart
+respects walls, one-way arrow tiles, and load / unload positions
+automatically.
+
+- Smooth arcade-style driving: hold a button to glide, release to stop;
+  diagonals work
+- Pick a drive mode with `DRIVE_MODE`: `MANUAL` (remote only),
+  `HYBRID` (remote + idle-timeout auto-drive), `AUTO` (headless
+  automatic load/unload cycles)
+
+**Manual mode** — rig-verified, with these noticeable improvements:
+
+- Sliding the cart along a wall now runs at full speed instead of the
+  reduced diagonal speed
+- Cart stops cleanly at walls and grid edges, even with fresh batteries
+  (no more coasting off the rig)
+- One-way arrow tiles reliably block travel against the arrow
+- Cart can drive freely through L and U tiles when there's nothing to
+  load or unload (no accidental re-loading / re-unloading)
+- Manual loading / unloading aligns the cart on the tile before
+  starting the action, same as auto-drive
+- Cart sits still cleanly after a load or unload finishes — no leftover
+  jerk
+- If the cart drifts into a wall corner, it can still slide along the
+  wall instead of getting stuck
+
+**Auto mode** — rig-verified.
+
+**New optional feature: `AUTO_UNLOAD_ON_TIMER_END`** — when the
+countdown ends naturally, the cart parks itself at the unload tile so
+the rig is ready to resume on the next countdown start. Off by default;
+flip the flag in `vehicle_odv.py` to enable.
+
+**Remote LED** now follows the countdown colour through all phases
+(READY, FINAL_MINUTE, FINAL_20_SECS, ENDED), not just ACTIVE.
+
+**Documentation** — grid-legend icons in the quick-start guide are now
+rendered from the same generator as the grid diagrams, so the colours
+and arrow style match exactly.
+
+**Known limitations**
+
+- **`HYBRID` drive mode is not yet rig-verified** — deferred to a
+  future version.
+
+### Version 2.3.0
+
+- ODV autodrive fixes
+
+### Version 2.2.0
 
 - ODV full auto, hybrid, and manual drive modes working correctly
 - Fix hybrid mode timer reset when user interrupts auto navigation

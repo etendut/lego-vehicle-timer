@@ -5,9 +5,9 @@ Usage (from project root):
     python tools/generate_grid_images.py
 
 Output:
-    images/ODV_GRID_DEFAULT.png
-    images/ODV_GRID_EX1.png
-    images/ODV_GRID_EX2.png
+    docs/images/ODV_GRID_DEFAULT.png
+    docs/images/ODV_GRID_EX1.png
+    docs/images/ODV_GRID_EX2.png
 """
 import os
 import sys
@@ -19,19 +19,19 @@ from PIL import Image, ImageDraw, ImageFont
 from modules.vehicle_odv import ODV_GRID_DEFAULT, ODV_GRID_EX1, ODV_GRID_EX2, ODV_GRID_EX3
 
 # ── layout ────────────────────────────────────────────────────────────────────
-TILE        = 36    # px per tile (square)
+TILE        = 72    # px per tile (square) — render at 2x so the HTML scale-down stays crisp on Retina
 TILE_LONG   = round(TILE * 1.15)  # px for Load/Unload tiles (15% longer in X)
-GAP         = 3    # px gap between tiles
-PAD         = 6    # px outer padding
+GAP         = 6    # px gap between tiles
+PAD         = 12   # px outer padding
 
 # ── colours ───────────────────────────────────────────────────────────────────
 BG           = (255, 255, 255)
-TRACK_FILL   = (208, 208, 208)
-LOAD_FILL    = ( 92, 184,  92)   # green
-UNLOAD_FILL  = (224, 120,   0)   # orange
+TRACK_FILL   = (230, 227, 224)  #	Very Light Bluish Gray	E6E3E0
+LOAD_FILL    = ( 187, 223,  11)   # Lime	BBE90B
+UNLOAD_FILL  = (254, 138,   24)   # Orange	FE8A18
 BORDER       = (  0,   0,   0)
 LABEL_COLOR  = (255, 255, 255)
-ARROW_COLOR  = ( 80,  80,  80)
+ARROW_COLOR  = (201,  26,  9)   # Red	C91A09
 
 TILE_COLORS = {
     '#': TRACK_FILL,
@@ -48,8 +48,17 @@ GRIDS = [
     ('ODV_GRID_EX3', ODV_GRID_EX3),
 ]
 
+# Single-tile previews for the docs' grid-legend. Re-uses render_grid so the
+# tile colours and arrow style stay byte-for-byte identical to the full grid
+# PNGs above; HTML scales them down via CSS for inline-icon display.
+SINGLE_TILES = [
+    ('tile_load',   ['L']),
+    ('tile_unload', ['U']),
+    ('tile_arrow',  ['<']),
+]
 
-def _load_font(size: int) -> ImageFont.ImageFont:
+
+def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     candidates = [
         'arialbd.ttf',
         'arial.ttf',
@@ -64,19 +73,34 @@ def _load_font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
+def _rline(draw: ImageDraw.ImageDraw, p1: tuple, p2: tuple, fill: tuple, width: int) -> None:
+    """Line with round caps — draws the line then circles at both endpoints."""
+    draw.line([p1, p2], fill=fill, width=width)
+    r = width // 2
+    for x, y in (p1, p2):
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=fill)
+
+
 def _draw_arrow(draw: ImageDraw.ImageDraw, px: int, py: int, char: str) -> None:
-    """Draw a filled arrow centred in the tile at pixel origin (px, py)."""
+    """Draw a thin arrow (<- or ->) centred in the tile at pixel origin (px, py).
+    Shaft runs full-width to the tip; two chevron arms branch from the tip."""
     cx = px + TILE // 2
     cy = py + TILE // 2
-    hw = TILE // 4   # half-width of arrow body
-    ah = TILE // 5   # half-height of arrowhead
+    hw = TILE // 3       # half total arrow span
+    aw = TILE // 4       # chevron arm horizontal reach
+    ah = TILE // 4       # chevron arm half-height
+    lw = max(2, TILE // 12)  # line width
 
-    if char == '<':   # pointing left
-        pts = [(cx + hw, cy - ah), (cx - hw, cy), (cx + hw, cy + ah)]
-    else:             # '>' pointing right
-        pts = [(cx - hw, cy - ah), (cx + hw, cy), (cx - hw, cy + ah)]
-
-    draw.polygon(pts, fill=ARROW_COLOR)
+    if char == '<':   # pointing left  (<-)
+        tip_x = cx - hw
+        _rline(draw, (cx + hw, cy), (tip_x, cy),        ARROW_COLOR, lw)  # shaft
+        _rline(draw, (tip_x, cy),   (tip_x + aw, cy - ah), ARROW_COLOR, lw)  # top arm
+        _rline(draw, (tip_x, cy),   (tip_x + aw, cy + ah), ARROW_COLOR, lw)  # bottom arm
+    else:             # pointing right  (->)
+        tip_x = cx + hw
+        _rline(draw, (cx - hw, cy), (tip_x, cy),        ARROW_COLOR, lw)  # shaft
+        _rline(draw, (tip_x, cy),   (tip_x - aw, cy - ah), ARROW_COLOR, lw)  # top arm
+        _rline(draw, (tip_x, cy),   (tip_x - aw, cy + ah), ARROW_COLOR, lw)  # bottom arm
 
 
 def _col_widths(grid: list[str]) -> list[int]:
@@ -137,10 +161,16 @@ def render_grid(grid: list[str]) -> Image.Image:
 def main() -> None:
     _compile.main()
 
-    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'images')
+    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'docs', 'images')
     os.makedirs(out_dir, exist_ok=True)
 
     for name, grid in GRIDS:
+        path = os.path.join(out_dir, f'{name}.png')
+        img  = render_grid(grid)
+        img.save(path)
+        print(f'  {name}.png  {img.size[0]}×{img.size[1]}px')
+
+    for name, grid in SINGLE_TILES:
         path = os.path.join(out_dir, f'{name}.png')
         img  = render_grid(grid)
         img.save(path)

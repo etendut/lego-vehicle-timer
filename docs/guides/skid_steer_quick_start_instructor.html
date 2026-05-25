@@ -496,11 +496,11 @@
       <a href="https://github.com/etendut/lego-vehicle-timer"
         >github.com/etendut/lego-vehicle-timer</a
       >
-      &mdash; v2.2.0
+      &mdash; v3.0.0
     </footer>
 
     <!-- ── PAGE 2: LIGHT CODES & HUB SETUP ─────────────────────────── -->
-    <div style="page-break-before: always;">
+    <div style="page-break-before: always">
       <section class="setup">
         <h2>Light Codes</h2>
         <div class="body">
@@ -514,76 +514,290 @@
             </thead>
             <tbody>
               <tr>
-                <td><img src="../images/blue_dot_f.png" alt="Blue flashing" style="height:13pt;vertical-align:middle;" /></td>
+                <td>
+                  <img
+                    src="../images/blue_dot_f.png"
+                    alt="Blue flashing"
+                    style="height: 13pt; vertical-align: middle"
+                  />
+                </td>
                 <td>Blue &mdash; flashing</td>
-                <td><strong>Caution:</strong> hub has been wiped and needs reprogramming &mdash; usually caused by very low batteries</td>
+                <td>
+                  <strong>Caution:</strong> hub has been wiped and needs
+                  reprogramming &mdash; usually caused by very low batteries
+                </td>
               </tr>
               <tr>
-                <td><img src="../images/blue_dot.png" alt="Blue steady" style="height:13pt;vertical-align:middle;" /></td>
+                <td>
+                  <img
+                    src="../images/blue_dot.png"
+                    alt="Blue steady"
+                    style="height: 13pt; vertical-align: middle"
+                  />
+                </td>
                 <td>Blue &mdash; steady</td>
                 <td>Program started, connecting&hellip;</td>
               </tr>
               <tr>
-                <td style="white-space:nowrap"><img src="../images/white_dot_f.png" alt="White flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/white_dot_f.png" alt="White flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/white_dot_f.png" alt="White flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /></td>
+                <td style="white-space: nowrap">
+                  <img
+                    src="../images/white_dot_f.png"
+                    alt="White flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/white_dot_f.png"
+                    alt="White flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/white_dot_f.png"
+                    alt="White flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  />
+                </td>
                 <td>3 white flashes, pause</td>
                 <td>Looking for remote</td>
               </tr>
               <tr>
-                <td><img src="../images/green_dot_f.png" alt="Green flashing" style="height:13pt;vertical-align:middle;" /></td>
+                <td>
+                  <img
+                    src="../images/green_dot_f.png"
+                    alt="Green flashing"
+                    style="height: 13pt; vertical-align: middle"
+                  />
+                </td>
                 <td>Green &mdash; flashing</td>
                 <td>Ready &mdash; press buttons to start timer</td>
               </tr>
               <tr>
-                <td><img src="../images/green_dot.png" alt="Green steady" style="height:13pt;vertical-align:middle;" /></td>
+                <td>
+                  <img
+                    src="../images/green_dot.png"
+                    alt="Green steady"
+                    style="height: 13pt; vertical-align: middle"
+                  />
+                </td>
                 <td>Green &mdash; steady</td>
                 <td>Timer running, vehicle working</td>
               </tr>
               <tr>
-                <td><img src="../images/orange_dot_fs.png" alt="Orange slow flashing" style="height:13pt;vertical-align:middle;" /></td>
+                <td>
+                  <img
+                    src="../images/orange_dot_fs.png"
+                    alt="Orange slow flashing"
+                    style="height: 13pt; vertical-align: middle"
+                  />
+                </td>
                 <td>Orange &mdash; slow flashing</td>
                 <td>Last 60 seconds</td>
               </tr>
               <tr>
-                <td><img src="../images/orange_dot_f.png" alt="Orange fast flashing" style="height:13pt;vertical-align:middle;" /></td>
+                <td>
+                  <img
+                    src="../images/orange_dot_f.png"
+                    alt="Orange fast flashing"
+                    style="height: 13pt; vertical-align: middle"
+                  />
+                </td>
                 <td>Orange &mdash; fast flashing</td>
                 <td>Last 20 seconds</td>
               </tr>
               <tr>
-                <td><img src="../images/orange_dot.png" alt="Orange steady" style="height:13pt;vertical-align:middle;" /></td>
+                <td>
+                  <img
+                    src="../images/orange_dot.png"
+                    alt="Orange steady"
+                    style="height: 13pt; vertical-align: middle"
+                  />
+                </td>
                 <td>Orange &mdash; steady</td>
                 <td>Time complete, vehicle stopped</td>
               </tr>
               <tr>
-                <td colspan="3" style="background:#fff3e0;font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.4pt;color:#888;padding:4pt 6pt 3pt;border-top:1pt solid #ccc;">Errors</td>
+                <td
+                  colspan="3"
+                  style="
+                    background: #fff3e0;
+                    font-size: 8.5pt;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.4pt;
+                    color: #888;
+                    padding: 4pt 6pt 3pt;
+                    border-top: 1pt solid #ccc;
+                  "
+                >
+                  Errors
+                </td>
               </tr>
-<tr>
-                <td style="white-space:nowrap"><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /></td>
+              <tr>
+                <td style="white-space: nowrap">
+                  <img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  />
+                </td>
                 <td>Constant red flash</td>
                 <td>Other error</td>
               </tr>
               <tr>
-                <td style="white-space:nowrap"><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /></td>
+                <td style="white-space: nowrap">
+                  <img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  />
+                </td>
                 <td>2 red flashes, pause</td>
                 <td>Missing motor on Port A</td>
               </tr>
               <tr>
-                <td style="white-space:nowrap"><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /></td>
+                <td style="white-space: nowrap">
+                  <img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  />
+                </td>
                 <td>3 red flashes, pause</td>
                 <td>Missing motor on Port B</td>
               </tr>
               <tr>
-                <td style="white-space:nowrap"><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /></td>
+                <td style="white-space: nowrap">
+                  <img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  />
+                </td>
                 <td>4 red flashes, pause</td>
                 <td>Missing remote</td>
               </tr>
               <tr>
-                <td style="white-space:nowrap"><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /><img src="../images/red_dot_f.png" alt="Red flashing" style="height:13pt;vertical-align:middle;margin-right:2pt;" /></td>
+                <td style="white-space: nowrap">
+                  <img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  /><img
+                    src="../images/red_dot_f.png"
+                    alt="Red flashing"
+                    style="
+                      height: 13pt;
+                      vertical-align: middle;
+                      margin-right: 2pt;
+                    "
+                  />
+                </td>
                 <td>5 red flashes, pause</td>
                 <td>Low battery &mdash; swap or recharge before restarting</td>
               </tr>
             </tbody>
           </table>
-      
         </div>
       </section>
       <section class="setup">
@@ -592,32 +806,56 @@
           <ol class="steps">
             <li>
               <span class="step-num">1</span>
-              <span>Go to <strong>code.pybricks.com</strong> in a browser and connect your hub via Bluetooth.</span>
+              <span
+                >Go to <strong>code.pybricks.com</strong> in a browser and
+                connect your hub via Bluetooth.</span
+              >
             </li>
             <li>
               <span class="step-num">2</span>
-              <span>If the hub does not already have PyBricks firmware, follow the on-screen instructions to install it.</span>
+              <span
+                >If the hub does not already have PyBricks firmware, follow the
+                on-screen instructions to install it.</span
+              >
             </li>
             <li>
               <span class="step-num">3</span>
-              <span>Download <a href="../pybricks/lego_vehicle_timer_skid_steer.py">lego_vehicle_timer_skid_steer.py</a> and open it in PyBricks.</span>
+              <span
+                >Download
+                <a href="../pybricks/lego_vehicle_timer_skid_steer.py"
+                  >lego_vehicle_timer_skid_steer.py</a
+                >
+                and open it in PyBricks.</span
+              >
             </li>
             <li>
               <span class="step-num">4</span>
-              <span>Edit the configuration constants at the top of the file as needed (speed, motor ports, countdown time).</span>
+              <span
+                >Edit the configuration constants at the top of the file as
+                needed (speed, motor ports, countdown time).</span
+              >
             </li>
             <li>
               <span class="step-num">5</span>
-              <span>Click <strong>Run</strong> (or <strong>Download &amp; Run</strong>) to load the program onto the hub.</span>
+              <span
+                >Click <strong>Run</strong> (or
+                <strong>Download &amp; Run</strong>) to load the program onto
+                the hub.</span
+              >
             </li>
           </ol>
-          <p class="note" style="margin-top:8pt;">The hub stores the last program run — you only need to reload if the program or settings change.</p>
+          <p class="note" style="margin-top: 8pt">
+            The hub stores the last program run — you only need to reload if the
+            program or settings change.
+          </p>
         </div>
       </section>
     </div>
-      <footer>
-        <a href="https://github.com/etendut/lego-vehicle-timer">github.com/etendut/lego-vehicle-timer</a>
-        &mdash; v2.2.0
-      </footer>
+    <footer>
+      <a href="https://github.com/etendut/lego-vehicle-timer"
+        >github.com/etendut/lego-vehicle-timer</a
+      >
+      &mdash; v3.0.0
+    </footer>
   </body>
 </html>

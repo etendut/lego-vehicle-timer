@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# E722 (bare except) is intentional in PyBricks code — MicroPython's exception
+# hierarchy is minimal and hardware init paths need to catch anything.
+# E402 (module-level import not at top) is unavoidable in the compiled files
+# where vehicle sections are spliced into a shared base after top-level statements.
+ignore = ["E722", "E402"]
