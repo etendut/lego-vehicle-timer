@@ -27,15 +27,20 @@ All Claude-related files live under `.claude/`:
 ## Active work
 No active redesign. Branch `v3` is the as-shipped ODV rewrite
 (arcade-style virtual-joystick, AABB-in-tile-grid validation,
-4-direction BFS, explicit `DRIVE_MODE` enum). Auto mode is
-rig-verified (2026-04-19); **manual / hybrid mode still needs
-on-rig verification** before any further redesign work.
+4-direction BFS, explicit `DRIVE_MODE` enum).
+
+Rig-verification state:
+- **Auto mode**: verified (2026-04-19).
+- **Manual mode**: verified (2026-05-25) — full refinement pass
+  landed (one-way barriers across coast, brake-on-block, slide-along-
+  wall full duty, has_load guards on load/unload triggers,
+  AUTO_UNLOAD_ON_TIMER_END, COAST + reset_ramp_state on routine exit).
+- **Hybrid mode**: NOT rig-verified — deferred to a future version.
 
 Future directions (not started; 2026-04-19 exploration):
 - `.claude/analysis/multi_cart_exploration.md` — multi-cart on one
   grid. Decisions locked: Topology A (one hub / two carts), own
-  L/U per cart, A+B+C crossing resolution. Blocked on manual rig
-  verification.
+  L/U per cart, A+B+C crossing resolution.
 - **Partial tile** — a tile where only part is passable (e.g. SE
   corner, triangle walls). Deferred; not yet explored. Grid-encoding
   question is the key open design call.

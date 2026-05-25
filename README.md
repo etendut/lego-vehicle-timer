@@ -161,6 +161,44 @@ L→U travels top (eastward through `>`), U→L travels bottom (westward through
     `IdleTimeout` (only active in `HYBRID`)
   - Compile tool validates splice markers and lints compiled files with
     ruff
+- Manual mode rig-verified; auto mode rig-verified
+- Post-rewrite refinements:
+  - One-way (`<` / `>`) barriers keep blocking eastbound/westbound across
+    motor coast — previous "crossing line" check let the cart slip
+    through after a single overshoot
+  - Brake hard when a press is into an obstacle instead of ramping the
+    motor down at decreasing duty (was letting fresh batteries coast
+    the cart off the grid edge)
+  - Full base duty when sliding along a wall (the 71% diagonal cut now
+    only applies when both axes are actually moving)
+  - Load / unload triggers only fire when there's something to do
+    (`not has_load` / `has_load`) — pressing the chute direction at
+    L / U with the wrong state no longer re-snaps the cart to centre
+  - Cart drive into L / U from outside is allowed (the previous
+    `block_special` guard was too aggressive)
+  - Manual load / unload routines centre + pause 500 ms before the dip /
+    stall, mirroring auto-mode arrival
+  - Boundary-overrun escape allows axis-independent slides along an
+    overrun wall (cart pushed past the east edge can still slide north)
+  - Final return after dip / stall uses `then=Stop.COAST` to avoid PID
+    snap-back
+  - `stop_motors()` clears the `AxisController` ramp state so the next
+    idle tick after a routine doesn't re-engage the motor with stale
+    duty (root cause of post-routine "east jerk" / "west jerk")
+  - Opt-in `AUTO_UNLOAD_ON_TIMER_END` — when the countdown runs out
+    naturally the cart auto-navigates to U via the planner (if homed)
+    or falls back to stall-homing (if not), so the rig is ready to
+    resume on the next countdown start
+  - Remote LED tracks all countdown states (was only updating during
+    `ACTIVE`)
+  - Pre-commit hook auto-recompiles `docs/pybricks/*.py` so source-only
+    commits can't ship out of sync with the compiled output
+  - Documentation: grid legend now uses single-tile PNGs rendered from
+    the same generator as the full-grid diagrams (colours match exactly)
+- Known limitations:
+  - **`HYBRID` drive mode is not yet rig-verified** — works in
+    simulation and unit tests but deferred to a future version pending
+    on-rig confirmation
 
 ### Version 2.3.0
 
